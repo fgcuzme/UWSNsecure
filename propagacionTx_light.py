@@ -232,6 +232,7 @@ def create_auth_response_tx(node_ch1):
 
 
 from bbdd2_sqlite3 import load_keys_shared_withou_cipher, load_keys_sign_withou_cipher
+from copy import deepcopy
 
 # Funcion para propagar respuesta de los ch al sink
 def propagate_tx_to_sink_and_cluster(sink1, list_ch, node_uw3, max_retries=3, timeout=2):
@@ -268,13 +269,25 @@ def propagate_tx_to_sink_and_cluster(sink1, list_ch, node_uw3, max_retries=3, ti
         print('####')
         end_time_responseCH = time.time() - time_start_responseCH
         times_response_all_ch.append(end_time_responseCH)  # Guardar el tiempo de respuesta para este CH
-                        
-        # # Aqui se agrega la TX en el tips del nodo
-        # ch_node1['Tips'].append(auth_response_tx1['ID'])
+
+        # Crear una copia profunda de la transacción para evitar referencias compartidas
+        auth_response_tx_sink = deepcopy(auth_response_tx1)
+        auth_response_tx_ch = deepcopy(auth_response_tx1)
 
         # # Actualizar la tx de Tips a ApprovedTransactions del ch
-        # update_transactions(ch_node1, auth_response_tx1)
-        
+        update_transactions(ch_node1, auth_response_tx_ch)  # corregido
+
+        # 
+        # Eliminar la tx que genera conflicto, para solucionar la eliminación de tx aprobada
+        id_transaction = auth_response_tx_ch['ID']
+        # Eliminar la transacción
+        delete_transaction(ch_node1, id_transaction) # corregido
+
+        # # Aqui se agrega la TX en el tips del nodo
+        ch_node1['Tips'].append(id_transaction)     # corregido
+        # Se vuelve agregar la tx en el nodo
+        ch_node1['Transactions'].append(auth_response_tx_ch)    # corregido
+
         retries = 0
         while retries < max_retries:
             # Se puede medir el tiempo de propagación de la Tx dentro del cluster
@@ -330,13 +343,8 @@ def propagate_tx_to_sink_and_cluster(sink1, list_ch, node_uw3, max_retries=3, ti
 
                     print(f"Se actualizo información del nodo {ch_node1['NodeID']},  en el Sink {sink1['RegisterNodes'][indexCH - 1]['Status_auth']}")
 
-
-                    # Una vez que el sink verifica la recepción de aprobación de la Tx Response_auth_to_sink
-                    # se hacen los cambios en el sink,
-                    update_transactions(sink1, auth_response_tx1)
-
-                    # # Actualizar la tx de Tips a ApprovedTransactions
-                    # update_transactions(ch_node1, auth_response_tx1)
+                    # Actualizar las transacciones en el sink
+                    update_transactions(sink1, auth_response_tx_sink)
 
                     print('Verificamos que el sink ha actualizado las tx de forma correcta : ', sink1)
 
@@ -356,53 +364,53 @@ def propagate_tx_to_sink_and_cluster(sink1, list_ch, node_uw3, max_retries=3, ti
         # # Actualizar la tx de Tips a ApprovedTransactions del ch
         # update_transactions(ch_node1, auth_response_tx1)
 
-        # ##
-        # ##
-        # # Propagar la respuesta del CH a los nodos del cluster
-        # for node2 in node_uw3:
-        #     if node2['ClusterHead'] == ch_node1['NodeID'] and node2['IsSynced'] and node2['NodeID'] != ch_node1['NodeID']:  # Excluir el propio CH
-        #         retries = 0
+        ##
+        ##
+        # Propagar la respuesta del CH a los nodos del cluster
+        for node2 in node_uw3:
+            if node2['ClusterHead'] == ch_node1['NodeID'] and node2['IsSynced'] and node2['NodeID'] != ch_node1['NodeID']:  # Excluir el propio CH
+                retries = 0
 
-        #         while retries < max_retries:
-        #             # Aqui toca agregar el delay de propagación basasdo en la formula de distancia/velocidad
-        #             # delay = random_sync_delay()  # Generar un tiempo de retraso aleatorio
-        #             # calcular la distancia entre los nodos
-        #             dist = np.linalg.norm(ch_node1["Position"] - node2["Position"])
-        #             delay = propagation_time(dist, speed=1500)
-        #             print(f"CH {ch_node1['NodeID']} enviando Tx Response_auth_to_sink al nodo {node2['NodeID']} de su cluster, retraso de {delay:.2f} segundos, distancia calculada {dist:.2f}")
-        #             time.sleep(delay)  # Simular el tiempo de sincronización
+                while retries < max_retries:
+                    # Aqui toca agregar el delay de propagación basasdo en la formula de distancia/velocidad
+                    # delay = random_sync_delay()  # Generar un tiempo de retraso aleatorio
+                    # calcular la distancia entre los nodos
+                    dist = np.linalg.norm(ch_node1["Position"] - node2["Position"])
+                    delay = propagation_time(dist, speed=1500)
+                    print(f"CH {ch_node1['NodeID']} enviando Tx Response_auth_to_sink al nodo {node2['NodeID']} de su cluster, retraso de {delay:.2f} segundos, distancia calculada {dist:.2f}")
+                    time.sleep(delay)  # Simular el tiempo de sincronización
 
-        #             if propagate_with_probability():
-        #                 # Los nodos que reciben la Tx de respuesta del CH, tambien deben buscar la clave en la bbd y verificarl
-        #                 # print(f"El nodo sensor {node['NodeID']} recibio la Tx del CH {ch['NodeID']}...")
+                    if propagate_with_probability():
+                        # Los nodos que reciben la Tx de respuesta del CH, tambien deben buscar la clave en la bbd y verificarl
+                        # print(f"El nodo sensor {node['NodeID']} recibio la Tx del CH {ch['NodeID']}...")
 
-        #                 payload = auth_response_tx1['Payload']
-        #                 # Dividir el payload por el separador ";"
-        #                 payload_parts = payload.split(';') # obtener el identificador de la firma utilizada
-        #                 id_pair_keys_sign = payload_parts[1] # Obtener el identificador del par de firmas (segundo elemento)
+                        payload = auth_response_tx1['Payload']
+                        # Dividir el payload por el separador ";"
+                        payload_parts = payload.split(';') # obtener el identificador de la firma utilizada
+                        id_pair_keys_sign = payload_parts[1] # Obtener el identificador del par de firmas (segundo elemento)
 
-        #                 # Si la tx llega al nodo debe identificar la id de la clave utilizada para validar la firma
-        #                 _, key_public_sign = load_keys_sign_withou_cipher("bbdd_keys_shared_sign_cipher.db", "keys_sign_ed25519", index=id_pair_keys_sign)
+                        # Si la tx llega al nodo debe identificar la id de la clave utilizada para validar la firma
+                        _, key_public_sign = load_keys_sign_withou_cipher("bbdd_keys_shared_sign_cipher.db", "keys_sign_ed25519", index=id_pair_keys_sign)
 
-        #                 # El nodo verifica la tx de autenticación creada y enviada por el CH
-        #                 # Esta se verifica con la clave publica obtenida de la BBDD.
-        #                 if verify_transaction_signature(auth_response_tx1['ID'], auth_response_tx1['Signature'], key_public_sign):
-        #                     print(f"Nodo {node2['NodeID']} recibió y verifico la Tx Response_auth_to_sink de CH {ch_node1['NodeID']}")
+                        # El nodo verifica la tx de autenticación creada y enviada por el CH
+                        # Esta se verifica con la clave publica obtenida de la BBDD.
+                        if verify_transaction_signature(auth_response_tx1['ID'], auth_response_tx1['Signature'], key_public_sign):
+                            print(f"Nodo {node2['NodeID']} recibió y verifico la Tx Response_auth_to_sink de CH {ch_node1['NodeID']}")
                             
-        #                     # Se actualiza el ID del tip en el nodo
-        #                     node2['Tips'].append(auth_response_tx1['ID'])
+                            # Se actualiza el ID del tip en el nodo
+                            node2['Tips'].append(auth_response_tx1['ID']) # corregido
                             
-        #                     break
-        #                 else:
-        #                     print(f"Nodo {node2['NodeID']} falló en la verificación de la Tx de autenticación.")
-        #                     retries += 1
-        #                     time.sleep(timeout)
-        #             else:
-        #                 print(f"Nodo {node2['NodeID']} no recibió la Tx de autenticación. Reintentando... ({retries + 1}/{max_retries})")
-        #                 retries += 1
-        #                 time.sleep(timeout)
-        #         if retries == max_retries:
-        #             print(f"Nodo {node2['NodeID']} no respondió tras {max_retries} reintentos.")
+                            break
+                        else:
+                            print(f"Nodo {node2['NodeID']} falló en la verificación de la Tx de autenticación.")
+                            retries += 1
+                            time.sleep(timeout)
+                    else:
+                        print(f"Nodo {node2['NodeID']} no recibió la Tx de autenticación. Reintentando... ({retries + 1}/{max_retries})")
+                        retries += 1
+                        time.sleep(timeout)
+                if retries == max_retries:
+                    print(f"Nodo {node2['NodeID']} no respondió tras {max_retries} reintentos.")
 
 
 
@@ -488,16 +496,16 @@ def authenticate_nodes_to_ch(nodes, chead, max_retries=3, timeout=2):
                             #time.sleep(5)
                             
                             # Agregar la tx como tips en el nodo, se agrega aqui despues de todo el proceso
-                            #node4['Tips'] = node_auth_tx['ID']
+                            node4['Tips'].append(node_auth_tx['ID'])    # corregido
 
-                            # # Se agrega el id de tx al ch
-                            # node_ch['Tips'].append(node_auth_tx['ID'])
+                            # Se agrega el id de tx al ch
+                            node_ch['Tips'].append(node_auth_tx['ID'])  # corregido
 
                             # # Aqui se debe actualizar las tx del CH
                             # update_transactions(node_ch, node_auth_tx)
 
                             # Actualizar el nodo dentro del cluster
-                            #update_transactions(node4, node_auth_tx)
+                            update_transactions(node4, node_auth_tx)    # corregido
 
                             #node4['Tips'] = node_auth_tx['ID']
 
@@ -626,9 +634,10 @@ def update_transactions(node, received_transaction):
     # Extraer ID de la transacción recibida y las aprobaciones
     transaction_id = transaction_copy.get("ID")
     # approved_tips2 = transaction_copy.get("ApprovedTx", [])
-    approved_tips2 = transaction_copy.get("ApprovedTx")
+    # approved_tips2 = transaction_copy.get("ApprovedTx")
     # approved_tips2 = transaction_copy.setdefault("ApprovedTx", [])
     # approved_tips2 = received_transaction["ApprovedTx"]
+    approved_tips2 = list(received_transaction.get("ApprovedTx", []))
 
     print('Tips que se deben aprobar 1: ', transaction_copy)
     print('Tips que se deben aprobar 2: ', approved_tips2)
@@ -652,3 +661,27 @@ def update_transactions(node, received_transaction):
     print('Nodo actualizado en ApprovedTransactions:', node["ApprovedTransactions"])
     print('Tips restantes:', node["Tips"])
 
+
+
+# Funcion para eliminar la tx
+def delete_transaction(node, transaction_id):
+    """
+    Elimina una transacción del nodo dado su ID.
+    
+    Args:
+        node (dict): Nodo del que se desea eliminar la transacción.
+        transaction_id (str): ID de la transacción a eliminar.
+
+    Returns:
+        bool: True si la transacción fue eliminada, False si no se encontró.
+    """
+    transactions = node.get("Transactions", [])
+    
+    for tx in transactions:
+        if tx["ID"] == transaction_id:
+            transactions.remove(tx)
+            print(f"Transacción con ID {transaction_id} eliminada del nodo {node['NodeID']}.")
+            return True
+
+    print(f"Transacción con ID {transaction_id} no encontrada en el nodo {node['NodeID']}.")
+    return False
