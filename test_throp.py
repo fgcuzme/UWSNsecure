@@ -6,7 +6,7 @@ def random_speed_of_sound():
     # Rango de salinidad en ppt
     salinity = random.uniform(30, 40)
     # Rango de profundidad en metros
-    depth = random.uniform(0, 2000)
+    depth = random.uniform(0, 100)
     # depth = 100
     
     # Ecuación de Mackenzie para calcular la velocidad del sonido en el agua
@@ -95,9 +95,6 @@ loss = acoustic_loss_thorp(distancia, freq)
 print(f"Absorción acústica a {freq} kHz: {loss:.2f} dB/km")
 
 
-
-
-
 # Donde α tiene unidades de dB·km-1 y f es la frecuencia de la señal en kHz. El último
 # término es una corrección que tiene en cuenta la absorción a muy baja frecuencia,
 # siendo esta ecuación válida para temperaturas de 4ºC y una profundidad de 900 m,
@@ -116,8 +113,6 @@ frecuencia = 20  # Frecuencia en kHz
 absorcion = thorp_absorption(frecuencia)
 
 print(f"Absorción acústica a {frecuencia} kHz: {absorcion:.2f} dB/km")
-
-
 
 # Spreading Factor
 # El spreading factor es otra contribución a la pérdida de señal y depende de la geometría de propagación. Existen dos tipos principales:
