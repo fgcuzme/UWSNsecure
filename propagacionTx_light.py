@@ -34,6 +34,7 @@ def propagate_with_probability(success_rate = 0):
 
 
 # Funcion para propagar tx genesis hacia los CHs
+# Los Ch deben validar la tx enviada por el genesis
 def propagate_tx_to_ch(sink1, ch_list, node_uw1, genesis_tx, max_retries=3, timeout=2):
     """
     Función para propagar la transacción génesis del Sink a los CHs.
@@ -46,8 +47,10 @@ def propagate_tx_to_ch(sink1, ch_list, node_uw1, genesis_tx, max_retries=3, time
     """
     # Listas para almacenar los tiempos de verificación y respuesta por cada CH
     times_verify_all_ch = []
-    times_response_all_ch = []
-
+    speed_propagation = []
+    # times_response_all_ch = []
+    times_propagation_tx = 0
+    
     for index_ch in ch_list:
         retries = 0
         #node_ch = node_uw[ch]
@@ -61,6 +64,8 @@ def propagate_tx_to_ch(sink1, ch_list, node_uw1, genesis_tx, max_retries=3, time
             if Ch_node['IsSynced']:
                 # print(f"Propagando Tx génesis al CH {node_uw[ch]['NodeID']}")
 
+                time_start_ptx = time.time() # inicia el conteo del tiempo de propagación
+
                 # Aqui toca agregar el delay de propagación basasdo en la formula de distancia/velocidad
                 # delay = random_sync_delay()  # Generar un tiempo de retraso aleatorio
                 # calcular la distancia entre los nodos
@@ -68,7 +73,10 @@ def propagate_tx_to_ch(sink1, ch_list, node_uw1, genesis_tx, max_retries=3, time
                 delay = propagation_time(dist, speed=1500)
                 print(f"Sink enviando Tx genesis (Request_auth) al CH {Ch_node['NodeID']}, retraso de {delay:.2f} segundos, distancia calculada {dist:.2f}")
                 time.sleep(delay)  # Simular el tiempo de sincronización
-
+                # speed_propagation.append(speed)
+                # print('speed_propagation', speed_propagation)
+                times_propagation_tx = times_propagation_tx + (time.time() - time_start_ptx)
+                
                 # Simular probabilidad de recepción
                 if propagate_with_probability():
 
@@ -86,7 +94,10 @@ def propagate_tx_to_ch(sink1, ch_list, node_uw1, genesis_tx, max_retries=3, time
                         Ch_node['Tips'].append(genesis_tx['ID'])    # Se guarda la Tx genesis en el CH
 
                         # Propagar la Tx Génesis a los nodos del cluster del CH
-                        propagate_genesis_to_cluster(node_uw1, index_ch, genesis_tx, max_retries=3, timeout=2)
+                        times_propagation_tx_nodes = propagate_genesis_to_cluster(node_uw1, index_ch, genesis_tx, max_retries=3, timeout=2)
+                        
+                        # suma el tiempo que lleva en cada cluster 
+                        times_propagation_tx = times_propagation_tx + times_propagation_tx_nodes
 
                         recived = True
                         break
@@ -107,7 +118,7 @@ def propagate_tx_to_ch(sink1, ch_list, node_uw1, genesis_tx, max_retries=3, time
             print(f"CH {Ch_node['NodeID']} no respondió tras {max_retries} reintentos.")
             recived = False
 
-    return recived, times_verify_all_ch, times_response_all_ch
+    return recived, times_verify_all_ch, times_propagation_tx
 
 
 # Funcion para propagar la tx genesis hacia cada cluster
@@ -126,6 +137,10 @@ def propagate_genesis_to_cluster(node_uw2, ch_index, genesis_tx, max_retries=3, 
     # Almacena el nodo CH para esta ronda
     ch_node1 = node_uw2[ch_index]
     #print(indexCH)
+    
+    # Variable para almacenar el tiempo de propagación de tx genesis
+    times_propagation_tx_nodes = 0
+    speed_propagation = []
 
     # Iterar sobre los nodos del cluster
     for node1 in node_uw2:
@@ -137,6 +152,8 @@ def propagate_genesis_to_cluster(node_uw2, ch_index, genesis_tx, max_retries=3, 
             while retries < max_retries:
                 # print(f"Intentando enviar la transacción génesis al nodo {node['NodeID']}... Reintento {retries + 1}/{max_retries}")
 
+                time_start_ptx = time.time() # inicia el conteo del tiempo de propagación
+
                 # Aqui toca agregar el delay de propagación basasdo en la formula de distancia/velocidad
                 # delay = random_sync_delay()  # Generar un tiempo de retraso aleatorio
                 # calcular la distancia entre los nodos
@@ -144,6 +161,8 @@ def propagate_genesis_to_cluster(node_uw2, ch_index, genesis_tx, max_retries=3, 
                 delay = propagation_time(dist, speed=1500)
                 print(f"CH {ch_node1['NodeID']} enviando Tx genesis (Request_auth) al nodo {node1['NodeID']}, retraso de {delay:.2f} segundos, distancia calculada {dist:.2f}")
                 time.sleep(delay)  # Simular el tiempo de sincronización
+                # speed_propagation.append(speed)
+                times_propagation_tx_nodes = times_propagation_tx_nodes + (time.time() - time_start_ptx)
 
                 if propagate_with_probability():
                     # Verificar la Tx con la clave pública del Sink
@@ -166,6 +185,8 @@ def propagate_genesis_to_cluster(node_uw2, ch_index, genesis_tx, max_retries=3, 
             # Si se alcanzan los reintentos máximos
             if retries == max_retries:
                 print(f"Nodo {node1['NodeID']} no respondió tras {max_retries} reintentos.")
+
+    return times_propagation_tx_nodes
 
 # ####
 # # Crear la genesis
@@ -253,6 +274,10 @@ def propagate_tx_to_sink_and_cluster(sink1, list_ch, node_uw3, max_retries=3, ti
     times_verify_all_ch = []
     times_response_all_ch = []
 
+    # Variable para almacenar el tiempo de propagación de tx respuesta del CH
+    # al sink y nodos del cluster
+    times_propagation_tx_response = 0
+
     for ch_index in list_ch:
         print('Iniciando propagación de la transacción respuesta del CH al sink y dentro del cluster...')
         indexCH = node_uw3[ch_index]['NodeID']
@@ -290,6 +315,8 @@ def propagate_tx_to_sink_and_cluster(sink1, list_ch, node_uw3, max_retries=3, ti
 
         retries = 0
         while retries < max_retries:
+            
+            start_response_tx_ch = time.time()
             # Se puede medir el tiempo de propagación de la Tx dentro del cluster
             # Aqui toca agregar el delay de propagación basasdo en la formula de distancia/velocidad
             # delay = random_sync_delay()  # Generar un tiempo de retraso aleatorio
@@ -298,6 +325,8 @@ def propagate_tx_to_sink_and_cluster(sink1, list_ch, node_uw3, max_retries=3, ti
             delay = propagation_time(dist, speed=1500)
             print(f"CH {ch_node1['NodeID']} enviando Tx Response_auth_to_sink, retraso de {delay:.2f} segundos, distancia calculada {dist:.2f}")
             time.sleep(delay)  # Simular el tiempo de sincronización
+
+            times_propagation_tx_response = times_propagation_tx_response + (time.time() - start_response_tx_ch)
 
             print('####')
             print('Antes de actualizar el CH imprimimos el esatdo del nodo : ', ch_node1)
@@ -372,6 +401,9 @@ def propagate_tx_to_sink_and_cluster(sink1, list_ch, node_uw3, max_retries=3, ti
                 retries = 0
 
                 while retries < max_retries:
+                    
+                    start_response_tx_ch = time.time()
+
                     # Aqui toca agregar el delay de propagación basasdo en la formula de distancia/velocidad
                     # delay = random_sync_delay()  # Generar un tiempo de retraso aleatorio
                     # calcular la distancia entre los nodos
@@ -379,6 +411,8 @@ def propagate_tx_to_sink_and_cluster(sink1, list_ch, node_uw3, max_retries=3, ti
                     delay = propagation_time(dist, speed=1500)
                     print(f"CH {ch_node1['NodeID']} enviando Tx Response_auth_to_sink al nodo {node2['NodeID']} de su cluster, retraso de {delay:.2f} segundos, distancia calculada {dist:.2f}")
                     time.sleep(delay)  # Simular el tiempo de sincronización
+
+                    times_propagation_tx_response = times_propagation_tx_response + (time.time() - start_response_tx_ch)
 
                     if propagate_with_probability():
                         # Los nodos que reciben la Tx de respuesta del CH, tambien deben buscar la clave en la bbd y verificarl
@@ -412,7 +446,7 @@ def propagate_tx_to_sink_and_cluster(sink1, list_ch, node_uw3, max_retries=3, ti
                 if retries == max_retries:
                     print(f"Nodo {node2['NodeID']} no respondió tras {max_retries} reintentos.")
 
-
+    return times_response_all_ch, times_propagation_tx_response
 
 # Filtrado de Nodos Sincronizados: Primero se filtran los nodos que deben autenticarse con el CH, asegurando que sean nodos sincronizados y que no sean el propio CH.
 # Generación de la Transacción: Los nodos generan una transacción de autenticación que envían al CH.
@@ -441,6 +475,9 @@ def authenticate_nodes_to_ch(nodes, chead, max_retries=3, timeout=2):
         node_ch = nodes[index_ch]
         print('Nodo ch para esta vuelta: ', node_ch)
 
+        # Creamos el diccionario para las busquedas rapidas de ID del nodo a actulizar en el CH
+        diccionary_nodes = create_diccionary_nodes(node_ch['RegisterNodes'])
+
         for node4 in cluster_nodes:
             retries = 0
             authenticated = False
@@ -448,6 +485,9 @@ def authenticate_nodes_to_ch(nodes, chead, max_retries=3, timeout=2):
             print('Nodo del cluster : ', node4)
             # Crear transacción de autenticación para el CH
             node_auth_tx = create_auth_response_tx(node4)
+
+            # Agregar la tx como tips en el nodo, se agrega aqui despues de todo el proceso
+            node4['Tips'].append(node_auth_tx['ID'])    # corregido
 
             while retries < max_retries and not authenticated:
                 print(f"Nodo {node4['NodeID']} intenta autenticarse con el CH {node_ch['NodeID']}...")
@@ -493,10 +533,7 @@ def authenticate_nodes_to_ch(nodes, chead, max_retries=3, timeout=2):
                             #nodes[index_ch]['ApprovedTransactions'].append(node_auth_tx['ID'])
                             print("Tx agregadas : ", node_ch['Tips'])
                             #print("Pausa")
-                            #time.sleep(5)
-                            
-                            # Agregar la tx como tips en el nodo, se agrega aqui despues de todo el proceso
-                            node4['Tips'].append(node_auth_tx['ID'])    # corregido
+                            #time.sleep(5)                        
 
                             # Se agrega el id de tx al ch
                             node_ch['Tips'].append(node_auth_tx['ID'])  # corregido
@@ -507,7 +544,24 @@ def authenticate_nodes_to_ch(nodes, chead, max_retries=3, timeout=2):
                             # Actualizar el nodo dentro del cluster
                             update_transactions(node4, node_auth_tx)    # corregido
 
-                            #node4['Tips'] = node_auth_tx['ID']
+                            # #node4['Tips'] = node_auth_tx['ID']
+                            # # Buscar la ubicación del nodo en la lista de RegisterNodes
+                            # index_node = find_node_index(node_ch['RegisterNodes'], node4['NodeID'])
+                            # # print('Indice encontrado: ', index_node)
+                            # # time.sleep(5)
+
+                            index_node = diccionary_nodes.get(node4['NodeID'], -1)
+                            if index_node != -1:
+                                # Aqui debemos colocar como autenticado el nodo en los registros del CH
+                                node_ch['RegisterNodes'][index_node]['Status_auth'] = True
+                                print(f"El nodo con NodeID {node4['NodeID']} se encuentra en el índice {index_node}.")
+                            else:
+                                print(f"No se encontró el nodo con NodeID {node4['NodeID']}.")
+
+                            # # Aqui debemos colocar como autenticado el nodo en los registros del CH
+                            # node_ch['RegisterNodes'][index_node]['Status_auth'] = True
+                            # print('Nodo actualizado : ', node_ch['RegisterNodes'][index_node]['Status_auth'])
+                            # time.sleep(5)
 
                         else:
                             print(f"CH {node_ch['NodeID']} falló en la verificación de la autenticación de Nodo {node4['NodeID']}.")
@@ -685,3 +739,45 @@ def delete_transaction(node, transaction_id):
 
     print(f"Transacción con ID {transaction_id} no encontrada en el nodo {node['NodeID']}.")
     return False
+
+
+# Función para busqueda lineal en el diccionario, no puede ser muy eficiente si incrementa el numero de nodos
+def find_node_index(register_nodes, target_node_id):
+    """
+    Busca en la lista 'register_nodes' el nodo cuyo 'NodeID' coincide con 'target_node_id'
+    y devuelve su índice. Si no se encuentra el nodo, retorna -1.
+
+    Parámetros:
+      - register_nodes: lista de diccionarios, cada uno representando un nodo.
+      - target_node_id: identificador del nodo a buscar (se compara en forma de cadena).
+
+    Retorna:
+      - Índice (int) del nodo en la lista, o -1 si no se encontró.
+    """
+    # Convertir el target_node_id a cadena para evitar problemas de tipado
+    target_node_id = str(target_node_id)
+    
+    # print('Register nodes: ', register_nodes)
+    # print('Target node id : ', target_node_id)
+
+    # Realiza una búsqueda lineal en la lista
+    for index, node in enumerate(register_nodes):
+        # print('Indice : ', index, ' node : ', node)
+        # time.sleep(5)
+        if str(node.get("NodeID")) == target_node_id:
+            return index  # Se retorna el índice tan pronto se encuentra la coincidencia
+    return -1  # Retorna -1 si no se encontró ningún nodo con el ID especificado
+
+
+# Función para busquedas más rapidas, conviertiendo los indices y el nodoId en un diccionario para busquedas
+def create_diccionary_nodes(register_nodes):
+    """
+    Crea un diccionario que asocia cada NodeID al índice correspondiente.
+    
+    Parámetros:
+      - register_nodes: lista de diccionarios, cada uno representando un nodo.
+    
+    Retorna:
+      - Un diccionario {NodeID: índice}
+    """
+    return {node["NodeID"]: index for index, node in enumerate(register_nodes)}
