@@ -131,14 +131,16 @@ def save_stats_tx(filename, stats_tx):
         # Escribir los encabezados en el archivo CSV
         # Si el archivo está vacío, escribir los encabezados
         if file.tell() == 0:
-            writer.writerow(['Times CreateTxGen', 'Times VerifyTx', 'Times TxResponse'])
+            writer.writerow(['Times CreateTxGen', 'times_propagation_txgen', 'times_verifyTx_toCH', 'times_TxresponseCH', 'times_propagation_response_tx'])
 
         # Convertir las estadísticas en filas y escribirlas en el archivo
         for i in range(len(stats_tx['times_createTxgen'])):
             writer.writerow([
                 stats_tx['times_createTxgen'][i],
-                stats_tx['times_verifyTx'][i] if i < len(stats_tx['times_verifyTx']) else '',
-                stats_tx['times_Txresponse'][i] if i < len(stats_tx['times_Txresponse']) else ''
+                stats_tx['times_propagation_txgen'][i] if i < len(stats_tx['times_propagation_txgen']) else '',
+                stats_tx['times_verifyTx_toCH'][i] if i < len(stats_tx['times_verifyTx_toCH']) else '',
+                stats_tx['times_TxresponseCH'][i] if i < len(stats_tx['times_TxresponseCH']) else '',
+                stats_tx['times_propagation_response_tx'][i] if i < len(stats_tx['times_propagation_response_tx']) else ''
             ])
 
 
