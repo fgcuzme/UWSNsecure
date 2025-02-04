@@ -251,24 +251,24 @@ save_stats_to_syn_csv('sync_stats_cdma.csv', stats_cdma, 'CDMA')
 print ('FIN DE PROCESO DE SYNCRONIZACIÓN SIMULANDO CDMA...')
 print('-')
 
-# # Borrar la sincronización establecida
-# clear_sync_state(node_sink, node_uw, CH)
+# Borrar la sincronización establecida
+clear_sync_state(node_sink, node_uw, CH)
 
-# print("-")
-# print("INCIO PROCESO DE SINCRONIZACIÓN CON TDMA")
+print("-")
+print("INCIO PROCESO DE SINCRONIZACIÓN CON TDMA")
 
-# # Sincronización basada en CDMA
-# # syn_packet, stats_cdma = propagate_syn_to_CH_cdma(node_sink, CH, node_uw, max_retries, timeout, freq)
-# syn_packet, stats_tdma = propagate_syn_to_CH_tdma(node_sink, CH, node_uw, max_retries, timeout, freq, E_schedule, size_packet_control, alpha, P_r, E_standby)
+# Sincronización basada en CDMA
+# syn_packet, stats_cdma = propagate_syn_to_CH_cdma(node_sink, CH, node_uw, max_retries, timeout, freq)
+syn_packet, stats_tdma = propagate_syn_to_CH_tdma(node_sink, CH, node_uw, max_retries, timeout, freq, E_schedule, size_packet_control, alpha, P_r, E_standby)
 
-# print(" - ")
-# print('Resultados TDMA')
+print(" - ")
+print('Resultados TDMA')
 
-# # save_stats_to_csv_cdma('sync_stats_tdma.csv', stats_tdma, 'TDMA')
-# save_stats_to_syn_csv('sync_stats_tdma.csv', stats_tdma, 'TDMA')
+# save_stats_to_csv_cdma('sync_stats_tdma.csv', stats_tdma, 'TDMA')
+save_stats_to_syn_csv('sync_stats_tdma.csv', stats_tdma, 'TDMA')
 
-# print("FIN PROCESO DE SINCRONIZACIÓN CON TDMA")
-# print("-")
+print("FIN PROCESO DE SINCRONIZACIÓN CON TDMA")
+print("-")
 
 ######################
 
