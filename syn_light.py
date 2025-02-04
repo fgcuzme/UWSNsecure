@@ -185,6 +185,9 @@ def propagate_syn_to_CH_tdma(sink, CH_ids, node_uw, max_retries=3, timeout=2, fr
             else:               
                 print(f"Cluster Head {ch + 1} sincronizado exitosamente.")
                 node_uw[ch]["IsSynced"] = True  # Marcar el nodo como sincronizado
+                
+                # Si el CH se sincroniza exitosamente el Sink lo habilita como sincronizado
+                sink['RegisterNodes'][ch]['Status_syn'] = True
 
                 # Capturar estadísticas de sincronización del CH
                 sync_end_time = time.time() - start_time
@@ -232,7 +235,7 @@ def synchronize_nodes_tdma(CH_id, syn_packet, node_uw, max_retries_sensor, timeo
 
             # delay = random_sync_delay()  # Generar un tiempo de retraso aleatorio
             # calcular la distancia entre los nodos
-            dist = np.linalg.norm(node["Position"] - node_uw[CH_id + 1]["Position"])
+            dist = np.linalg.norm(node["Position"] - node_uw[CH_id]["Position"])
 
             delay = propagation_time(dist, speed=1500)
 
@@ -255,6 +258,10 @@ def synchronize_nodes_tdma(CH_id, syn_packet, node_uw, max_retries_sensor, timeo
             if ack_received_node:
                 print(f"Nodo {node['NodeID']} sincronizado exitosamente.")
                 node["IsSynced"] = True  # Marcar el nodo como sincronizado
+
+                # Registrar el nodo como sincronizado en el CH
+                register_node_to_ch(CH_id, node["NodeID"], node["IsSynced"], False, node_uw)  # Aquí asumimos que aún no está autenticado
+
             else:
                 print(f"Nodo {node['NodeID']} falló en sincronizarse, intento {retries+1}")
                 retries += 1
@@ -535,12 +542,16 @@ def clear_sync_state(nodo_sink, node_uw, CH):
         nodo_sink['RegisterNodes'][i]['Status_syn'] = False
         # nodo_sink['RegisterNodes'][i]['Status_auth'] = False
 
+    #print(" node sink : ", nodo_sink)
+
     # Restablecer el estado de autenticación de cada nodo CH
     for ch_index in CH:
         for i in range(len(node_uw[ch_index]['RegisterNodes'])):
+            #print("ch_index : ", ch_index, " i : ", i, " len : ", len(node_uw[ch_index]['RegisterNodes']))
             node_uw[ch_index]['RegisterNodes'][i]['Status_syn'] = False
             # node_uw[ch_index]['RegisterNodes'][i]['Status_auth'] = False
-            node_uw[ch_index]["RegisterNodes"] = [] # Eliminar los registros del CH
+        
+        node_uw[ch_index]["RegisterNodes"] = [] # Eliminar los registros del CH
 
     for node in node_uw:
         node['IsSynced'] = False
