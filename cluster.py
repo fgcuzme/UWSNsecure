@@ -4,16 +4,13 @@ import numpy as np
 # Guangsong Yang, School of Information Engineering, Jimei University, Xiamen, China, gsyang@jmu.edu.cn
 # 2010
 
-
 def classify_levels(dist_al_sink, num_levels):
     """
     Clasifica los nodos en niveles basados en la distancia al Sink.
     Los nodos más cercanos al Sink obtienen un nivel más bajo.
-
     Parámetros:
     dist_al_sink: array con las distancias de los nodos al Sink.
     num_levels: número de niveles a generar.
-
     Retorna:
     niveles: array con los niveles asignados a cada nodo, donde el nivel está basado en la distancia al Sink.
     """
