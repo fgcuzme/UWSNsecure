@@ -16,7 +16,6 @@ import numpy as np
 
 # # print(nodo_sink)
 
-
 import random
 import time
 
