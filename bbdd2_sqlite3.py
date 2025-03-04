@@ -487,3 +487,83 @@ if x_priv_ch and x_pub_node:
 # 📌 Verificación
 assert shared_key_node == shared_key_ch, "Error: Las claves compartidas no coinciden"
 print("🔐 Claves compartidas generadas correctamente y almacenadas en la BBDD.")
+
+
+####
+
+# función que carga las claves compartidas
+def get_x25519_shared_keys(db_path, node_id):
+
+    # Obtener la ruta del directorio donde se encuentra el script actual
+    # current_dir = os.path.dirname(os.path.abspath(__file__))
+    current_dir = os.getcwd()
+    
+    # Definir la carpeta donde quieres guardar el archivo (carpeta 'data')
+    carpeta_destino = os.path.join(current_dir, 'data')
+
+    # Crea la carpeta en caso de no existir
+    if not os.path.exists(carpeta_destino):
+        os.makedirs(carpeta_destino)
+
+    # Ruta completa del archivo de la base de datos dentro de la carpeta 'data'
+    ruta_bbdd = os.path.join(carpeta_destino, db_path)
+
+    conn = sqlite3.connect(ruta_bbdd)
+    cursor = conn.cursor()
+
+    """
+    Recupera la clave pública y privada de X25519 desde la BBDD según el ID del nodo.
+    """
+    # conn = sqlite3.connect(db_path)
+    # cursor = conn.cursor()
+    
+    cursor.execute("SELECT node_id, peer_id, shared_key FROM shared_keys WHERE node_id = ?", (node_id,))
+    row = cursor.fetchone()
+    
+    conn.close()
+    
+    if row:
+        return row[1], row[2]  # Devuelve clave pública y privada en bytes
+    return None, None
+
+###
+
+def encrypt_message(shared_key, plaintext):
+    """Cifra un mensaje con ASCON usando la clave compartida."""
+    nonce = os.urandom(16)
+    associated_data = b""
+    ciphertext = encrypt(shared_key[:16], nonce, associated_data, plaintext.encode(), variant="Ascon-128")
+    #encrypted_key = encrypt(key, nonce, associated_data, private_key_bytes, variant="Ascon-128")
+    print("Mensaje cifrado : ", ciphertext.hex())
+    print("Nonce : ", nonce.hex())
+    return nonce + ciphertext  # Incluye el nonce en el mensaje cifrado
+
+def decrypt_message(shared_key, encrypted_message):
+    """Descifra un mensaje con ASCON."""
+    print("Separar el nonce : ", encrypted_message[:16])
+    print("Separar el mensaje : ", encrypted_message[16:])
+    nonce, ciphertext = encrypted_message[:16], encrypted_message[16:]
+    associated_data = b""
+    #decrypted_key = decrypt(key, nonce, associated_data, encrypted_key, variant="Ascon-128")
+    return decrypt(shared_key[:16], nonce, associated_data, ciphertext, variant="Ascon-128").decode()
+
+
+## Prueba datos de sensores
+from data_sensors import *
+
+data = generate_sensor_data(f"node_{node_id}")
+plaintext = str(data)
+print("Dato a encriptar : ", plaintext)
+
+# Simulación de transmisión de datos cifrados
+# plaintext = "Mensaje secreto del nodo al CH tiene este tammaño de dato"
+_, shared_key = get_x25519_shared_keys("bbdd_keys_shared_sign_cipher.db", ch_id)  # Obtener clave compartida del nodo
+
+print("Clave compartida recuperada : ", shared_key.hex())
+
+encrypted_msg = encrypt_message(shared_key, plaintext)
+print(f"📤 Mensaje cifrado enviado: {encrypted_msg.hex()}")
+
+# CH descifra el mensaje
+decrypted_msg = decrypt_message(shared_key, encrypted_msg)
+print(f"📥 Mensaje descifrado en CH: {decrypted_msg}")
