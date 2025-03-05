@@ -6,7 +6,7 @@ def random_speed_of_sound():
     # Rango de salinidad en ppt
     salinity = random.uniform(30, 40)
     # Rango de profundidad en metros
-    depth = random.uniform(0, 100)
+    depth = random.uniform(0, 1000)
     # depth = 100
     
     # Ecuación de Mackenzie para calcular la velocidad del sonido en el agua
@@ -19,7 +19,6 @@ def random_speed_of_sound():
 # Ejemplo de uso:
 velocidad, temp, sal, prof = random_speed_of_sound()
 print(f"Velocidad del sonido: {velocidad:.2f} m/s a {temp:.2f}°C, {sal:.2f} ppt, {prof:.2f} m")
-
 
 
 # Para calcular el tiempo de propagación de una señal acústica en un entorno subacuático, se puede usar la fórmula
@@ -46,11 +45,11 @@ def propagation_time(dist, speed=1500):
     
     # Se calcula la velocidad del sonido de acuerdo a la formula de Mackenzie
     speed, temp, sal, prof = random_speed_of_sound()
-    print("Velocidad calculada con la formula de Mackenzie ", speed)
+    # print(f"Velocidad calculada con la formula de Mackenzie: {velocidad:.2f} m/s a {temp:.2f}°C, {sal:.2f} ppt, {prof:.2f} m")
 
     return dist / speed
 
-distancia = 2000  # Distancia en metros
+distancia = 1000  # Distancia en metros
 tiempo = propagation_time(distancia)
 print(f"El tiempo de propagación es {tiempo:.2f} segundos")
 
@@ -65,34 +64,34 @@ import random
 # mientras que la propagación se basa en la distancia y un factor de dispersión.
 # Distancia: Evita dividir por cero retornando 0 si dist = 0.
 
-def acoustic_loss_thorp(dist, freq):
-    # Parámetros aleatorios basados en rangos típicos para el modelo de Thorp
-    A = random.uniform(0.08, 0.12)  # Valor ajustado para bajas frecuencias
-    B = random.uniform(35, 45)     # Para frecuencias intermedias
-    C = random.uniform(4000, 4200) # Frecuencia crítica de absorción
-    D = random.uniform(0.0015, 0.0025) # Factor para frecuencias altas
+# def acoustic_loss_thorp(dist, freq):
+#     # Parámetros aleatorios basados en rangos típicos para el modelo de Thorp
+#     A = random.uniform(0.08, 0.12)  # Valor ajustado para bajas frecuencias
+#     B = random.uniform(35, 45)     # Para frecuencias intermedias
+#     C = random.uniform(4000, 4200) # Frecuencia crítica de absorción
+#     D = random.uniform(0.0015, 0.0025) # Factor para frecuencias altas
     
-    # Evitar división por cero
-    if dist == 0:
-        return 0
+#     # Evitar división por cero
+#     if dist == 0:
+#         return 0
     
-    # Absorción acústica en dB/km (basado en el modelo Thorp simplificado)
-    absorption_loss = (A * freq**2) / (freq**2 + B) + C * freq**2 / (freq**2 + D)
-    absorption_loss *= dist / 1000  # Convertir a dB/m
+#     # Absorción acústica en dB/km (basado en el modelo Thorp simplificado)
+#     absorption_loss = (A * freq**2) / (freq**2 + B) + C * freq**2 / (freq**2 + D)
+#     absorption_loss *= dist / 1000  # Convertir a dB/m
     
-    # Pérdidas por propagación (factor de propagación)
-    spreading_factor = 1.5  # Se puede ajustar según las condiciones
-    propagation_loss = spreading_factor * 10 * np.log10(dist)
+#     # Pérdidas por propagación (factor de propagación)
+#     spreading_factor = 1.5  # Se puede ajustar según las condiciones
+#     propagation_loss = spreading_factor * 10 * np.log10(dist)
     
-    # Pérdidas totales
-    total_loss = propagation_loss + absorption_loss
-    return total_loss
+#     # Pérdidas totales
+#     total_loss = propagation_loss + absorption_loss
+#     return total_loss
 
-distancia = 1000
-freq = 20
+# distancia = 1000
+# freq = 20
 
-loss = acoustic_loss_thorp(distancia, freq)
-print(f"Absorción acústica a {freq} kHz: {loss:.2f} dB/km")
+# loss = acoustic_loss_thorp(distancia, freq)
+# print(f"Absorción acústica a {freq} kHz: {loss:.2f} dB/km")
 
 
 # Donde α tiene unidades de dB·km-1 y f es la frecuencia de la señal en kHz. El último
@@ -102,9 +101,7 @@ print(f"Absorción acústica a {freq} kHz: {loss:.2f} dB/km")
 
 def thorp_absorption(frequency_khz):
     # Fórmula de Thorp para calcular absorción en dB/km
-    alpha = (0.11 * frequency_khz**2) / (1 + frequency_khz**2) + \
-            (44 * frequency_khz**2) / (4100 + frequency_khz) + \
-            2.75e-4 * frequency_khz**2 + 0.003
+    alpha = (0.11 * frequency_khz**2) / (1 + frequency_khz**2) + (44 * frequency_khz**2) / (4100 + frequency_khz) + 2.75e-4 * frequency_khz**2 + 0.003
     return alpha
 
 # Ejemplo de uso:
