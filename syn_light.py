@@ -1,6 +1,8 @@
 import time
 import numpy as np
 import random
+from test_throp import propagation_time
+
 
 # Función para crear un paquete SYN desde el Sink
 def create_syn_packet(sink_id, timestamp):
@@ -23,37 +25,37 @@ def random_sync_delay():
 # 𝑡 = es el tiempo de propagación (en segundos),
 # 𝑑 = es la distancia entre el emisor y el receptor (en metros),
 # 𝑣 = es la velocidad del sonido en el agua (en metros por segundo).
-# La velocidad del sonido en el agua puede variar dependiendo de la temperatura, la salinidad y la presión.
-def propagation_time(dist, speed=1500):
-    """
-    Calcula el tiempo de propagación de una señal acústica.
+# # La velocidad del sonido en el agua puede variar dependiendo de la temperatura, la salinidad y la presión.
+# def propagation_time(dist, speed=1500):
+#     """
+#     Calcula el tiempo de propagación de una señal acústica.
     
-    Parámetros:
-    - dist: Distancia en metros entre el emisor y el receptor.
-    - speed: Velocidad del sonido en el agua (por defecto 1500 m/s).
+#     Parámetros:
+#     - dist: Distancia en metros entre el emisor y el receptor.
+#     - speed: Velocidad del sonido en el agua (por defecto 1500 m/s).
     
-    Retorna:
-    - Tiempo de propagación en segundos.
-    """
-    if dist <= 0:
-        return 0  # Evitar valores negativos o nulos de distancia
+#     Retorna:
+#     - Tiempo de propagación en segundos.
+#     """
+#     if dist <= 0:
+#         return 0  # Evitar valores negativos o nulos de distancia
     
-    return dist / speed
+#     return dist / speed
 
 
-def propagation_time(dist, speed=1500):
-    """
-    Calcula el tiempo de propagación de una señal acústica.    
-    Parámetros:
-    - dist: Distancia en metros entre el emisor y el receptor.
-    - speed: Velocidad del sonido en el agua (por defecto 1500 m/s).
-    Retorna:
-    - Tiempo de propagación en segundos.
-    """
-    if dist <= 0:
-        return 0  # Evitar valores negativos o nulos de distancia
+# def propagation_time(dist, speed=1500):
+#     """
+#     Calcula el tiempo de propagación de una señal acústica.    
+#     Parámetros:
+#     - dist: Distancia en metros entre el emisor y el receptor.
+#     - speed: Velocidad del sonido en el agua (por defecto 1500 m/s).
+#     Retorna:
+#     - Tiempo de propagación en segundos.
+#     """
+#     if dist <= 0:
+#         return 0  # Evitar valores negativos o nulos de distancia
     
-    return dist / speed
+#     return dist / speed
 
 
 
@@ -245,7 +247,8 @@ def synchronize_nodes_tdma(CH_id, syn_packet, node_uw, max_retries_sensor, timeo
             initial_energy = node["ResidualEnergy"]         
 
             # Actualizar la energía del nodo sensor
-            node = update_energy_node_tdma(node, node_uw[CH_id + 1]["Position"], size_packet, alpha_node, E_schedule, Ptr_node, freq_node, is_ch=False)
+            #node = update_energy_node_tdma(node, node_uw[CH_id + 1]["Position"], size_packet, alpha_node, E_schedule, Ptr_node, freq_node, is_ch=False)
+            node = update_energy_node_tdma(node, node_uw[CH_id]["Position"], size_packet, alpha_node, E_schedule, Ptr_node, freq_node, is_ch=False)
             energy_consumed_node += ((initial_energy - node["ResidualEnergy"]) + E_standby_node)
 
             # print(node_uw)
