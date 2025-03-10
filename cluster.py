@@ -192,7 +192,38 @@ def update_energy(energia_nodos, pos_nodos, CH, idx_CH, sink_pos, a, EDA, E_sche
 # Funciones auxiliares necesarias para la conversión (como acoustic_loss y calcular_consumo_cifrado) deben definirse por separado.
 
 import numpy as np
+from test_throp import thorp_absorption
 
+# def acoustic_loss(dist, freq):
+#     """
+#     Modelo de pérdida acústica basado en la distancia y la frecuencia, 
+#     basado en el modelo de atenuación de Thorp y la teoría de propagación acústica de Urick.
+    
+#     Parámetros:
+#     dist: distancia entre nodos (en metros).
+#     freq: frecuencia de transmisión (en kHz).
+    
+#     Retorna:
+#     L: pérdida acústica en dB.
+#     """
+    
+#     # Parámetros típicos del medio acuático
+#     alpha = 0.01  # Factor de absorción (dB/m) para la frecuencia dada (ajustar según el ambiente)
+#     spreading_factor = 1.5  # Factor de propagación (generalmente entre 1 y 2)
+
+#     # Cálculo de pérdida de transmisión (en dB)
+#     # Pérdida por absorción: L_absorption = alpha * freq * dist
+#     absorption_loss = alpha * freq * dist
+
+#     # Pérdida por propagación (espacio libre o esférico): L_propagation = spreading_factor * log10(dist)
+#     propagation_loss = spreading_factor * np.log10(dist)
+
+#     # Pérdida total de señal (suma de absorción y propagación)
+#     L = propagation_loss + absorption_loss  # Total en dB
+
+#     return L
+
+# Definir la función de pérdida acústica
 def acoustic_loss(dist, freq):
     """
     Modelo de pérdida acústica basado en la distancia y la frecuencia, 
@@ -206,13 +237,15 @@ def acoustic_loss(dist, freq):
     L: pérdida acústica en dB.
     """
     
+    if dist <= 0 or freq <= 0:
+        raise ValueError("La distancia y la frecuencia deben ser mayores que cero.")
+
     # Parámetros típicos del medio acuático
-    alpha = 0.01  # Factor de absorción (dB/m) para la frecuencia dada (ajustar según el ambiente)
+    alpha = thorp_absorption(freq) / 1000  # Convertir a dB/m (ya que Thorp da dB/km)
     spreading_factor = 1.5  # Factor de propagación (generalmente entre 1 y 2)
 
-    # Cálculo de pérdida de transmisión (en dB)
-    # Pérdida por absorción: L_absorption = alpha * freq * dist
-    absorption_loss = alpha * freq * dist
+    # Pérdida por absorción: L_absorption = alpha * dist
+    absorption_loss = alpha * dist
 
     # Pérdida por propagación (espacio libre o esférico): L_propagation = spreading_factor * log10(dist)
     propagation_loss = spreading_factor * np.log10(dist)
@@ -221,6 +254,7 @@ def acoustic_loss(dist, freq):
     L = propagation_loss + absorption_loss  # Total en dB
 
     return L
+
 
 # Ejemplo de uso en Python:
 # dist = 1000  # Distancia entre nodos en metros
