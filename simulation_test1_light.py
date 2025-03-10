@@ -1,4 +1,3 @@
-
 # %% PARAMETROS INICIALES DE SIMULACIÓN
 import numpy as np
 from bbdd2_sqlite3 import generarte_keys_shared_without_cipher, generarte_keys_sign_without_cipher
@@ -7,10 +6,10 @@ print ('PARAMETROS DE SIMULACIÓN...')
 # PARAMETROS DE LA RED INICIAL
 # Parámetros de la red de nodos
 num_nodes = 20  # Número de nodos
-dim_x = 100  # Dimensiones del área de despliegue (en metros)
-dim_y = 100
-dim_z = -100  # Profundidad (en metros)
-sink_pos = np.array([50, 50, 0])  # Posición del Sink en el centro
+dim_x = 200  # Dimensiones del área de despliegue (en metros)
+dim_y = 200
+dim_z = -200  # Profundidad (en metros)
+sink_pos = np.array([100, 100, 0])  # Posición del Sink en el centro
 E_init = 10  # Energía inicial de cada nodo (en Joules)
 
 # Frecuencia de transmisión en kHz
@@ -96,7 +95,7 @@ print ('INICIO DE PROCESO DE CREACIÓN DE CLUSTER...')
 ## Proceso de generación de cluster
 num_rounds = 1
 num_niveles = 3
-radio_comunicacion = 50
+radio_comunicacion = 100
 
 # Inicialización de energía
 energia_nodos = np.full(num_nodes, E_init)
