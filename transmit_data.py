@@ -300,27 +300,55 @@ def generate_shared_keys(db_path, node_uw, CH, node_sink):
             print(f"🔐 CH {node_id} generó clave compartida con el Sink")
 
 
-def transmit_data(db_path, sender_id, receiver_id, plaintext, node_sink):
-    """Simula la transmisión de datos cifrados entre nodos usando claves compartidas almacenadas en la base de datos."""
-    conn = sqlite3.connect(db_path)
+def transmit_data(db_path, sender_id, receiver_id, plaintext, node_sink, node_uw):
+    # """Simula la transmisión de datos cifrados entre nodos usando claves compartidas almacenadas en la base de datos."""
+    # conn = sqlite3.connect(db_path)
+    # cursor = conn.cursor()
+
+    # Obtener la ruta del directorio donde se encuentra el script actual
+    # current_dir = os.path.dirname(os.path.abspath(__file__))
+    current_dir = os.getcwd()
+    
+    # Definir la carpeta donde quieres guardar el archivo (carpeta 'data')
+    carpeta_destino = os.path.join(current_dir, 'data')
+
+    # Crea la carpeta en caso de no existir
+    if not os.path.exists(carpeta_destino):
+        os.makedirs(carpeta_destino)
+
+    # Ruta completa del archivo de la base de datos dentro de la carpeta 'data'
+    ruta_bbdd = os.path.join(carpeta_destino, db_path)
+
+    conn = sqlite3.connect(ruta_bbdd)
     cursor = conn.cursor()
+
+    # Obtener clave compartida entre nodos dentro de la BBDD
+    cursor.execute("SELECT shared_key FROM shared_keys WHERE node_id = ? AND peer_id = ?", (sender_id, receiver_id))
+    row = cursor.fetchone()
+    conn.close()
+
+    print("sender_id : ", sender_id, " -> ", "receiver_id : ", receiver_id)
 
     # 📌 Caso especial: Si el receptor es el Sink, usa la clave almacenada en node_sink
     if receiver_id == node_sink["NodeID"]:
         print(f"🔹 Enviando datos al Sink desde {sender_id}")
-        x_pub_receiver = node_sink["PublicKey_shared"].encode()  # Convertir clave a bytes
-        x_priv_sender, _ = get_x25519_keys(db_path, sender_id)  # Obtener clave privada del remitente
+        x_pub_receiver = node_sink["PublicKey_shared"] #.encode()  # Convertir clave a bytes
+        # x_priv_sender, _ = get_x25519_keys(db_path, sender_id)  # Obtener clave privada del remitente
+        x_priv_sender = node_uw[sender_id]["PrivateKey_shared"]
 
+        print("Clave publica receptor : ", x_pub_receiver)
+        print("Clave privada emisor : ",x_priv_sender)
+        
         if x_priv_sender and x_pub_receiver:
             shared_key = derive_shared_key(x_priv_sender, x_pub_receiver)  # Generar clave compartida
         else:
             print(f"🚨 Error al generar clave compartida entre {sender_id} y Sink")
             return
     else:
-        # Obtener clave compartida entre nodos dentro de la BBDD
-        cursor.execute("SELECT shared_key FROM shared_keys WHERE node_id = ? AND peer_id = ?", (sender_id, receiver_id))
-        row = cursor.fetchone()
-        conn.close()
+        # # Obtener clave compartida entre nodos dentro de la BBDD
+        # cursor.execute("SELECT shared_key FROM shared_keys WHERE node_id = ? AND peer_id = ?", (sender_id, receiver_id))
+        # row = cursor.fetchone()
+        # conn.close()
 
         if row:
             shared_key = row[0]
@@ -368,8 +396,8 @@ generate_shared_keys("bbdd_keys_shared_sign_cipher.db", node_uw, CH, node_sink)
 # 📌 Simulación de transmisión de información entre nodos y CHs
 for i in range(1, 11):  # Simular 10 envíos
     ch_id = node_uw[i]["ClusterHead"]
-    transmit_data("bbdd_keys_shared_sign_cipher.db", node_uw[i]["NodeID"], ch_id, f"Temperatura: {np.random.uniform(5, 30):.2f}°C", node_sink)
+    transmit_data("bbdd_keys_shared_sign_cipher.db", node_uw[i]["NodeID"], ch_id, f"Temperatura: {np.random.uniform(5, 30):.2f}°C", node_sink, node_uw)
 
 # 📌 Simulación de CH enviando datos al Sink
 for ch in CH:
-    transmit_data("bbdd_keys_shared_sign_cipher.db", ch, node_sink["NodeID"], "Datos agregados del cluster", node_sink)
+    transmit_data("bbdd_keys_shared_sign_cipher.db", ch, node_sink["NodeID"], "Datos agregados del cluster", node_sink, node_uw)
