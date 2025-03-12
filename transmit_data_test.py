@@ -92,7 +92,7 @@ def store_shared_key(db_path, node_id, peer_id, shared_key):
     cursor = conn.cursor()
 
     cursor.execute("INSERT INTO shared_keys (node_id, peer_id, shared_key) VALUES (?, ?, ?)",
-                   (node_id, peer_id, shared_key))
+                   (int(node_id), int(peer_id), shared_key))
     conn.commit()
     conn.close()
 
@@ -115,13 +115,13 @@ def generate_shared_keys(db_path, node_uw, CH, node_sink):
 
         if x_priv_node and x_pub_ch:
             shared_key = derive_shared_key(x_priv_node, x_pub_ch)
-            print("db_path : ", db_path, "node_id : ", node_id, "ch_id : ", ch_id, "shared_key : ", shared_key)
+            print("db_path : ", db_path, "node_id : ", node_id, "ch_id : ", ch_id, "shared_key : ", shared_key.hex())
             store_shared_key(db_path, node_id, ch_id, shared_key)
             print(f"🔐 Nodo {node_id} generó clave compartida con CH {ch_id}")
 
         if node_id in CH:  # Si el nodo es un CH, genera clave con el Sink
             shared_key = derive_shared_key(x_priv_node, x_pub_sink)
-            print("db_path : ", db_path, "node_id : ", node_id, "node_sink[NodeID] : ", node_sink["NodeID"], "shared_key : ", shared_key)
+            print("db_path : ", db_path, "node_id : ", node_id, "node_sink[NodeID] : ", node_sink["NodeID"], "shared_key : ", shared_key.hex())
             store_shared_key(db_path, node_id, node_sink["NodeID"], shared_key)
             print(f"🔐 CH {node_id} generó clave compartida con el Sink")
 
@@ -171,12 +171,14 @@ def transmit_data(db_path, sender_id, receiver_id, plaintext):
     cursor = conn.cursor()
         
     # Obtener la clave compartida entre los nodos
-    cursor.execute("SELECT shared_key FROM shared_keys WHERE node_id = ? AND peer_id = ?", (sender_id, receiver_id))
+    # cursor.execute("SELECT shared_key FROM shared_keys WHERE node_id = ? AND peer_id = ?", (sender_id, receiver_id)) # accede al dato tipo blob
+    cursor.execute("SELECT shared_key FROM shared_keys WHERE node_id = ? AND peer_id = ?", (int(sender_id), int(receiver_id))) # accede al dato tipo int
     row = cursor.fetchone()
     conn.close()
 
     if row:
         shared_key = row[0]
+        print("shared_key : ", row[0].hex())
         encrypted_msg = encrypt_message(shared_key, plaintext)
         
         # Simulación de retardo en la propagación acústica
