@@ -123,8 +123,8 @@ def store_shared_key(db_path, node_id, peer_id, shared_key):
     # conn = sqlite3.connect(db_path)
     # cursor = conn.cursor()
     
-    cursor.execute("INSERT INTO shared_keys (node_id, peer_id, shared_key) VALUES (?, ?, ?)",
-                   (node_id, peer_id, shared_key))
+    cursor.execute("INSERT INTO shared_keys (node_id, peer_id, shared_key) VALUES ( ?, ?, ?)",
+                   (int(node_id), int(peer_id), shared_key))
     
     conn.commit()
     conn.close()
@@ -240,14 +240,14 @@ def encrypt_message(shared_key, plaintext):
     associated_data = b""
     ciphertext = encrypt(shared_key[:16], nonce, associated_data, plaintext.encode(), variant="Ascon-128")
     #encrypted_key = encrypt(key, nonce, associated_data, private_key_bytes, variant="Ascon-128")
-    print("Mensaje cifrado : ", ciphertext.hex())
-    print("Nonce : ", nonce.hex())
+    # print("Mensaje cifrado : ", ciphertext.hex())
+    # print("Nonce : ", nonce.hex())
     return nonce + ciphertext  # Incluye el nonce en el mensaje cifrado
 
 def decrypt_message(shared_key, encrypted_message):
     """Descifra un mensaje con ASCON."""
-    print("Separar el nonce : ", encrypted_message[:16])
-    print("Separar el mensaje : ", encrypted_message[16:])
+    # print("Separar el nonce : ", encrypted_message[:16])
+    # print("Separar el mensaje : ", encrypted_message[16:])
     nonce, ciphertext = encrypted_message[:16], encrypted_message[16:]
     associated_data = b""
     #decrypted_key = decrypt(key, nonce, associated_data, encrypted_key, variant="Ascon-128")
@@ -293,11 +293,13 @@ def generate_shared_keys(db_path, node_uw, CH, node_sink):
             shared_key = derive_shared_key(x_priv_node, x_pub_ch)
             store_shared_key(db_path, node_id, ch_id, shared_key)
             print(f"🔐 Nodo {node_id} generó clave compartida con CH {ch_id}")
+            print("shared_key : ", shared_key.hex())
 
         if node_id in CH:  # Si el nodo es un CH, genera clave con el Sink
             shared_key = derive_shared_key(x_priv_node, x_pub_sink)
             store_shared_key(db_path, node_id, node_sink["NodeID"], shared_key)
             print(f"🔐 CH {node_id} generó clave compartida con el Sink")
+            print("shared_key : ", shared_key.hex())
 
 
 def transmit_data(db_path, sender_id, receiver_id, plaintext, node_sink, node_uw):
@@ -323,7 +325,8 @@ def transmit_data(db_path, sender_id, receiver_id, plaintext, node_sink, node_uw
     cursor = conn.cursor()
 
     # Obtener clave compartida entre nodos dentro de la BBDD
-    cursor.execute("SELECT shared_key FROM shared_keys WHERE node_id = ? AND peer_id = ?", (sender_id, receiver_id))
+    # cursor.execute("SELECT shared_key FROM shared_keys WHERE node_id = ? AND peer_id = ?", (sender_id, receiver_id)) # accede al dato tipo blob
+    cursor.execute("SELECT shared_key FROM shared_keys WHERE node_id = ? AND peer_id = ?", (int(sender_id), int(receiver_id))) # accede al dato tipo int
     row = cursor.fetchone()
     conn.close()
 
@@ -334,10 +337,10 @@ def transmit_data(db_path, sender_id, receiver_id, plaintext, node_sink, node_uw
         print(f"🔹 Enviando datos al Sink desde {sender_id}")
         x_pub_receiver = node_sink["PublicKey_shared"] #.encode()  # Convertir clave a bytes
         # x_priv_sender, _ = get_x25519_keys(db_path, sender_id)  # Obtener clave privada del remitente
-        x_priv_sender = node_uw[sender_id]["PrivateKey_shared"]
+        x_priv_sender = node_uw[sender_id-1]["PrivateKey_shared"]
 
-        print("Clave publica receptor : ", x_pub_receiver)
-        print("Clave privada emisor : ",x_priv_sender)
+        print("Clave publica receptor : ", x_pub_receiver.hex())
+        print("Clave privada emisor : ",x_priv_sender.hex())
         
         if x_priv_sender and x_pub_receiver:
             shared_key = derive_shared_key(x_priv_sender, x_pub_receiver)  # Generar clave compartida
