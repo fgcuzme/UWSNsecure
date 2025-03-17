@@ -1,4 +1,6 @@
 import random
+import math
+import numpy as np
 
 def random_speed_of_sound():
     # Rango de temperatura en °C
@@ -49,49 +51,9 @@ def propagation_time(dist, speed=1500):
 
     return dist / speed
 
-distancia = 1000  # Distancia en metros
+distancia = 500  # Distancia en metros
 tiempo = propagation_time(distancia)
 print(f"El tiempo de propagación es {tiempo:.2f} segundos")
-
-
-
-import numpy as np
-import random
-
-# Función de perdidas por absorción
-# Constantes A, B, C, D: Se generan aleatoriamente dentro de los rangos recomendados para simular variaciones en las condiciones ambientales.
-# Absorción y Pérdida por Propagación: La absorción se calcula usando un ajuste simplificado del modelo de Thorp, 
-# mientras que la propagación se basa en la distancia y un factor de dispersión.
-# Distancia: Evita dividir por cero retornando 0 si dist = 0.
-
-# def acoustic_loss_thorp(dist, freq):
-#     # Parámetros aleatorios basados en rangos típicos para el modelo de Thorp
-#     A = random.uniform(0.08, 0.12)  # Valor ajustado para bajas frecuencias
-#     B = random.uniform(35, 45)     # Para frecuencias intermedias
-#     C = random.uniform(4000, 4200) # Frecuencia crítica de absorción
-#     D = random.uniform(0.0015, 0.0025) # Factor para frecuencias altas
-    
-#     # Evitar división por cero
-#     if dist == 0:
-#         return 0
-    
-#     # Absorción acústica en dB/km (basado en el modelo Thorp simplificado)
-#     absorption_loss = (A * freq**2) / (freq**2 + B) + C * freq**2 / (freq**2 + D)
-#     absorption_loss *= dist / 1000  # Convertir a dB/m
-    
-#     # Pérdidas por propagación (factor de propagación)
-#     spreading_factor = 1.5  # Se puede ajustar según las condiciones
-#     propagation_loss = spreading_factor * 10 * np.log10(dist)
-    
-#     # Pérdidas totales
-#     total_loss = propagation_loss + absorption_loss
-#     return total_loss
-
-# distancia = 1000
-# freq = 20
-
-# loss = acoustic_loss_thorp(distancia, freq)
-# print(f"Absorción acústica a {freq} kHz: {loss:.2f} dB/km")
 
 
 # Donde α tiene unidades de dB·km-1 y f es la frecuencia de la señal en kHz. El último
@@ -100,8 +62,14 @@ import random
 # que es donde se tomaron las medidas [2]. 
 
 def thorp_absorption(frequency_khz):
+    fsq = frequency_khz * frequency_khz
     # Fórmula de Thorp para calcular absorción en dB/km
-    alpha = (0.11 * frequency_khz**2) / (1 + frequency_khz**2) + (44 * frequency_khz**2) / (4100 + frequency_khz) + 2.75e-4 * frequency_khz**2 + 0.003
+    if (frequency_khz >= 0.4):
+        # alpha = (0.11 * frequency_khz**2) / (1 + frequency_khz**2) + (44 * frequency_khz**2) / (4100 + frequency_khz) + 2.75e-4 * frequency_khz**2 + 0.003
+        # alpha = (0.11 * frequency_khz**2) / (1 + frequency_khz**2) + (44 * frequency_khz**2) / (4100 + frequency_khz) + (2.75 * 10**-4) * frequency_khz**2 + 0.003
+        alpha = (0.11 * fsq / (1 + fsq) + 44 * fsq / (4100 + fsq) + 2.75e-4 * fsq + 0.003)
+    else:
+        alpha = 0.002 + 0.11 * (frequency_khz / (1 + frequency_khz)) + 0.011 * frequency_khz
     return alpha
 
 # Ejemplo de uso:
@@ -134,9 +102,13 @@ print(f"Absorción acústica a {frecuencia} kHz: {absorcion:.2f} dB/km")
 # Cilíndrico (2D spreading): Se da en entornos como canales acústicos, donde la propagación es limitada horizontalmente, con pérdidas de 
 # 10 log b10 (d)
 
+# spherical -> 2
+# cylindrical -> 1
+# mixed -> 1.5
+
 import numpy as np
 
-def spreading_loss(distance, spreading_type='spherical'):
+def spreading_loss(distance, spreading_type):
     """
     Calcula la pérdida por dispersión (spreading loss) para una señal acústica.
 
@@ -147,18 +119,58 @@ def spreading_loss(distance, spreading_type='spherical'):
     Returns:
     - float: Pérdida en dB.
     """
-    if spreading_type == 'spherical':
+    if spreading_type == 2:
         return 20 * np.log10(distance)  # Pérdida esférica
-    elif spreading_type == 'cylindrical':
+    elif spreading_type == 1:
         return 10 * np.log10(distance)  # Pérdida cilíndrica
+    elif spreading_type == 1.5:
+        return 15 * np.log10(distance)  # Pérdida mixta
     else:
         raise ValueError("Tipo de dispersión no válido. Use 'spherical' o 'cylindrical'.")
 
+
+def compute_path_loss(frequency_khz: float, distance: float, spread_coef: float = 1.5):
+        """
+        Calcula la pérdida de propagación en el canal acústico submarino.
+        :param propagation_speed: Velocidad de propagación del sonido en el agua (m/s)
+        :param frequency: Frecuencia en Hz
+        :param distance: Distancia en metros
+        :return: Pérdida de propagación en factor de fracción (no en dB)
+        # """
+        # attenuation_db = (self.spread_coef * 10.0 * math.log10(distance) +
+        #                   (distance / 1000.0) * self.get_atten_db_km(frequency / 1000.0))
+        
+        attenuation_db = spreading_loss(distance, spread_coef) +  (distance/1000.0) * thorp_absorption(frequency_khz)
+
+        # print(" attenuation_db : ", attenuation_db)
+
+        return attenuation_db, 10 ** (-attenuation_db / 10)  # Conversión de dB a fracción
+
+
+def compute_range(frequency: float, loss: float):
+    """
+    Calcula el alcance máximo basado en la frecuencia y la pérdida de señal.
+    :param propagation_speed: Velocidad de propagación del sonido en el agua (m/s)
+    :param frequency: Frecuencia en Hz
+    :param loss: Factor de pérdida permitido
+    :return: Distancia máxima en metros
+    """
+    att = 10 ** (-thorp_absorption(frequency) / 10)  # Conversión de dB a fracción
+    distance = 1000 * loss / att
+    return distance
+
+
 # Ejemplo de uso:
-distancia = 1000  # metros
-print(f"Pérdida esférica: {spreading_loss(distancia, 'spherical')} dB")
-print(f"Pérdida cilíndrica: {spreading_loss(distancia, 'cylindrical')} dB")
+# distancia = 1500  # metros
+print(f"Pérdida esférica: {spreading_loss(distancia, 2)} dB")
+print(f"Pérdida cilíndrica: {spreading_loss(distancia, 1)} dB")
+print(f"Pérdida mixta: {spreading_loss(distancia, 1.5)} dB")
 
 
-print(f"Perdida total absorption_loss + spreading_loss(spherical) : ", absorcion + spreading_loss(distancia, 'spherical'))
-print(f"Perdida total absorption_loss + spreading_loss(cylindrical) : ", absorcion + spreading_loss(distancia, 'cylindrical'))
+print(f"Perdida total path_loss (spherical) : ", compute_path_loss(frecuencia, distancia, 2))
+print(f"Perdida total path_loss (cylindrical) : ", compute_path_loss(frecuencia, distancia, 1))
+print(f"Perdida total path_loss (mixta) : ", compute_path_loss(frecuencia, distancia, 1.5))
+
+# Ejemplo de cálculo del rango máximo
+loss = 1e-3  # Factor de pérdida permitido
+print(f"Distancia máxima alcanzable: {compute_range(frecuencia, loss)} metros")

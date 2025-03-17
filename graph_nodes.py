@@ -51,26 +51,26 @@ for nodo_id, pos in pos_nodes.items():
     else:
         ax.scatter(pos[0], pos[1], -pos[2], c='green', s=50, label='Sensor' if nodo_id == nodos_regulares[0] else "")
 
-# Dibujar conexiones entre nodos
-for nodo in nodos:
-    nodo_pos = pos_nodes[nodo["NodeID"]]
-    for vecino in nodo["NeighborNodes"]:
-        vecino_pos = pos_nodes[vecino]
-        ax.plot([nodo_pos[0], vecino_pos[0]], 
-                [nodo_pos[1], vecino_pos[1]], 
-                [-nodo_pos[2], -vecino_pos[2]], 'k-', alpha=0.5)
-
-# # Dibujar conexiones solo de los sensores hacia su CH
+# # Dibujar conexiones entre nodos
 # for nodo in nodos:
-#     nodo_id = nodo["NodeID"]
-#     if "ClusterHead" in nodo and nodo["ClusterHead"] != nodo_id:  # Nodo regular
-#         ch_id = nodo["ClusterHead"]
-#         if ch_id in pos_nodes:  # Verificar que el CH existe
-#             nodo_pos = pos_nodes[nodo_id]
-#             ch_pos = pos_nodes[ch_id]
-#             ax.plot([nodo_pos[0], ch_pos[0]], 
-#                     [nodo_pos[1], ch_pos[1]], 
-#                     [-nodo_pos[2], -ch_pos[2]], 'k-', alpha=0.5)
+#     nodo_pos = pos_nodes[nodo["NodeID"]]
+#     for vecino in nodo["NeighborNodes"]:
+#         vecino_pos = pos_nodes[vecino]
+#         ax.plot([nodo_pos[0], vecino_pos[0]], 
+#                 [nodo_pos[1], vecino_pos[1]], 
+#                 [-nodo_pos[2], -vecino_pos[2]], 'k-', alpha=0.5)
+
+# Dibujar conexiones solo de los sensores hacia su CH
+for nodo in nodos:
+    nodo_id = nodo["NodeID"]
+    if "ClusterHead" in nodo and nodo["ClusterHead"] != nodo_id:  # Nodo regular
+        ch_id = nodo["ClusterHead"]
+        if ch_id in pos_nodes:  # Verificar que el CH existe
+            nodo_pos = pos_nodes[nodo_id]
+            ch_pos = pos_nodes[ch_id]
+            ax.plot([nodo_pos[0], ch_pos[0]], 
+                    [nodo_pos[1], ch_pos[1]], 
+                    [-nodo_pos[2], -ch_pos[2]], 'k-', alpha=0.5)
             
 
 # Conectar CH al Sink visualmente

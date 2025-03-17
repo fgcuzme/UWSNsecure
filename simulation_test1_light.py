@@ -220,13 +220,13 @@ print('-')
 # %%    PROCESO DE SINCRONIZACIÓN
 
 print('-')
-print ('INICIO DE PROCESO DE SYNCRONIZACIÓN SIMULANDO CDMA...')
+print ('INICIO DE PROCESO DE SYNCRONIZACIÓN...')
 
 from syn_light import propagate_syn_to_CH_tdma, propagate_syn_to_CH_cdma, clear_sync_state
 from save_csv import save_stats_to_csv, save_stats_to_csv_cdma, save_stats_to_syn_csv
 
-# Borrar la sincronización establecida
-clear_sync_state(node_sink, node_uw, CH)
+# # Borrar la sincronización establecida
+# clear_sync_state(node_sink, node_uw, CH)
 
 ### SINCRONIZACIÓN DE NODO
 max_retries = 3
@@ -237,21 +237,25 @@ alpha=1e-6
 E_listen=1e-9
 E_standby=1e-12
 
-# Sincronización basada en CDMA
-# syn_packet, stats_cdma = propagate_syn_to_CH_cdma(node_sink, CH, node_uw, max_retries, timeout, freq)
-syn_packet, stats_cdma = propagate_syn_to_CH_cdma(node_sink, CH, node_uw, max_retries, timeout, freq, processing_energy_cdma, size_packet_control, alpha, P_r, E_listen, E_standby)
+# Por ahora solo se va a utilizar TDMA
+# print('-')
+# print ('INICIO DE PROCESO DE SYNCRONIZACIÓN SIMULANDO CDMA...')
 
-print(" - ")
-print('Resultados CDMA')
+# # Sincronización basada en CDMA
+# # syn_packet, stats_cdma = propagate_syn_to_CH_cdma(node_sink, CH, node_uw, max_retries, timeout, freq)
+# syn_packet, stats_cdma = propagate_syn_to_CH_cdma(node_sink, CH, node_uw, max_retries, timeout, freq, processing_energy_cdma, size_packet_control, alpha, P_r, E_listen, E_standby)
 
-# save_stats_to_csv_cdma('sync_stats_cdma.csv', stats_cdma, 'CDMA')
-save_stats_to_syn_csv('sync_stats_cdma.csv', stats_cdma, 'CDMA')
+# print(" - ")
+# print('Resultados CDMA')
 
-print ('FIN DE PROCESO DE SYNCRONIZACIÓN SIMULANDO CDMA...')
-print('-')
+# # save_stats_to_csv_cdma('sync_stats_cdma.csv', stats_cdma, 'CDMA')
+# save_stats_to_syn_csv('sync_stats_cdma.csv', stats_cdma, 'CDMA')
 
-# Borrar la sincronización establecida
-clear_sync_state(node_sink, node_uw, CH)
+# print ('FIN DE PROCESO DE SYNCRONIZACIÓN SIMULANDO CDMA...')
+# print('-')
+
+# # Borrar la sincronización establecida
+# clear_sync_state(node_sink, node_uw, CH)
 
 print("-")
 print("INCIO PROCESO DE SINCRONIZACIÓN CON TDMA")
@@ -361,10 +365,65 @@ print("FIN PROCESO DE AUTENTICACIÓN BASADO EN TX")
 
 print('Nodo Sink : ', node_sink)
 
+
+#%%
+## INICIO PROCESO DE TRANSMISIÓN DE DATOS CIFRADOS CON ASCON
+print("-")
+print ('INICIO PROCESO DE TRANSMISIÓN DE DATOS CIFRADOS CON ASCON...')
+from transmit_data_test import create_shared_keys_table, generate_shared_keys, transmit_data
+
+# Se crea la tabla en la BBDD donde se van a crear las claves compartidas
+create_shared_keys_table("bbdd_keys_shared_sign_cipher.db")
+
+# 📌 Generar claves compartidas después de la autenticación
+generate_shared_keys("bbdd_keys_shared_sign_cipher.db", node_uw, CH, node_sink)
+
+# Número total de transmisiones que queremos completar
+total_transmissions = 20
+completed_transmissions = 0  # Contador de transmisiones realizadas
+max_attempts = 100  # Para evitar un bucle infinito si no hay nodos elegibles
+attempts = 0
+
+attempts = 0
+while completed_transmissions < total_transmissions and attempts < max_attempts:
+    attempts += 1  # Contador de intentos para evitar bucles infinitos
+    
+    # Seleccionamos un nodo aleatorio
+    sender_index = np.random.randint(0, len(node_uw))  # Selección aleatoria de nodo
+    sender = node_uw[sender_index]
+
+    # Obtener el ID del Cluster Head (CH)
+    ch_id = sender.get("ClusterHead")
+
+    # Validar que el nodo tiene un Cluster Head asignado
+    if ch_id is None or ch_id == sender["NodeID"]:
+        continue  # Saltar si el nodo no tiene CH o si es su propio CH
+
+    # Obtener el nodo Cluster Head
+    receiver = node_uw[ch_id - 1]
+
+    # Transmitir datos
+    transmit_data("bbdd_keys_shared_sign_cipher.db", sender, receiver, f"Temperatura: {np.random.uniform(5, 30):.2f}°C")
+
+    completed_transmissions += 1  # Incrementar transmisiones realizadas
+
+# 📌 Simulación de CH enviando datos al Sink
+for ch in CH:
+    node_cluster = node_uw[ch - 1]
+    transmit_data("bbdd_keys_shared_sign_cipher.db", node_cluster, node_sink, "Datos agregados del cluster")
+
+print(f"✅ Simulación completa: {completed_transmissions}/{total_transmissions} transmisiones realizadas.")
+
+
+print("-")
+print ('FIN PROCESO DE TRANSMISIÓN DE DATOS CIFRADOS CON ASCON...')
+#%%
+
 # %%
 #%%
-# ###################
 
+# ###################
+print("-")
 print ('INICIO PROCESO DE GUARDADO NODOS EN ARCHIVO PICKLE...')
 # ## GUARDAR LA ESTRUCTURA HASTA ESTE MOMENTO
 # import json

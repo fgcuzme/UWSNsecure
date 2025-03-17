@@ -397,7 +397,7 @@ print("🚀 Iniciando simulación de red submarina con una única BBDD...")
 generate_shared_keys("bbdd_keys_shared_sign_cipher.db", node_uw, CH, node_sink)
 
 # 📌 Simulación de transmisión de información entre nodos y CHs
-for i in range(1, 11):  # Simular 10 envíos
+for i in range(0, 10):  # Simular 10 envíos
     ch_id = node_uw[i]["ClusterHead"]
     transmit_data("bbdd_keys_shared_sign_cipher.db", node_uw[i]["NodeID"], ch_id, f"Temperatura: {np.random.uniform(5, 30):.2f}°C", node_sink, node_uw)
 
