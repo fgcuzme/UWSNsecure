@@ -69,7 +69,11 @@ def propagate_tx_to_ch(sink1, ch_list, node_uw1, genesis_tx, max_retries=3, time
                 # delay = random_sync_delay()  # Generar un tiempo de retraso aleatorio
                 # calcular la distancia entre los nodos
                 dist = np.linalg.norm(Ch_node["Position"] - sink1["Position"])
-                delay = propagation_time(dist, speed=1500)
+                
+                start_position = sink1["Position"]
+                end_position = Ch_node["Position"]
+
+                delay = propagation_time(dist, start_position, end_position)
                 print(f"Sink enviando Tx genesis (Request_auth) al CH {Ch_node['NodeID']}, retraso de {delay:.2f} segundos, distancia calculada {dist:.2f}")
                 time.sleep(delay)  # Simular el tiempo de sincronización
                 # speed_propagation.append(speed)
@@ -157,7 +161,11 @@ def propagate_genesis_to_cluster(node_uw2, ch_index, genesis_tx, max_retries=3, 
                 # delay = random_sync_delay()  # Generar un tiempo de retraso aleatorio
                 # calcular la distancia entre los nodos
                 dist = np.linalg.norm(ch_node1["Position"] - node1["Position"])
-                delay = propagation_time(dist, speed=1500)
+                
+                start_position = ch_node1["Position"]
+                end_position = node1["Position"]
+                delay = propagation_time(dist, start_position, end_position)
+                
                 print(f"CH {ch_node1['NodeID']} enviando Tx genesis (Request_auth) al nodo {node1['NodeID']}, retraso de {delay:.2f} segundos, distancia calculada {dist:.2f}")
                 time.sleep(delay)  # Simular el tiempo de sincronización
                 # speed_propagation.append(speed)
@@ -321,7 +329,11 @@ def propagate_tx_to_sink_and_cluster(sink1, list_ch, node_uw3, max_retries=3, ti
             # delay = random_sync_delay()  # Generar un tiempo de retraso aleatorio
             # calcular la distancia entre los nodos
             dist = np.linalg.norm(ch_node1["Position"] - sink1["Position"])
-            delay = propagation_time(dist, speed=1500)
+            
+            start_position = ch_node1["Position"]
+            end_position = sink1["Position"]
+            delay = propagation_time(dist, start_position, end_position)
+            
             print(f"CH {ch_node1['NodeID']} enviando Tx Response_auth_to_sink, retraso de {delay:.2f} segundos, distancia calculada {dist:.2f}")
             time.sleep(delay)  # Simular el tiempo de sincronización
 
@@ -407,7 +419,11 @@ def propagate_tx_to_sink_and_cluster(sink1, list_ch, node_uw3, max_retries=3, ti
                     # delay = random_sync_delay()  # Generar un tiempo de retraso aleatorio
                     # calcular la distancia entre los nodos
                     dist = np.linalg.norm(ch_node1["Position"] - node2["Position"])
-                    delay = propagation_time(dist, speed=1500)
+                    
+                    start_position = ch_node1["Position"]
+                    end_position = node2["Position"]
+                    delay = propagation_time(dist, start_position, end_position)
+                    
                     print(f"CH {ch_node1['NodeID']} enviando Tx Response_auth_to_sink al nodo {node2['NodeID']} de su cluster, retraso de {delay:.2f} segundos, distancia calculada {dist:.2f}")
                     time.sleep(delay)  # Simular el tiempo de sincronización
 
@@ -495,7 +511,11 @@ def authenticate_nodes_to_ch(nodes, chead, max_retries=3, timeout=2):
                 # delay = random_sync_delay()  # Generar un tiempo de retraso aleatorio
                 # calcular la distancia entre los nodos
                 dist = np.linalg.norm(node_ch["Position"] - node4["Position"])
-                delay = propagation_time(dist, speed=1500)
+                
+                start_position = node4["Position"]
+                end_position = node_ch["Position"]
+                delay = propagation_time(dist, start_position, end_position)
+                
                 print(f"Nodo {node4['NodeID']} envia Tx Response_auth_to_ch al CH {node_ch['NodeID']}, retraso de {delay:.2f} segundos, distancia calculada {dist:.2f}")
                 time.sleep(delay)  # Simular el tiempo de sincronización
 

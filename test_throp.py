@@ -2,13 +2,12 @@ import random
 import math
 import numpy as np
 
-def random_speed_of_sound():
+def random_speed_of_sound(depth = random.uniform(0, 8000)):
     # Rango de temperatura en °C
     temp = random.uniform(0, 30)
     # Rango de salinidad en ppt
     salinity = random.uniform(30, 40)
     # Rango de profundidad en metros
-    depth = random.uniform(0, 1000)
     # depth = 100
     
     # Ecuación de Mackenzie para calcular la velocidad del sonido en el agua
@@ -31,7 +30,7 @@ print(f"Velocidad del sonido: {velocidad:.2f} m/s a {temp:.2f}°C, {sal:.2f} ppt
 # 𝑣 = es la velocidad del sonido en el agua (en metros por segundo).
 # La velocidad del sonido en el agua puede variar dependiendo de la temperatura, la salinidad y la presión.
 
-def propagation_time(dist, speed=1500):
+def propagation_time(dist, start_position, end_position):
     """
     Calcula el tiempo de propagación de una señal acústica.
     
@@ -42,17 +41,19 @@ def propagation_time(dist, speed=1500):
     Retorna:
     - Tiempo de propagación en segundos.
     """
-    if dist <= 0:
-        return 0  # Evitar valores negativos o nulos de distancia
+    # Calcular la profundidad media
+    depth = np.abs((start_position[2] - end_position[2]) / 2 + end_position[2])
     
     # Se calcula la velocidad del sonido de acuerdo a la formula de Mackenzie
-    speed, temp, sal, prof = random_speed_of_sound()
-    # print(f"Velocidad calculada con la formula de Mackenzie: {velocidad:.2f} m/s a {temp:.2f}°C, {sal:.2f} ppt, {prof:.2f} m")
+    speed, temp, sal, prof = random_speed_of_sound(depth)
+    print(f"Velocidad calculada con la formula de Mackenzie: {speed:.2f} m/s a {temp:.2f}°C, {sal:.2f} ppt, {prof:.2f} m")
 
     return dist / speed
 
 distancia = 500  # Distancia en metros
-tiempo = propagation_time(distancia)
+start_position = (100, 100, 0)  # Coordenadas (x, y, z) del transmisor
+end_position = (67.33, 131.87, 13.71)  # Coordenadas (x, y, z) del receptor
+tiempo = propagation_time(distancia, start_position, end_position)
 print(f"El tiempo de propagación es {tiempo:.2f} segundos")
 
 

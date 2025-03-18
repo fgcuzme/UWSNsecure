@@ -196,7 +196,9 @@ def transmit_data(db_path, sender_id, receiver_id, plaintext):
         # Simulación de retardo en la propagación acústica
         # distance = np.random.uniform(100, 1000)  # Distancia aleatoria entre nodos
         distance = np.linalg.norm(sender_id["Position"] - receiver_id["Position"])
-        delay = propagation_time(distance, speed=1500)  # Velocidad del sonido en agua ~1500 m/s
+        start_position = sender_id["Position"]
+        end_position = receiver_id["Position"]
+        delay = propagation_time(distance, start_position, end_position)
         print(f"delay of propagation data :  {delay}")
         time.sleep(delay)
 

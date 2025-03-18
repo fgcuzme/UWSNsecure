@@ -1,7 +1,7 @@
 import time
 import numpy as np
 import random
-from test_throp import propagation_time
+from test_throp import propagation_time, compute_path_loss
 
 
 # Función para crear un paquete SYN desde el Sink
@@ -15,10 +15,6 @@ def create_syn_packet(sink_id, timestamp):
     }
     return packet
 
-# Función para generar un tiempo de retraso aleatorio basado en la distancia o condiciones del entorno
-def random_sync_delay():
-    return np.random.uniform(0.1, 2)  # Simular tiempos de sincronización entre 100 ms y 2 segundos
-
 # Para calcular el tiempo de propagación de una señal acústica en un entorno subacuático, se puede usar la fórmula
 # t = d / v
 #donde:
@@ -26,37 +22,6 @@ def random_sync_delay():
 # 𝑑 = es la distancia entre el emisor y el receptor (en metros),
 # 𝑣 = es la velocidad del sonido en el agua (en metros por segundo).
 # # La velocidad del sonido en el agua puede variar dependiendo de la temperatura, la salinidad y la presión.
-# def propagation_time(dist, speed=1500):
-#     """
-#     Calcula el tiempo de propagación de una señal acústica.
-    
-#     Parámetros:
-#     - dist: Distancia en metros entre el emisor y el receptor.
-#     - speed: Velocidad del sonido en el agua (por defecto 1500 m/s).
-    
-#     Retorna:
-#     - Tiempo de propagación en segundos.
-#     """
-#     if dist <= 0:
-#         return 0  # Evitar valores negativos o nulos de distancia
-    
-#     return dist / speed
-
-
-# def propagation_time(dist, speed=1500):
-#     """
-#     Calcula el tiempo de propagación de una señal acústica.    
-#     Parámetros:
-#     - dist: Distancia en metros entre el emisor y el receptor.
-#     - speed: Velocidad del sonido en el agua (por defecto 1500 m/s).
-#     Retorna:
-#     - Tiempo de propagación en segundos.
-#     """
-#     if dist <= 0:
-#         return 0  # Evitar valores negativos o nulos de distancia
-    
-#     return dist / speed
-
 
 
 ## Funciones adicionales
@@ -64,20 +29,13 @@ def random_sync_delay():
 # CAMBIAR FUNCIÓN
 # Función de pérdida acústica (implementada previamente)
 def acoustic_loss(dist, freq):
-    # Este valor consultar si es fijo o variable
-    alpha = 0.01  # Factor de absorción (dB/m)
     
     spreading_factor = 1.5  # Factor de propagación
-    
-    # Evitar la división por cero: si dist es 0, devolver una pérdida acústica fija (puede ajustarse)
-    if dist == 0:
-        return 0  # O puedes devolver un valor fijo como 0 o una pequeña constante para evitar errores
-    
-    absorption_loss = alpha * freq * dist
 
-    propagation_loss = spreading_factor * np.log10(dist)
+    # Devuelve la perdida total en dB
+    loss, _ = compute_path_loss(freq, dist, spreading_factor)
 
-    return propagation_loss + absorption_loss
+    return loss
 
 
 # IMPLEMENTADO TDMA
@@ -159,7 +117,9 @@ def propagate_syn_to_CH_tdma(sink, CH_ids, node_uw, max_retries=3, timeout=2, fr
             # calcular la distancia entre los nodos
             dist = np.linalg.norm(node_uw[ch]["Position"] - sink["Position"])
 
-            delay = propagation_time(dist, speed=1500)
+            start_position = sink["Position"]
+            end_position = node_uw[ch]["Position"]
+            delay = propagation_time(dist, start_position, end_position)
 
             print(f"Sincronizando el CH {node_uw[ch]['NodeID']} bajo el Cluster Head Sink con un retraso de {delay:.2f} segundos, distancia calculada {dist:.2f}")
             time.sleep(delay)  # Simular el tiempo de sincronización
@@ -173,7 +133,6 @@ def propagate_syn_to_CH_tdma(sink, CH_ids, node_uw, max_retries=3, timeout=2, fr
 
             # **Nuevo: Calcular la energía consumida**
             energy_consumed_ch += ((initial_energy - node_uw[ch]["ResidualEnergy"]) + E_standby_node)
-
 
             # Simulación de recepción de ACK para el CH, se considera 0 como escenario ideal
             # Pero se puede manejar una probabilidad de acuerdo a otros estudios
@@ -239,7 +198,9 @@ def synchronize_nodes_tdma(CH_id, syn_packet, node_uw, max_retries_sensor, timeo
             # calcular la distancia entre los nodos
             dist = np.linalg.norm(node["Position"] - node_uw[CH_id]["Position"])
 
-            delay = propagation_time(dist, speed=1500)
+            start_position = node["Position"]
+            end_position = node_uw[CH_id]["Position"]
+            delay = propagation_time(dist, start_position, end_position)
 
             print(f"Sincronizando nodo {node['NodeID']} bajo el Cluster Head {CH_id + 1} con un retraso de {delay:.2f} segundos, distancia calculada {dist:.2f}")
             time.sleep(delay)  # Simular el tiempo de sincronización
@@ -380,7 +341,11 @@ def propagate_syn_to_CH_cdma(sink, CH_ids, node_uw, max_retries=3, timeout=2, fr
             # delay = random_sync_delay()  # Generar un tiempo de retraso aleatorio
             # calcular la distancia entre los nodos
             dist = np.linalg.norm(node_uw[ch]["Position"] - sink["Position"])
-            delay = propagation_time(dist, speed=1500)
+            
+            start_position = sink["Position"]
+            end_position = node_uw[ch]["Position"]
+            delay = propagation_time(dist, start_position, end_position)
+
             print(f"Sincronizando el CH {node_uw[ch]['NodeID']} bajo el Sink, retraso de {delay:.2f} segundos, distancia calculada {dist:.2f}")
             time.sleep(delay)  # Simular el tiempo de sincronización
 
@@ -413,7 +378,11 @@ def propagate_syn_to_CH_cdma(sink, CH_ids, node_uw, max_retries=3, timeout=2, fr
                 # delay = random_sync_delay()  # Generar un tiempo de retraso aleatorio
                 # calcular la distancia entre los nodos
                 dist = np.linalg.norm(node_uw[ch]["Position"] - sink["Position"])
-                delay = propagation_time(dist, speed=1500)
+                
+                start_position = sink["Position"]
+                end_position = node_uw[ch]["Position"]
+                delay = propagation_time(dist, start_position, end_position)
+
                 print(f"CH {node_uw[ch]['NodeID']} sicronizado exitosamente bajo el Sink, retraso de {delay:.2f} segundos, distancia calculada {dist:.2f}")
                 time.sleep(delay)  # Simular el tiempo de sincronización
 
@@ -466,7 +435,11 @@ def synchronize_nodes_cdma(CH_id, syn_packet, node_uw, timeout, freq, processing
             # delay = random_sync_delay()  # Generar un tiempo de retraso aleatorio
             # calcular la distancia entre los nodos
             dist = np.linalg.norm(node["Position"] - node_uw[CH_id]["Position"])
-            delay = propagation_time(dist, speed=1500)
+            
+            start_position = node["Position"]
+            end_position = node_uw[CH_id]["Position"]
+            delay = propagation_time(dist, start_position, end_position)
+
             print(f"Sincronizando nodo {node['NodeID']} bajo el Cluster Head {CH_id + 1}, retraso de {delay:.2f} segundos, distancia calculada {dist:.2f}")
             time.sleep(delay)  # Simular el tiempo de sincronización
 
@@ -493,7 +466,11 @@ def synchronize_nodes_cdma(CH_id, syn_packet, node_uw, timeout, freq, processing
                 # delay = random_sync_delay()  # Generar un tiempo de retraso aleatorio
                 # calcular la distancia entre los nodos
                 dist = np.linalg.norm(node["Position"] - node_uw[CH_id]["Position"])
-                delay = propagation_time(dist, speed=1500)
+                
+                start_position = node["Position"]
+                end_position = node_uw[CH_id]["Position"]
+                delay = propagation_time(dist, start_position, end_position)
+
                 print(f"Nodo {node['NodeID']} sincronizado exitosamente bajo el Cluster Head {CH_id + 1}, retraso de {delay:.2f} segundos, distancia calculada {dist:.2f}")
                 time.sleep(delay)  # Simular el tiempo de sincronización
 
