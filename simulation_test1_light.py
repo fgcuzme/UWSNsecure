@@ -379,7 +379,7 @@ create_shared_keys_table("bbdd_keys_shared_sign_cipher.db")
 generate_shared_keys("bbdd_keys_shared_sign_cipher.db", node_uw, CH, node_sink)
 
 # Número total de transmisiones que queremos completar
-total_transmissions = 20
+total_transmissions = 30
 completed_transmissions = 0  # Contador de transmisiones realizadas
 max_attempts = 100  # Para evitar un bucle infinito si no hay nodos elegibles
 attempts = 0
@@ -393,14 +393,22 @@ while completed_transmissions < total_transmissions and attempts < max_attempts:
     sender = node_uw[sender_index]
 
     # Obtener el ID del Cluster Head (CH)
-    ch_id = sender.get("ClusterHead")
+    # ch_id = sender.get("ClusterHead")
+    ch_id = sender["ClusterHead"]
+    # print("Sender : ", ch_id)
 
     # Validar que el nodo tiene un Cluster Head asignado
     if ch_id is None or ch_id == sender["NodeID"]:
+        print("Detiene en caso de no tener CH asignado o es el mismo nodo...")
         continue  # Saltar si el nodo no tiene CH o si es su propio CH
 
     # Obtener el nodo Cluster Head
     receiver = node_uw[ch_id - 1]
+    # print("Receiver : ", receiver["NodeID"])
+    time.sleep(10)
+
+    # verificar que datos se envian
+    print(" Sender : ",sender["NodeID"],"-> Receiver : ", receiver["NodeID"])
 
     # Transmitir datos
     transmit_data("bbdd_keys_shared_sign_cipher.db", sender, receiver, f"Temperatura: {np.random.uniform(5, 30):.2f}°C")
@@ -409,7 +417,7 @@ while completed_transmissions < total_transmissions and attempts < max_attempts:
 
 # 📌 Simulación de CH enviando datos al Sink
 for ch in CH:
-    node_cluster = node_uw[ch - 1]
+    node_cluster = node_uw[ch]
     transmit_data("bbdd_keys_shared_sign_cipher.db", node_cluster, node_sink, "Datos agregados del cluster")
 
 print(f"✅ Simulación completa: {completed_transmissions}/{total_transmissions} transmisiones realizadas.")

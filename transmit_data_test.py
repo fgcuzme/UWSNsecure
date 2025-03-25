@@ -1,5 +1,6 @@
 import sqlite3
 
+# Crea la tabla para almacenar las claves compartidas en la BBDD del nodo
 def create_shared_keys_table(db_path):
 
     # Obtener la ruta del directorio donde se encuentra el script actual
@@ -36,7 +37,7 @@ def create_shared_keys_table(db_path):
     conn.commit()
     conn.close()
 
-
+# Obtiene las claves de la BBDD del nodo, con el ID de clave
 def get_x25519_keys(db_path, key_id):
     # """Obtiene las claves X25519 de la base de datos usando el ID aleatorio asignado."""
     # conn = sqlite3.connect(db_path)
@@ -67,12 +68,15 @@ def get_x25519_keys(db_path, key_id):
 
 from cryptography.hazmat.primitives.asymmetric import x25519
 
+# Realiza la derivación de la clave, tomando la clave privada del nodo source y
+# la clave publica de nodo destination
 def derive_shared_key(x_priv_bytes, peer_x_pub_bytes):
     """Deriva una clave compartida usando X25519."""
     private_key = x25519.X25519PrivateKey.from_private_bytes(x_priv_bytes)
     peer_public_key = x25519.X25519PublicKey.from_public_bytes(peer_x_pub_bytes)
     return private_key.exchange(peer_public_key)
 
+# Almacena la clave compartida en la tabla respectiva
 def store_shared_key(db_path, node_id, peer_id, shared_key):
     # """Guarda la clave compartida en la base de datos."""
     # conn = sqlite3.connect(db_path)
@@ -100,17 +104,31 @@ def store_shared_key(db_path, node_id, peer_id, shared_key):
     conn.commit()
     conn.close()
 
+# Función para generar claves compartidas desde el soruce al destination
 def generate_shared_keys(db_path, node_uw, CH, node_sink):
     """Genera claves compartidas considerando los ID aleatorios asignados a cada nodo."""
     for node in node_uw:
         node_id = node["NodeID"]
         key_id = node["Id_pair_keys_shared"]  # ID de clave aleatoria
         ch_id = node["ClusterHead"]
+        # if_node_ch = 0
         
+        # Obtner clave del sink
+        x_pub_sink = node_sink["PublicKey_shared"]
+
         # Evitar que el nodo genere una clave con él mismo
         if node_id == ch_id:
-            print(f"⚠️ Nodo {node_id} es un CH y no generará clave consigo mismo.")
+            # print(f"⚠️ Nodo {node_id} es un CH y no generará clave consigo mismo.")
+            print(f"⚠️ Nodo {node_id} es un CH...")
+
+            shared_key = derive_shared_key(x_priv_node, x_pub_sink)
+            print("db_path : ", db_path, "node_id : ", node_id, "node_sink[NodeID] : ", node_sink["NodeID"], "shared_key : ", shared_key.hex())
+            store_shared_key(db_path, node_id, node_sink["NodeID"], shared_key)
+            print(f"🔐 CH {node_id} generó clave compartida con el Sink")
+            # if_node_ch = 1
             continue
+        # else:
+        #     if_node_ch = 2
 
         # Obtener claves del nodo y su Cluster Head
         x_pub_node, x_priv_node = get_x25519_keys(db_path, key_id)
@@ -120,7 +138,6 @@ def generate_shared_keys(db_path, node_uw, CH, node_sink):
         # Obtener claves del Sink (única clave)
         # sink_key_id = node_sink["Id_pair_keys_shared"]
         # x_pub_sink, _ = get_x25519_keys(db_path, sink_key_id)
-        x_pub_sink = node_sink["PublicKey_shared"]
 
         if x_priv_node and x_pub_ch:
             shared_key = derive_shared_key(x_priv_node, x_pub_ch)
@@ -128,11 +145,8 @@ def generate_shared_keys(db_path, node_uw, CH, node_sink):
             store_shared_key(db_path, node_id, ch_id, shared_key)
             print(f"🔐 Nodo {node_id} generó clave compartida con CH {ch_id}")
 
-        if node_id in CH:  # Si el nodo es un CH, genera clave con el Sink
-            shared_key = derive_shared_key(x_priv_node, x_pub_sink)
-            print("db_path : ", db_path, "node_id : ", node_id, "node_sink[NodeID] : ", node_sink["NodeID"], "shared_key : ", shared_key.hex())
-            store_shared_key(db_path, node_id, node_sink["NodeID"], shared_key)
-            print(f"🔐 CH {node_id} generó clave compartida con el Sink")
+        #if node_id in CH:  # Si el nodo es un CH, genera clave con el Sink
+            
 
 
 from ascon import encrypt, decrypt
@@ -182,6 +196,9 @@ def transmit_data(db_path, sender_id, receiver_id, plaintext):
 
     sender = sender_id["NodeID"]
     receiver = receiver_id["NodeID"]
+
+    print("Dentro de la función transmit data : ", sender, "-->", receiver)
+
     # Obtener la clave compartida entre los nodos
     # cursor.execute("SELECT shared_key FROM shared_keys WHERE node_id = ? AND peer_id = ?", (sender_id, receiver_id)) # accede al dato tipo blob
     cursor.execute("SELECT shared_key FROM shared_keys WHERE node_id = ? AND peer_id = ?", (int(sender), int(receiver))) # accede al dato tipo int
