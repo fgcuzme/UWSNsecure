@@ -1,4 +1,6 @@
 import sqlite3
+from metrics import (log_latency, log_throughput, log_energy, log_packet_result, 
+                     get_packet_loss_percentage, summarize_metrics, export_metrics_to_json, export_metrics_to_csv)
 
 # Crea la tabla para almacenar las claves compartidas en la BBDD del nodo
 def create_shared_keys_table(db_path):
@@ -104,6 +106,7 @@ def store_shared_key(db_path, node_id, peer_id, shared_key):
     conn.commit()
     conn.close()
 
+
 # Función para generar claves compartidas desde el soruce al destination
 def generate_shared_keys(db_path, node_uw, CH, node_sink):
     """Genera claves compartidas considerando los ID aleatorios asignados a cada nodo."""
@@ -122,9 +125,10 @@ def generate_shared_keys(db_path, node_uw, CH, node_sink):
             print(f"⚠️ Nodo {node_id} es un CH...")
 
             shared_key = derive_shared_key(x_priv_node, x_pub_sink)
-            print("db_path : ", db_path, "node_id : ", node_id, "node_sink[NodeID] : ", node_sink["NodeID"], "shared_key : ", shared_key.hex())
+
+            #print("db_path : ", db_path, "node_id : ", node_id, "node_sink[NodeID] : ", node_sink["NodeID"], "shared_key : ", shared_key.hex())
             store_shared_key(db_path, node_id, node_sink["NodeID"], shared_key)
-            print(f"🔐 CH {node_id} generó clave compartida con el Sink")
+            print(f"🔐 CH {node_id} generó clave compartida con el Sink", shared_key.hex())
             # if_node_ch = 1
             continue
         # else:
@@ -140,14 +144,15 @@ def generate_shared_keys(db_path, node_uw, CH, node_sink):
         # x_pub_sink, _ = get_x25519_keys(db_path, sink_key_id)
 
         if x_priv_node and x_pub_ch:
+
             shared_key = derive_shared_key(x_priv_node, x_pub_ch)
-            print("db_path : ", db_path, "node_id : ", node_id, "ch_id : ", ch_id, "shared_key : ", shared_key.hex())
+
+            #print("db_path : ", db_path, "node_id : ", node_id, "ch_id : ", ch_id, "shared_key : ", shared_key.hex())
             store_shared_key(db_path, node_id, ch_id, shared_key)
-            print(f"🔐 Nodo {node_id} generó clave compartida con CH {ch_id}")
+            print(f"🔐 Nodo {node_id} generó clave compartida con CH {ch_id}", shared_key.hex())
 
         #if node_id in CH:  # Si el nodo es un CH, genera clave con el Sink
             
-
 
 from ascon import encrypt, decrypt
 import os
@@ -197,7 +202,7 @@ def transmit_data(db_path, sender_id, receiver_id, plaintext):
     sender = sender_id["NodeID"]
     receiver = receiver_id["NodeID"]
 
-    print("Dentro de la función transmit data : ", sender, "-->", receiver)
+    #print("Dentro de la función transmit data : ", sender, "-->", receiver)
 
     # Obtener la clave compartida entre los nodos
     # cursor.execute("SELECT shared_key FROM shared_keys WHERE node_id = ? AND peer_id = ?", (sender_id, receiver_id)) # accede al dato tipo blob
@@ -207,9 +212,12 @@ def transmit_data(db_path, sender_id, receiver_id, plaintext):
 
     if row:
         shared_key = row[0]
-        print("shared_key : ", row[0].hex())
+        #print("shared_key : ", row[0].hex())
+
+        start_time = time.time()
         encrypted_msg = encrypt_message(shared_key, plaintext)
-        
+        end_time_encrypted = time.time()
+
         # Simulación de retardo en la propagación acústica
         # distance = np.random.uniform(100, 1000)  # Distancia aleatoria entre nodos
         distance = np.linalg.norm(sender_id["Position"] - receiver_id["Position"])
@@ -224,7 +232,37 @@ def transmit_data(db_path, sender_id, receiver_id, plaintext):
         # delay = distance / 1500  # Velocidad del sonido en agua ~1500 m/s
         # time.sleep(delay)
 
+        start_time_decrypt = time.time()
         decrypted_msg = decrypt_message(shared_key, encrypted_msg)
+        end_time = time.time()
+
+        # latency_ms_encrypted = (end_time_encrypted - start_time) * 1000
+        # latency_ms_encrypted = (end_time_total - start_time_decrypt) * 1000
+        # latency_ms = (end_time_total - start_time) * 1000
+
+        # Registro de métricas
+        log_latency(start_time, end_time)
+
+        data_bytes = len(encrypted_msg)
+        transmission_time = end_time - start_time
+        log_throughput(data_bytes, transmission_time)
+
+        bits_sent = len(plaintext.encode()) * 8
+        bits_received = len(encrypted_msg) * 8
+        log_energy(bits_sent, bits_received)
+
+        # Simular pérdida de paquetes
+        import random
+        success = random.random() > 0.15  # 95% éxito
+        log_packet_result(success)
+
+        if not success:
+            print("⚠️ Paquete perdido durante la transmisión simulada")
+
+        summarize_metrics()
+        export_metrics_to_json()  # Puedes especificar otro nombre si lo deseas
+        export_metrics_to_csv()
+                                  
         print(f"📡 {sender} → {receiver} | 🔐 Cifrado: {encrypted_msg.hex()[:20]}... | 📥 Descifrado: {decrypted_msg}")
     else:
         print(f"🚨 Error: No se encontró clave compartida entre {sender} y {receiver}")

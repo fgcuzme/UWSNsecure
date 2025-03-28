@@ -145,7 +145,6 @@ def save_stats_tx(filename, stats_tx):
 
 
 
-
 def save_stats_to_syn_csv(file_name, stats, method_name):
     """
     Guarda las estadísticas de sincronización en un archivo CSV.

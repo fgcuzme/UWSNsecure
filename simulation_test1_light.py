@@ -405,10 +405,10 @@ while completed_transmissions < total_transmissions and attempts < max_attempts:
     # Obtener el nodo Cluster Head
     receiver = node_uw[ch_id - 1]
     # print("Receiver : ", receiver["NodeID"])
-    time.sleep(10)
+    # time.sleep(1)
 
     # verificar que datos se envian
-    print(" Sender : ",sender["NodeID"],"-> Receiver : ", receiver["NodeID"])
+    # print(" Sender : ",sender["NodeID"],"-> Receiver : ", receiver["NodeID"])
 
     # Transmitir datos
     transmit_data("bbdd_keys_shared_sign_cipher.db", sender, receiver, f"Temperatura: {np.random.uniform(5, 30):.2f}°C")
