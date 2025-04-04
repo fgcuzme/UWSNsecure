@@ -124,6 +124,9 @@ def generate_shared_keys(db_path, node_uw, CH, node_sink):
             # print(f"⚠️ Nodo {node_id} es un CH y no generará clave consigo mismo.")
             print(f"⚠️ Nodo {node_id} es un CH...")
 
+            # Obtener claves del nodo y su Cluster Head
+            x_pub_node, x_priv_node = get_x25519_keys(db_path, key_id)
+
             shared_key = derive_shared_key(x_priv_node, x_pub_sink)
 
             #print("db_path : ", db_path, "node_id : ", node_id, "node_sink[NodeID] : ", node_sink["NodeID"], "shared_key : ", shared_key.hex())
@@ -176,6 +179,23 @@ def decrypt_message(shared_key, encrypted_message):
 import time
 import numpy as np
 from test_throp import propagation_time, compute_path_loss
+
+# data_packet = {
+#     "PacketType": 0x03,           # Identificador de tipo DATA
+#     "SourceID": node_id,          # Nodo que envía el paquete
+#     "Timestamp": current_time,    # Marca de tiempo local
+#     "EncryptedPayload": cipher_text,  # Datos cifrados con Ascon
+#     "Tag": tag                    # Tag de autenticación (si no está embebido)
+# }
+
+# agg_packet = {
+#     "PacketType": 0x04,           # Tipo de paquete agregado
+#     "ClusterID": ch_id,           # Identificador del CH
+#     "Timestamp": current_time,    # Marca de tiempo de envío
+#     "PayloadCount": N,            # Número de paquetes agregados
+#     "AggregatedPayload": encrypted_blob  # Cifrado conjunto (JSON/lista cifrada)
+# }
+
 
 def transmit_data(db_path, sender_id, receiver_id, plaintext):
     # """Simula la transmisión de datos cifrados entre nodos usando claves compartidas almacenadas en la base de datos."""
