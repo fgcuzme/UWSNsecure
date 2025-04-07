@@ -1,15 +1,15 @@
 import numpy as np
-from test_throp import propagation_time, compute_path_loss
+# from test_throp import propagation_time, compute_path_loss
 
-# Función de pérdida acústica (implementada previamente)
-def acoustic_loss(dist, freq):
+# # Función de pérdida acústica (implementada previamente)
+# def acoustic_loss(dist, freq):
     
-    spreading_factor = 1.5  # Factor de propagación
+#     spreading_factor = 1.5  # Factor de propagación
 
-    # Devuelve la perdida total en dB
-    loss, _ = compute_path_loss(freq, dist, spreading_factor)
+#     # Devuelve la perdida total en dB
+#     loss, _ = compute_path_loss(freq, dist, spreading_factor)
 
-    return loss
+#     return loss
 
 
 # Proceso de cluster basado en el estudio de "A Cluster-head Selection Scheme for Underwater Acoustic Sensor Networks"

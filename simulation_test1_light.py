@@ -10,18 +10,28 @@ dim_x = 200  # Dimensiones del área de despliegue (en metros)
 dim_y = 200
 dim_z = -200  # Profundidad (en metros)
 sink_pos = np.array([100, 100, 0])  # Posición del Sink en el centro
-E_init = 10  # Energía inicial de cada nodo (en Joules)
+# E_init = 10  # Energía inicial de cada nodo (en Joules)
+
+# Estimación de la capacidad de batería necesaria para tus nodos acústicos subacuáticos, 
+# basado en las especificaciones del módem S2CR 15/27 (15–27 kHz) y tu perfil de tráfico. 
+# Este diseño es ideal para despliegues controlados (12–24 h), como misiones de muestreo
+#  temporal o experimentación oceanográfica.
+# Ref: chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://www.evologics.com/web/content/15634?unique=be7aa65d1c113e56664940ddea7cf65757e6648e
+E_init = 5000  # Energía inicial realista en julios (≈ 0.9 Ah @ 3.7V)
 
 # Frecuencia de transmisión en kHz
 freq = 20  # Ajusta la frecuencia según el entorno de la red subacuática
 
 # Configuración del modelo de energía basado en el artículo de Yang
-L = 2000  # Tamaño del paquete de datos (bits)
-size_packet_control = 80  # Tamaño del paquete de control (bits)
+# L = 2000  # Tamaño del paquete de datos (bits)
+size_packet_control = 48  # Tamaño del paquete de control (bits)
 EDA = 5 * 10**-9  # Energía para la agregación de datos (Joules/bit)
-E_schedule = 5 * 10**-9  # Energía de programación (Joules/bit)
-P_r = 1 * 10**-3  # Potencia de recepción (Joules/bit)
-threshold_bateria = 1  # Umbral de energía de la batería (Joules)
+E_schedule = 5 * 10**-9  # Energía de programación (Joules/bit) # Joules/bit = 5 nJ/bit
+# P_r = 1 * 10**-3  # Potencia de recepción (Joules/bit)
+# threshold_bateria = 1  # Umbral de energía de la batería (Joules)
+
+# Se ajusta el umbral de la capacidad de la bateria en vista que la carga inicial de los nodos aumenta
+threshold_bateria = 0.357 * E_init  # 10% de la capacidad
 
 # Posicionamiento de los nodos (valores aleatorios dentro del área de despliegue)
 pos_nodes = np.random.rand(num_nodes, 3) * [dim_x, dim_y, dim_z]
@@ -88,7 +98,7 @@ print('-')
 
 # %% PROCESO DE ESTABLECIMIENTO DE CLUSTER
 
-from cluster import classify_levels, select_cluster_heads, assign_to_clusters, update_energy, acoustic_loss
+from cluster import classify_levels, select_cluster_heads, assign_to_clusters
 print('-')
 print ('INICIO DE PROCESO DE CREACIÓN DE CLUSTER...')
 
@@ -231,11 +241,12 @@ from save_csv import save_stats_to_csv, save_stats_to_csv_cdma, save_stats_to_sy
 ### SINCRONIZACIÓN DE NODO
 max_retries = 3
 timeout = 2
-freq=20
+# freq=20
 processing_energy_cdma=5e-9
-alpha=1e-6
-E_listen=1e-9
-E_standby=1e-12
+# alpha=1e-6
+E_listen=5e-3
+E_standby=2.5e-3
+
 
 # Por ahora solo se va a utilizar TDMA
 # print('-')
@@ -262,7 +273,8 @@ print("INCIO PROCESO DE SINCRONIZACIÓN CON TDMA")
 
 # Sincronización basada en CDMA
 # syn_packet, stats_cdma = propagate_syn_to_CH_cdma(node_sink, CH, node_uw, max_retries, timeout, freq)
-syn_packet, stats_tdma = propagate_syn_to_CH_tdma(node_sink, CH, node_uw, max_retries, timeout, freq, E_schedule, size_packet_control, alpha, P_r, E_standby)
+syn_packet, stats_tdma = propagate_syn_to_CH_tdma(node_sink, CH, node_uw, max_retries, timeout, freq, 
+                                                  E_schedule, size_packet_control, E_standby, E_listen)
 
 print(" - ")
 print('Resultados TDMA')
@@ -411,7 +423,7 @@ while completed_transmissions < total_transmissions and attempts < max_attempts:
     # print(" Sender : ",sender["NodeID"],"-> Receiver : ", receiver["NodeID"])
 
     # Transmitir datos
-    transmit_data("bbdd_keys_shared_sign_cipher.db", sender, receiver, f"Temperatura: {np.random.uniform(5, 30):.2f}°C")
+    transmit_data("bbdd_keys_shared_sign_cipher.db", sender, receiver, f"Temperatura: {np.random.uniform(0, 30):.2f}°C")
 
     completed_transmissions += 1  # Incrementar transmisiones realizadas
 

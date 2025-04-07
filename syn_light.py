@@ -1,7 +1,7 @@
 import time
 import numpy as np
-import random
 from test_throp import propagation_time, compute_path_loss
+from energia_dinamica import calcular_energia_paquete
 
 
 # Función para crear un paquete SYN desde el Sink
@@ -33,15 +33,16 @@ def acoustic_loss(dist, freq):
     spreading_factor = 1.5  # Factor de propagación
 
     # Devuelve la perdida total en dB
-    loss, _ = compute_path_loss(freq, dist, spreading_factor)
+    loss_db, loss_factor = compute_path_loss(freq, dist, spreading_factor)
 
-    return loss
+    return loss_db, loss_factor
 
 
 # IMPLEMENTADO TDMA
 
 # Función para actualizar la energía de un nodo basado en su distancia al CH o Sink
-def update_energy_node_tdma(node, target_pos, packet_size_bits, alpha, E_schedule, P_r, freq, is_ch=False):
+def update_energy_node_tdma(node, target_pos, packet_size_bits, E_schedule, P_r, 
+                            freq, E_standby_node, E_listen_node, is_ch=False):
     """
     Actualiza la energía del nodo basado en su distancia al Sink o al CH.
     Parámetros:
@@ -55,21 +56,24 @@ def update_energy_node_tdma(node, target_pos, packet_size_bits, alpha, E_schedul
     Actualiza el campo ResidualEnergy del nodo.
     """
     dist = np.linalg.norm(node["Position"] - target_pos)  # Distancia entre el nodo y el objetivo
-    loss = acoustic_loss(dist, freq)  # Pérdida acústica entre el nodo y el objetivo
+    loss_db, loss_factor = acoustic_loss(dist, freq)  # Pérdida acústica entre el nodo y el objetivo
 
     # Pregunta si el nodo es CH
     if is_ch:
         # Energía de transmisión ajustada por la pérdida acústica
-        Et = packet_size_bits * (alpha * 10**(loss / 10) + E_schedule)
+        # Et = packet_size_bits * (alpha * loss_factor + E_schedule)
+        Et = calcular_energia_paquete("sync", es_tx=True) + E_schedule
     else:
         # Energía de transmisión ajustada por la pérdida acústica
-        Et = packet_size_bits * (alpha * 10**(loss / 10))
+        # Et = packet_size_bits * (alpha * loss_factor)
+        Et = calcular_energia_paquete("sync", es_tx=True)
 
     # Energía de recepción
-    Er = P_r * packet_size_bits
+    # Er = P_r * packet_size_bits
+    Er = calcular_energia_paquete("sync", es_tx=False)
 
     # Actualizar la energía residual del nodo
-    node["ResidualEnergy"] -= (Et + Er)
+    node["ResidualEnergy"] -= (Et + Er + E_standby_node + E_listen_node)
 
     # Evitar que la energía se vuelva negativa
     if node["ResidualEnergy"] < 0:
@@ -79,7 +83,8 @@ def update_energy_node_tdma(node, target_pos, packet_size_bits, alpha, E_schedul
 
 
 # Función para propagar el paquete SYN y actualizar la energía de los nodos
-def propagate_syn_to_CH_tdma(sink, CH_ids, node_uw, max_retries=3, timeout=2, freq=20, E_schedule = 5e-9, packet_size_bits=100,alpha=1e-6, Ptr=1e-3, E_standby=1e-12):
+def propagate_syn_to_CH_tdma(sink, CH_ids, node_uw, max_retries=3, timeout=2, freq=20, E_schedule=5e-9, 
+                             packet_size_bits=48, E_standby=2.5e-3, E_listen=5e-3):
     timestamp = time.time()  # Marca de tiempo actual en segundos
 
     # Genera el paquete el Sink de sincronización
@@ -89,9 +94,11 @@ def propagate_syn_to_CH_tdma(sink, CH_ids, node_uw, max_retries=3, timeout=2, fr
     freq_node = freq
     max_retries_sensor = max_retries
     timeout_node = timeout
-    size_packet = packet_size_bits  # Paquete SYN de 10 bytes = 80 bits
-    alpha_node = alpha  # Factor de energía por distancia
-    Ptr_node = Ptr # Potencia de recepción
+    size_packet = packet_size_bits  # Paquete syn 48 bits
+    # alpha_node = alpha  # Factor de energía por distancia
+    # Ptr_node = Ptr # Potencia de recepción
+    Ptr_node = calcular_energia_paquete("sync", es_tx=False)
+
     E_standby_node = E_standby # Consumo de energia en stanby
 
     # Diccionario para capturar estadísticas individuales
@@ -128,11 +135,12 @@ def propagate_syn_to_CH_tdma(sink, CH_ids, node_uw, max_retries=3, timeout=2, fr
             initial_energy = node_uw[ch]["ResidualEnergy"]
 
             # Actualizar la energía del Cluster Head
-            node_uw[ch] = update_energy_node_tdma(node_uw[ch], sink["Position"], size_packet, alpha_node, E_schedule, Ptr_node, freq_node, is_ch=True)
+            node_uw[ch] = update_energy_node_tdma(node_uw[ch], sink["Position"], size_packet, E_schedule, 
+                                                  Ptr_node, freq_node, E_standby_node, E_listen, is_ch=True)
             # Estadistica
 
             # **Nuevo: Calcular la energía consumida**
-            energy_consumed_ch += ((initial_energy - node_uw[ch]["ResidualEnergy"]) + E_standby_node)
+            energy_consumed_ch += ((initial_energy - node_uw[ch]["ResidualEnergy"]) + E_standby_node + E_listen)
 
             # Simulación de recepción de ACK para el CH, se considera 0 como escenario ideal
             # Pero se puede manejar una probabilidad de acuerdo a otros estudios
@@ -160,7 +168,8 @@ def propagate_syn_to_CH_tdma(sink, CH_ids, node_uw, max_retries=3, timeout=2, fr
                 }
 
                 # Sincronizar nodos bajo el CH
-                node_stats = synchronize_nodes_tdma(ch, syn_packet, node_uw, max_retries_sensor, timeout_node, freq_node, size_packet, alpha_node, Ptr_node, E_standby_node)
+                node_stats = synchronize_nodes_tdma(ch, syn_packet, node_uw, max_retries_sensor, timeout_node, 
+                                                    freq_node, size_packet, Ptr_node, E_standby_node, E_listen)
                 stats["sync_stats"].update(node_stats)
 
 
@@ -170,7 +179,8 @@ def propagate_syn_to_CH_tdma(sink, CH_ids, node_uw, max_retries=3, timeout=2, fr
 
 
 # Función para sincronizar nodos con el Cluster Head, incluyendo retransmisiones en nodos sensores
-def synchronize_nodes_tdma(CH_id, syn_packet, node_uw, max_retries_sensor, timeout_node, freq_node, size_packet, alpha_node, Ptr_node, E_standby_node):
+def synchronize_nodes_tdma(CH_id, syn_packet, node_uw, max_retries_sensor, timeout_node, freq_node, 
+                           size_packet, Ptr_node, E_standby_node, E_listen_node):
     print(f"Sincronizando Cluster Head {CH_id + 1} con Timestamp: {syn_packet['Timestamp']} y Hops: {syn_packet['Hops']}")
 
     # print(' Verificar CH_id en nodes : ', CH_id)
@@ -209,8 +219,9 @@ def synchronize_nodes_tdma(CH_id, syn_packet, node_uw, max_retries_sensor, timeo
 
             # Actualizar la energía del nodo sensor
             #node = update_energy_node_tdma(node, node_uw[CH_id + 1]["Position"], size_packet, alpha_node, E_schedule, Ptr_node, freq_node, is_ch=False)
-            node = update_energy_node_tdma(node, node_uw[CH_id]["Position"], size_packet, alpha_node, E_schedule, Ptr_node, freq_node, is_ch=False)
-            energy_consumed_node += ((initial_energy - node["ResidualEnergy"]) + E_standby_node)
+            node = update_energy_node_tdma(node, node_uw[CH_id]["Position"], size_packet, E_schedule, Ptr_node, 
+                                           freq_node, E_standby_node, E_listen_node, is_ch=False)
+            energy_consumed_node += ((initial_energy - node["ResidualEnergy"]) + E_standby_node + E_listen_node)
 
             # print(node_uw)
             # Simulación de recepción de ACK por parte del nodo
