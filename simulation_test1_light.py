@@ -273,8 +273,7 @@ print("INCIO PROCESO DE SINCRONIZACIÓN CON TDMA")
 
 # Sincronización basada en CDMA
 # syn_packet, stats_cdma = propagate_syn_to_CH_cdma(node_sink, CH, node_uw, max_retries, timeout, freq)
-syn_packet, stats_tdma = propagate_syn_to_CH_tdma(node_sink, CH, node_uw, max_retries, timeout, freq, 
-                                                  E_schedule, size_packet_control, E_standby, E_listen)
+syn_packet, stats_tdma = propagate_syn_to_CH_tdma(node_sink, CH, node_uw, max_retries, timeout, E_schedule)
 
 print(" - ")
 print('Resultados TDMA')
@@ -295,7 +294,7 @@ print("INCIO PROCESO DE AUTENTICACIÓN BASADO EN TX")
 from propagacionTx_light import propagate_tx_to_ch, authenticate_nodes_to_ch, propagate_tx_to_sink_and_cluster
 from tangle2_light import create_gen_block, delete_tangle
 import time
-from save_csv import save_stats_tx
+from save_csv import save_stats_tx, save_stats_energy_proTx_csv
 
 # Llamada a la función
 
@@ -340,20 +339,60 @@ for i in range(rondas):
     print("-")
     print ('PROPAGACIÓN DE LA TX GENESIS A LOS CH...')
 
+    # # Capturar estadisticas
+    # # Diccionario para capturar estadísticas individuales
+    # stats_proTx = {
+    #     "stats_proTx": {},  # Para guardar estadísticas por cada CH y nodo
+    # }
+
     # propagación de la tx genesis hacia los ch y nodos de cada cluster
     # en caso de recibir y verificar la tx genesis y verificarla la propaga hacia los nodos de su cluster
     # el ch prepara la tx de autenticación que la remite de vuelta al sink,el ch no se autentica mientras el sink
     #  no valide la tx de respuesta
-    # Este proceso solo se lleva a cabo siempre y cuando los ch esten sincronizados.
-    recived, end_time_verify, times_propagation_tx = propagate_tx_to_ch(node_sink, CH, node_uw, txgenesis)
+    # Este proceso solo se lleva a cabo siempre y cuando los ch esten sincronizados.t
+    # Sink -> CH
+    recived, end_time_verify, times_propagation_tx, stats_proTx1 = propagate_tx_to_ch(node_sink, CH, node_uw, txgenesis)
+    # stats_proTx["stats_proTx"].update(stats_proTx1)
+    # print("Energia consumida hasta ahora : ", stats_proTx)
+    # time.sleep(10)
 
     # Crear la tx de respuesta de los CH y transmitirlas al sink y los nodos del cluster
-    end_time_responseCH, end_time_propagationTxCh = propagate_tx_to_sink_and_cluster(node_sink, CH, node_uw)
+    # CH -> Sink
+    # CH -> SN
+    end_time_responseCH, end_time_propagationTxCh, stats_proTx2 = propagate_tx_to_sink_and_cluster(node_sink, CH, node_uw)
+    # stats_proTx["stats_proTx"].update(stats_proTx2)
+    # print("Energia consumida hasta ahora : ", stats_proTx)
+    # time.sleep(10)
 
     print("-")
     print('AUTENTICACIÓN DE LOS NODOS DEL CLUSTER')
     # Creación y propagación de la tx de autenticación de los nodos de cada cluster
-    authenticate_nodes_to_ch(node_uw, CH)
+    # SN -> CH
+    stats_proTx3 = authenticate_nodes_to_ch(node_uw, CH)
+    # stats_proTx["stats_proTx"].update(stats_proTx3)
+    # print("Energia consumida hasta ahora : ", stats_proTx)
+    # time.sleep(10)
+
+    # ### Hacer un solo archivo
+    # from collections import defaultdict
+
+    # # Acumulador por nodo
+    # acumulador = defaultdict(lambda: {"energy_consumed": 0.0})
+
+    # # Iterar sobre cada stats dict
+    # for partial in [stats_proTx1, stats_proTx2, stats_proTx3]:
+    #     for nodo, valores in partial.items():
+    #         acumulador[nodo]["energy_consumed"] += valores.get("energy_consumed", 0.0)
+
+    # #   Asignar al campo global
+    # stats_proTx["stats_proTx"] = dict(acumulador)
+
+
+    # Guarda las estadisticas del consumo de energia del proceso de autenticacion
+    # save_stats_energy_proTx_csv('sync_stats_energy_proTx.csv', stats_proTx)
+    save_stats_energy_proTx_csv('sync_stats_energy_proTx.csv', stats_proTx1)
+    save_stats_energy_proTx_csv('sync_stats_energy_proTx.csv', stats_proTx2)
+    save_stats_energy_proTx_csv('sync_stats_energy_proTx.csv', stats_proTx3)
 
     # Convertir las listas a cadenas para almacenarlas
     time_verify_str = ','.join(map(str, end_time_verify))
