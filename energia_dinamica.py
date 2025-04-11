@@ -179,7 +179,7 @@ def update_energy_node_tdma(node, target_pos, E_schedule, timeout, type_packet, 
     # 5. Actualizar energía total
     energy_consumed = Et + Er + E_guard + E_timeout
     print("Energia consumida : ", energy_consumed, "E_guard : ", E_guard, "E_timeout : ", E_timeout)
-    time.sleep(5)
+    #time.sleep(5)
 
     node["ResidualEnergy"] = max(node["ResidualEnergy"] - energy_consumed, 0)  # No negativa
     

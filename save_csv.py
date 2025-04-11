@@ -189,3 +189,105 @@ def save_stats_to_syn_csv(file_name, stats, method_name):
             ])
 
     print(f"Estadísticas guardadas en: {ruta_stats}")
+
+
+
+def save_stats_energy_proTx_csv(file_name, stats):
+    """
+    Guarda las estadísticas de sincronización en un archivo CSV.
+
+    Parámetros:
+    - file_name: Nombre del archivo CSV.
+    - stats: Diccionario de estadísticas que contiene datos de CHs y nodos.
+    """
+    
+    # Obtener la ruta actual y definir la carpeta 'stats' para guardar el archivo
+    current_dir = os.getcwd()
+    files_stats = os.path.join(current_dir, 'stats')
+    
+    # Crear la carpeta si no existe
+    if not os.path.exists(files_stats):
+        os.makedirs(files_stats)
+
+    # Ruta completa del archivo dentro de la carpeta 'stats'
+    ruta_stats = os.path.join(files_stats, file_name)
+
+    # Escribir en el archivo CSV
+    with open(ruta_stats, mode='a', newline='') as file:
+        writer = csv.writer(file)
+        
+        # Escribir encabezados si el archivo está vacío
+        if file.tell() == 0:
+            writer.writerow([
+                'ID', 'Tipo', 'Energía Consumida (J)'
+            ])
+        
+        # Escribir las estadísticas de cada CH y nodo en el archivo
+        for key, value in stats["stats_proTx"].items():
+            writer.writerow([
+                # method_name,
+                key, 
+                "CH" if "CH" in key else "Nodo",
+                value.get("energy_consumed", ''),
+                # value.get("sync_time", ''),
+                # value.get("retransmissions", ''),
+                # value.get("is_syn", '')
+            ])
+
+    print(f"Estadísticas guardadas en: {ruta_stats}")
+
+
+
+def save_stats_to_csv(stats, filename):
+    """Guarda las estadísticas en un archivo CSV"""
+    import csv
+    
+    # Preparar datos para CSV
+    energy_ch_tx = stats["energy"]["CH"]["tx"]
+    energy_ch_rx = stats["energy"]["CH"]["rx"]
+    energy_sn_tx = stats["energy"]["SN"]["tx"]
+    energy_sn_rx = stats["energy"]["SN"]["rx"]
+    times_prop = stats["times"]["propagation"]
+    times_verif = stats["times"]["verification"]
+    
+    # Escribir archivo CSV
+    with open(filename, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        
+        # Encabezados
+        writer.writerow([
+            "Tipo", "Energía CH Tx", "Energía CH Rx", 
+            "Energía SN Tx", "Energía SN Rx",
+            "Tiempo Propagación", "Tiempo Verificación"
+        ])
+        
+        # Datos (una fila por cada medición)
+        max_len = max(
+            len(energy_ch_tx), len(energy_ch_rx),
+            len(energy_sn_tx), len(energy_sn_rx),
+            len(times_prop), len(times_verif)
+        )
+        
+        for i in range(max_len):
+            writer.writerow([
+                f"Medición {i+1}",
+                energy_ch_tx[i] if i < len(energy_ch_tx) else "",
+                energy_ch_rx[i] if i < len(energy_ch_rx) else "",
+                energy_sn_tx[i] if i < len(energy_sn_tx) else "",
+                energy_sn_rx[i] if i < len(energy_sn_rx) else "",
+                times_prop[i] if i < len(times_prop) else "",
+                times_verif[i] if i < len(times_verif) else ""
+            ])
+        
+        # Totales
+        writer.writerow([
+            "TOTALES",
+            sum(energy_ch_tx),
+            sum(energy_ch_rx),
+            sum(energy_sn_tx),
+            sum(energy_sn_rx),
+            sum(times_prop),
+            sum(times_verif)
+        ])
+    
+    print(f"Estadísticas guardadas en {filename}")

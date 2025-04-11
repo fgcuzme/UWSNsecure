@@ -294,7 +294,7 @@ print("INCIO PROCESO DE AUTENTICACIÓN BASADO EN TX")
 from propagacionTx_light import propagate_tx_to_ch, authenticate_nodes_to_ch, propagate_tx_to_sink_and_cluster
 from tangle2_light import create_gen_block, delete_tangle
 import time
-from save_csv import save_stats_tx, save_stats_energy_proTx_csv
+from save_csv import save_stats_tx, save_stats_energy_proTx_csv, save_stats_to_csv
 
 # Llamada a la función
 
@@ -309,6 +309,23 @@ stats_tx = {
     "times_TxresponseCH": [],
     "times_propagation_txgen": [],
     "times_propagation_response_tx": [],
+}
+
+# Almacenar estadisticas
+# Agregar al inicio del archivo
+stats_model = {
+    "tx_energy": {
+        "genesis_propagation_ch": [],
+        "cluster_propagation_genesis": [],
+        "tx_auth_response_ch": [],
+        "node_authentication": []
+    },
+
+    "time_metrics": {
+        "tx_creation": [],
+        "propagation_delays": [],
+        "verification_times": []
+    }
 }
 
 # Crear la Tx genesis
@@ -351,7 +368,7 @@ for i in range(rondas):
     #  no valide la tx de respuesta
     # Este proceso solo se lleva a cabo siempre y cuando los ch esten sincronizados.t
     # Sink -> CH
-    recived, end_time_verify, times_propagation_tx, stats_proTx1 = propagate_tx_to_ch(node_sink, CH, node_uw, txgenesis)
+    recived, end_time_verify, times_propagation_tx, stats_proTx1, stats1, stats2 = propagate_tx_to_ch(node_sink, CH, node_uw, txgenesis)
     # stats_proTx["stats_proTx"].update(stats_proTx1)
     # print("Energia consumida hasta ahora : ", stats_proTx)
     # time.sleep(10)
@@ -359,7 +376,7 @@ for i in range(rondas):
     # Crear la tx de respuesta de los CH y transmitirlas al sink y los nodos del cluster
     # CH -> Sink
     # CH -> SN
-    end_time_responseCH, end_time_propagationTxCh, stats_proTx2 = propagate_tx_to_sink_and_cluster(node_sink, CH, node_uw)
+    end_time_responseCH, end_time_propagationTxCh, stats_proTx2, stats3 = propagate_tx_to_sink_and_cluster(node_sink, CH, node_uw)
     # stats_proTx["stats_proTx"].update(stats_proTx2)
     # print("Energia consumida hasta ahora : ", stats_proTx)
     # time.sleep(10)
@@ -368,7 +385,7 @@ for i in range(rondas):
     print('AUTENTICACIÓN DE LOS NODOS DEL CLUSTER')
     # Creación y propagación de la tx de autenticación de los nodos de cada cluster
     # SN -> CH
-    stats_proTx3 = authenticate_nodes_to_ch(node_uw, CH)
+    stats_proTx3, stats4 = authenticate_nodes_to_ch(node_uw, CH)
     # stats_proTx["stats_proTx"].update(stats_proTx3)
     # print("Energia consumida hasta ahora : ", stats_proTx)
     # time.sleep(10)
@@ -386,7 +403,23 @@ for i in range(rondas):
 
     # #   Asignar al campo global
     # stats_proTx["stats_proTx"] = dict(acumulador)
+    
+    # 4. Procesar estadísticas
+    print("\n=== Estadísticas completas ===")
+    print("Consumo energía CH (Tx):", sum(stats4["energy"]["CH"]["tx"]))
+    print("Consumo energía CH (Rx):", sum(stats4["energy"]["CH"]["rx"]))
+    print("Consumo energía SN (Tx):", sum(stats4["energy"]["SN"]["tx"]))
+    print("Consumo energía SN (Rx):", sum(stats4["energy"]["SN"]["rx"]))
+    print("Tiempo promedio propagación:", np.mean(stats4["times"]["propagation"]))
+    print("Tiempo promedio propagación por CH:", np.mean(stats4["times"]["propagation_all"]))
+    print("Tiempo promedio verificación:", np.mean(stats4["times"]["verification"]))
+    print("Total reintentos:", stats4["attempts"])
 
+    # 5. Guardar estadísticas en CSV
+    save_stats_to_csv(stats1, "estadisticas_simulacion1.csv")
+    save_stats_to_csv(stats2, "estadisticas_simulacion2.csv")
+    save_stats_to_csv(stats3, "estadisticas_simulacion3.csv")
+    save_stats_to_csv(stats4, "estadisticas_simulacion4.csv")
 
     # Guarda las estadisticas del consumo de energia del proceso de autenticacion
     # save_stats_energy_proTx_csv('sync_stats_energy_proTx.csv', stats_proTx)
