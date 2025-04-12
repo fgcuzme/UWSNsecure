@@ -36,10 +36,12 @@ def propagate_with_probability(success_rate = 0):
 stats = {
     "energy": {
         "CH": {
+            "id": [],    # id CH
             "tx": [],    # Energía en transmisión
             "rx": []     # Energía en recepción
         },
         "SN": {
+            "id": [],   # id SN
             "tx": [],
             "rx": []
         }
@@ -68,24 +70,12 @@ def propagate_tx_to_ch(sink1, ch_list, node_uw1, genesis_tx, max_retries=3, time
     max_retries: Número máximo de reintentos.
     timeout: Tiempo de espera entre reintentos.
     """
-    # # Capturar estadisticas nuevas
-    # stats = {
-    #     "energy_consumed": {"CH": [], "SN": []},
-    #     "propagation_times": [],
-    #     "verification_times": [],
-    #     "propagation_times_all":[]
-    # }
 
     # Listas para almacenar los tiempos de verificación y respuesta por cada CH
     times_verify_all_ch = []
-    speed_propagation = []
+    # speed_propagation = []
     # times_response_all_ch = []
     times_propagation_tx = 0
-
-    # Diccionario para capturar estadísticas individuales
-    stats_proTx1 = {
-        "stats_proTx": {},  # Para guardar estadísticas por cada CH y nodo
-    }
 
     for index_ch in ch_list:
         retries = 0
@@ -99,7 +89,6 @@ def propagate_tx_to_ch(sink1, ch_list, node_uw1, genesis_tx, max_retries=3, time
             # Verificar si el CH está sincronizado, para poder recibir la Tx
             if Ch_node['IsSynced']:
                 # print(f"Propagando Tx génesis al CH {node_uw[ch]['NodeID']}")
-
                 time_start_ptx = time.time() # inicia el conteo del tiempo de propagación
 
                 # Aqui toca agregar el delay de propagación basasdo en la formula de distancia/velocidad
@@ -131,18 +120,14 @@ def propagate_tx_to_ch(sink1, ch_list, node_uw1, genesis_tx, max_retries=3, time
                     times_verify_all_ch.append(end_time_verify)  # Guardar el tiempo de verificación para este CH
 
                     rx_energy = calcular_energia_paquete("tx", es_tx=False)
+
+                    print(f'Energy consumed del CH en Rx : ', rx_energy)
                     
                     # Calcula el consumo de energía en recepción del CH
                     Ch_node["ResidualEnergy"] -= rx_energy
 
-                    stats_proTx1["stats_proTx"][f"CH_Rx{Ch_node['NodeID']}"] = {
-                        "energy_consumed": rx_energy
-                        #"sync_time": sync_end_time_node,
-                        #"retransmissions": retries,
-                        #"is_syn": node["IsSynced"]
-                    }
-                    
                     # estadisticas nuevas
+                    stats["energy"]["CH"]["id"].append(Ch_node['NodeID'])  # CH recibe
                     stats["energy"]["CH"]["rx"].append(rx_energy)  # CH recibe
                     stats["times"]["propagation"].append(delay)
                     stats["times"]["verification"].append(end_time_verify)
@@ -155,11 +140,8 @@ def propagate_tx_to_ch(sink1, ch_list, node_uw1, genesis_tx, max_retries=3, time
 
                         # Propagar la Tx Génesis a los nodos del cluster del CH
                         # CH -> SN
-                        times_propagation_tx_nodes, node_stats_proTx, stats1 = propagate_genesis_to_cluster(node_uw1, index_ch, genesis_tx, max_retries=3, timeout=2)
+                        times_propagation_tx_nodes, stats1 = propagate_genesis_to_cluster(node_uw1, index_ch, genesis_tx, max_retries=3, timeout=2)
                         
-                        # capturar estadisticas
-                        stats_proTx1["stats_proTx"].update(node_stats_proTx)
-
                         # suma el tiempo que lleva en cada cluster 
                         times_propagation_tx = times_propagation_tx + times_propagation_tx_nodes
                         
@@ -185,7 +167,7 @@ def propagate_tx_to_ch(sink1, ch_list, node_uw1, genesis_tx, max_retries=3, time
             print(f"CH {Ch_node['NodeID']} no respondió tras {max_retries} reintentos.")
             recived = False
 
-    return recived, times_verify_all_ch, times_propagation_tx, stats_proTx1, stats, stats1
+    return recived, times_verify_all_ch, times_propagation_tx, stats, stats1
 
 
 # Funcion para propagar la tx genesis hacia cada cluster
@@ -199,12 +181,6 @@ def propagate_genesis_to_cluster(node_uw2, ch_index, genesis_tx, max_retries=3, 
     max_retries: Número máximo de reintentos.
     timeout: Tiempo de espera entre reintentos (en segundos).
     """
-    # # Estadisticas
-    # stats = {
-    #     "tx_energy": [],
-    #     "rx_energy":[],
-    #     "propagation_delays": []
-    # }
 
     print('Iniciando propagación de la transacción génesis dentro del cluster...')
     indexCH = node_uw2[ch_index]['NodeID']
@@ -215,11 +191,6 @@ def propagate_genesis_to_cluster(node_uw2, ch_index, genesis_tx, max_retries=3, 
     
     # Variable para almacenar el tiempo de propagación de tx genesis
     times_propagation_tx_nodes = 0
-    speed_propagation = []
-
-    # Diccionario para capturar estadísticas de cada nodo
-    stats_proTx2 = {}
-    consumo = 0.0
 
     # Iterar sobre los nodos del cluster
     for node1 in node_uw2:
@@ -246,28 +217,20 @@ def propagate_genesis_to_cluster(node_uw2, ch_index, genesis_tx, max_retries=3, 
                 time.sleep(delay)  # Simular el tiempo de sincronización
                 # speed_propagation.append(speed)
                 times_propagation_tx_nodes = times_propagation_tx_nodes + (time.time() - time_start_ptx)
-
+                
                 tx_energy = calcular_energia_paquete("tx", es_tx=True)
+
+                print(f'Energy consumed del CH en Tx : ', tx_energy)
 
                 # calculo de energia en la Transmision de la TX en el CH -> SN
                 ch_node1["ResidualEnergy"] -= tx_energy
-                
-                consumo += tx_energy
-
-                # Captura estadisticas energia
-                stats_proTx2[f"CH_Tx{ch_node1['NodeID']}"] = {
-                    "energy_consumed": consumo
-                    #"sync_time": sync_end_time_node,
-                    #"retransmissions": retries,
-                    #"is_syn": node["IsSynced"]
-                    }
-                             
+                                         
                 # Registrar
                 # estadisticas nuevas
+                stats["energy"]["CH"]["id"].append(ch_node1['NodeID'])  # CH trasmite
                 stats["energy"]["CH"]["tx"].append(tx_energy)  # CH trasmite
                 stats["times"]["propagation"].append(delay)
-                stats["attempts"] += retries  # Contar reintentos
-                
+                stats["attempts"] += retries  # Contar reintentos   
 
                 if propagate_with_probability():
                     
@@ -292,16 +255,9 @@ def propagate_genesis_to_cluster(node_uw2, ch_index, genesis_tx, max_retries=3, 
                         # Calcula el consumo de energía en recepción de TX del SN - CH -> SN
                         node1["ResidualEnergy"] -= rx_energy
 
-                        # Captura estadisticas energia
-                        stats_proTx2[f"Node_Rx{node1['NodeID']}"] = {
-                            "energy_consumed": rx_energy
-                            #"sync_time": sync_end_time_node,
-                            #"retransmissions": retries,
-                            #"is_syn": node["IsSynced"]
-                        }
-
                         # Registrar
                         # estadisticas nuevas
+                        stats["energy"]["SN"]["id"].append(node1['NodeID'])  # nodo recibe
                         stats["energy"]["SN"]["rx"].append(rx_energy)  # SN recibe
                         
                         break  # Salir del bucle de reintentos si la verificación es exitosa
@@ -318,7 +274,7 @@ def propagate_genesis_to_cluster(node_uw2, ch_index, genesis_tx, max_retries=3, 
             if retries == max_retries:
                 print(f"Nodo {node1['NodeID']} no respondió tras {max_retries} reintentos.")
 
-    return times_propagation_tx_nodes, stats_proTx2, stats
+    return times_propagation_tx_nodes, stats
 
 # ####
 # # Crear la genesis
@@ -400,17 +356,6 @@ def propagate_tx_to_sink_and_cluster(sink1, list_ch, node_uw3, max_retries=3, ti
     max_retries: Número máximo de reintentos.
     timeout: Tiempo de espera entre reintentos (en segundos).
     """
-
-    # # Estadisticas
-    # stats = {
-    #     "energy_breakdown": {
-    #         "CH_tx": [],
-    #         #"CH_rx": [],
-    #         "SN_rx": []
-    #     },
-    #     "attempts": 0
-    # }
-
     #Id_nodeCH = node_ch2['NodeID']
 
     #print('Nodo que se va actualizar el auth en el sink: ', Id_nodeCH)
@@ -423,13 +368,6 @@ def propagate_tx_to_sink_and_cluster(sink1, list_ch, node_uw3, max_retries=3, ti
     # al sink y nodos del cluster
     times_propagation_tx_response = 0
     
-    # Diccionario para capturar estadísticas individuales
-    stats_proTx2 = {
-        "stats_proTx": {},  # Para guardar estadísticas por cada CH y nodo
-    }
-    
-    consumo1 = 0.0 
-
     for ch_index in list_ch:
         print('Iniciando propagación de la transacción respuesta del CH al sink y dentro del cluster...')
         indexCH = node_uw3[ch_index]['NodeID']
@@ -441,11 +379,11 @@ def propagate_tx_to_sink_and_cluster(sink1, list_ch, node_uw3, max_retries=3, ti
         # Response_auth_to_sink
         time_start_responseCH = time.time() # Incia tiempo de medición de la creación de la nueva Tx de response
         auth_response_tx1 = create_auth_response_tx(ch_node1)
-        print('#####')
-        print('Transacción de auth creada por el ch : ', auth_response_tx1)
-        print('####')
         end_time_responseCH = time.time() - time_start_responseCH
         times_response_all_ch.append(end_time_responseCH)  # Guardar el tiempo de respuesta para este CH
+
+        # nueva estadistica Tx de respuesta
+        stats["times"]["response"].append(end_time_responseCH)
 
         # Crear una copia profunda de la transacción para evitar referencias compartidas
         auth_response_tx_sink = deepcopy(auth_response_tx1)
@@ -454,7 +392,6 @@ def propagate_tx_to_sink_and_cluster(sink1, list_ch, node_uw3, max_retries=3, ti
         # # Actualizar la tx de Tips a ApprovedTransactions del ch
         update_transactions(ch_node1, auth_response_tx_ch)  # corregido
 
-        # 
         # Eliminar la tx que genera conflicto, para solucionar la eliminación de tx aprobada
         id_transaction = auth_response_tx_ch['ID']
         # Eliminar la transacción
@@ -479,7 +416,6 @@ def propagate_tx_to_sink_and_cluster(sink1, list_ch, node_uw3, max_retries=3, ti
             start_position = ch_node1["Position"]
             end_position = sink1["Position"]
             delay = propagation_time(dist, start_position, end_position)
-            
             print(f"CH {ch_node1['NodeID']} enviando Tx Response_auth_to_sink, retraso de {delay:.2f} segundos, distancia calculada {dist:.2f}")
             time.sleep(delay)  # Simular el tiempo de sincronización
 
@@ -492,18 +428,11 @@ def propagate_tx_to_sink_and_cluster(sink1, list_ch, node_uw3, max_retries=3, ti
 
             # Medición por cada transmisión CH→Sink
             # estadisticas nuevas
+            stats["energy"]["CH"]["id"].append(ch_node1['NodeID'])  # CH trasmite
             stats["energy"]["CH"]["tx"].append(tx_energy)  # CH trasmite
             stats["times"]["propagation"].append(delay)
             stats["attempts"] += retries  # Contar reintentos
-
-            # Captura estadisticas energia
-            stats_proTx2["stats_proTx"][f"CH_Tx{ch_node1['NodeID']}"] = {
-                "energy_consumed": tx_energy
-                #"sync_time": sync_end_time_node,
-                #"retransmissions": retries,
-                #"is_syn": node["IsSynced"]
-            }
-            
+        
             print('####')
             print('Antes de actualizar el CH imprimimos el esatdo del nodo : ', ch_node1)
             print('####')
@@ -535,9 +464,18 @@ def propagate_tx_to_sink_and_cluster(sink1, list_ch, node_uw3, max_retries=3, ti
                 _, key_public_sign = load_keys_sign_withou_cipher("bbdd_keys_shared_sign_cipher.db", "keys_sign_ed25519",
                                                                 index=id_pair_keys_sign)
 
+                # Verificar la Tx con la clave pública del Sink
+                # calcular el tiempo de verificación tx por parte del CH
+                time_start = time.time()
+                isverify = verify_transaction_signature(auth_response_tx1['ID'], auth_response_tx1['Signature'], key_public_sign)
+                end_time_verify = time.time() - time_start
+                
+                # nueva estadistica
+                stats["times"]["verification"].append(end_time_verify)
+                
                 # La tx es verificada por el sink con la firma publica obtenida de la bbdd, el identificador 
                 # de la firma se envio en el payload
-                if verify_transaction_signature(auth_response_tx1['ID'], auth_response_tx1['Signature'], key_public_sign):
+                if isverify:
 
                     print(f"El Sink recibió y verificó la Tx de Response_auth_to_sink de CH {ch_node1['NodeID']}")
                     sink1['Tips'].append(auth_response_tx1['ID'])
@@ -599,18 +537,10 @@ def propagate_tx_to_sink_and_cluster(sink1, list_ch, node_uw3, max_retries=3, ti
 
                     # calculo de energia en la Transmision de la TX_response del CH -> SN
                     ch_node1["ResidualEnergy"] -= tx_energy
-                    consumo1 += tx_energy
-
-                    # Captura estadisticas energia
-                    stats_proTx2["stats_proTx"][f"CH_Tx{ch_node1['NodeID']}"] = {
-                        "energy_consumed": consumo1
-                        #"sync_time": sync_end_time_node,
-                        #"retransmissions": retries,
-                        #"is_syn": node["IsSynced"]
-                    }
 
                     # Medición por cada transmisión CH→Sink
                     # estadisticas nuevas
+                    stats["energy"]["CH"]["id"].append(ch_node1['NodeID'])  # CH trasmite
                     stats["energy"]["CH"]["tx"].append(tx_energy)  # CH trasmite
                     stats["times"]["propagation"].append(delay)
                     stats["attempts"] += retries  # Contar reintentos
@@ -627,26 +557,26 @@ def propagate_tx_to_sink_and_cluster(sink1, list_ch, node_uw3, max_retries=3, ti
                         # Si la tx llega al nodo debe identificar la id de la clave utilizada para validar la firma
                         _, key_public_sign = load_keys_sign_withou_cipher("bbdd_keys_shared_sign_cipher.db", "keys_sign_ed25519", index=id_pair_keys_sign)
                         
+                        # Verificar la Tx con la clave pública del Sink
+                        # calcular el tiempo de verificación tx por parte del CH
+                        time_start1 = time.time()
+                        isverify2 = verify_transaction_signature(auth_response_tx1['ID'], auth_response_tx1['Signature'], key_public_sign)
+                        end_time_verify1 = time.time() - time_start1
+
                         rx_energy = calcular_energia_paquete("tx", es_tx=False)
                         
                         # calculo de energia en la Recepción de la TX_response del CH -> SN
                         node2["ResidualEnergy"] -= rx_energy
                         
-                        # Captura estadisticas energia
-                        stats_proTx2["stats_proTx"][f"Node_Rx{node2['NodeID']}"] = {
-                            "energy_consumed": rx_energy
-                            #"sync_time": sync_end_time_node,
-                            #"retransmissions": retries,
-                            #"is_syn": node["IsSynced"]
-                        }
-
                         # Medición por cada transmisión CH→Sink
                         # estadisticas nuevas
+                        stats["energy"]["SN"]["id"].append(node2['NodeID'])  # SN recibe
                         stats["energy"]["SN"]["rx"].append(rx_energy)  # Nodo recibe
+                        stats["times"]["verification"].append(end_time_verify1)
 
                         # El nodo verifica la tx de autenticación creada y enviada por el CH
                         # Esta se verifica con la clave publica obtenida de la BBDD.
-                        if verify_transaction_signature(auth_response_tx1['ID'], auth_response_tx1['Signature'], key_public_sign):
+                        if isverify2:
                             print(f"Nodo {node2['NodeID']} recibió y verifico la Tx Response_auth_to_sink de CH {ch_node1['NodeID']}")
                             
                             # Se actualiza el ID del tip en el nodo
@@ -664,7 +594,10 @@ def propagate_tx_to_sink_and_cluster(sink1, list_ch, node_uw3, max_retries=3, ti
                 if retries == max_retries:
                     print(f"Nodo {node2['NodeID']} no respondió tras {max_retries} reintentos.")
 
-    return times_response_all_ch, times_propagation_tx_response, stats_proTx2, stats
+        # nueva estadistica
+        stats["times"]["propagation_all"].append(times_propagation_tx_response)
+
+    return times_response_all_ch, times_propagation_tx_response, stats
 
 # Filtrado de Nodos Sincronizados: Primero se filtran los nodos que deben autenticarse con el CH, asegurando que sean nodos sincronizados y que no sean el propio CH.
 # Generación de la Transacción: Los nodos generan una transacción de autenticación que envían al CH.
@@ -681,19 +614,7 @@ def authenticate_nodes_to_ch(nodes, chead, max_retries=3, timeout=2):
     max_retries: Número máximo de reintentos.
     timeout: Tiempo de espera entre reintentos.
     """
-    # auth_stats = {
-    #     "per_node": {},
-    #     "total_energy": 0.0
-    # }
-
     print('El ch que se pasa : ', chead)
-
-      # Diccionario para capturar estadísticas individuales
-    stats_proTx3 = {
-        "stats_proTx": {},  # Para guardar estadísticas por cada CH y nodo
-    }
-
-    consumo2 = 0.0 
 
     for index_ch in chead:
         print('index_ch : ', index_ch)
@@ -720,8 +641,15 @@ def authenticate_nodes_to_ch(nodes, chead, max_retries=3, timeout=2):
             authenticated = False
 
             print('Nodo del cluster : ', node4)
+
+            # Response_auth_to_CH
+            time_start_responseSN = time.time() # Incia tiempo de medición de la creación de la nueva Tx de response
             # Crear transacción de autenticación para el CH
             node_auth_tx = create_auth_response_tx(node4)
+            end_time_responseSN = time.time() - time_start_responseSN
+
+            # nueva estadistica Tx de respuesta
+            stats["times"]["response"].append(end_time_responseSN)
 
             # Agregar la tx como tips en el nodo, se agrega aqui despues de todo el proceso
             node4['Tips'].append(node_auth_tx['ID'])    # corregido
@@ -747,20 +675,12 @@ def authenticate_nodes_to_ch(nodes, chead, max_retries=3, timeout=2):
                 # calculo de energia en la Transmision de la TX_response del SN -> CH
                 node4["ResidualEnergy"] -= tx_energy
 
-                # Captura estadisticas energia
-                stats_proTx3["stats_proTx"][f"Node_Tx{node4['NodeID']}"] = {
-                "energy_consumed": tx_energy
-                #"sync_time": sync_end_time_node,
-                #"retransmissions": retries,
-                #"is_syn": node["IsSynced"]
-                }
-
                 # Cálculo de energía por intento
                 # estadisticas nuevas
+                stats["energy"]["SN"]["id"].append(node4['NodeID'])  # SN trasmite
                 stats["energy"]["SN"]["tx"].append(tx_energy)  # SN trasmite
                 stats["times"]["propagation"].append(delay)
                 stats["attempts"] += retries  # Contar reintentos
-
 
                 if propagate_with_probability():
                     # CH recibe la transacción y verifica si el nodo está sincronizado
@@ -773,43 +693,31 @@ def authenticate_nodes_to_ch(nodes, chead, max_retries=3, timeout=2):
                         # Cargar la clave pública desde la base de datos usando el identificador
                         _, key_public_sign = load_keys_sign_withou_cipher("bbdd_keys_shared_sign_cipher.db", "keys_sign_ed25519", index=id_pair_keys_sign)
 
+                        # Verificar la Tx con la clave pública del Sink
+                        # calcular el tiempo de verificación tx por parte del CH
+                        time_start1 = time.time()
+                        isverify2 = verify_transaction_signature(node_auth_tx['ID'], node_auth_tx['Signature'], key_public_sign)
+                        end_time_verify1 = time.time() - time_start1
+
                         rx_energy = calcular_energia_paquete("tx", es_tx=False)
 
                         # calculo de energia en la Recepción de la TX_response del SN -> CH
                         node_ch["ResidualEnergy"] -= rx_energy
-                        consumo2 += rx_energy
-
-                        # Captura estadisticas energia
-                        stats_proTx3["stats_proTx"][f"CH_Rx{node_ch['NodeID']}"] = {
-                            "energy_consumed": consumo2
-                            #"sync_time": sync_end_time_node,
-                            #"retransmissions": retries,
-                            #"is_syn": node["IsSynced"]
-                        }
 
                         # estadisticas nuevas
-                        stats["energy"]["CH"]["rx"].append(tx_energy)  # SN trasmite
+                        stats["energy"]["CH"]["id"].append(node_ch['NodeID'])  # CH recibe
+                        stats["energy"]["CH"]["rx"].append(rx_energy)  # CH recibe
+                        stats["times"]["verification"].append(end_time_verify1)
 
                         # Verificar la transacción con la clave pública
-                        if verify_transaction_signature(node_auth_tx['ID'], node_auth_tx['Signature'], key_public_sign):
+                        if isverify2:
                             print(f"CH {node_ch['NodeID']} recibió y verificó la Tx Response_auth_to_ch del Nodo {node4['NodeID']}.")
 
                             node4['Authenticated'] = True  # Se autentica exitosamente
                             authenticated = True
 
-                            # # # Asegurarse de que 'Tips' sea una lista
-                            # # if isinstance(node_uw[index_ch]['Tips'], str):
-                            # #     node_uw[index_ch]['Tips'] = node_uw[index_ch]['Tips'].split(',')  # Convertir en lista separada por comas si es necesario
-
-                            # # Debe agregar las Tx que son recibidas de los nodos del cluster
-                            # # Las agrega como tips
-                            # print('Tips del CH definido en ese momento : ', node_uw[index_ch]['Tips'])
                             print("Tx agregada al Tips :", node_auth_tx['ID'])
 
-                            # # Se agrega el id de tx al ch
-                            # node_ch['Tips'].append(node_auth_tx['ID'])
-                            
-                            #nodes[index_ch]['ApprovedTransactions'].append(node_auth_tx['ID'])
                             print("Tx agregadas : ", node_ch['Tips'])
                             #print("Pausa")
                             #time.sleep(5)                        
@@ -858,96 +766,7 @@ def authenticate_nodes_to_ch(nodes, chead, max_retries=3, timeout=2):
             if retries == max_retries:
                 print(f"CH {node_ch['NodeID']} no autenticó al Nodo {node4['NodeID']} tras {max_retries} reintentos.")
     #print("Que valor tiene : ", node_auth_tx)
-    return stats_proTx3, stats
-
-# def update_transactions2(node, approved_tx_ids):
-#     """
-#     Actualiza las listas de transacciones de un nodo, moviendo las transacciones aprobadas de 'Tips' a 'ApprovedTransactions'.
-#     Parameters:
-#     - node (dict): Diccionario que representa el nodo con sus transacciones.
-#     - approved_tx_ids (list): Lista de IDs de transacciones aprobadas para mover.
-#     Returns:
-#     - None
-#     """
-#     # Verificar si hay tips para aprobar
-#     if "Tips" in node and "ApprovedTransactions" in node:
-#         # Filtrar las transacciones aprobadas
-#         for tx_id in approved_tx_ids:
-#             if tx_id in node["Tips"]:
-#                 # Mover de Tips a ApprovedTransactions
-#                 node["ApprovedTransactions"].append(tx_id)
-#                 node["Tips"].remove(tx_id)
-
-#         print(f"Nodo {node['NodeID']}: Transacciones actualizadas.")
-#     else:
-#         print(f"Error: Nodo {node['NodeID']} no tiene listas de transacciones adecuadas.")
-
-# # Ejemplo de uso:
-# nodo_ejemplo = {
-#     "NodeID": 1,
-#     "Tips": ["tx1", "tx2", "tx3"],
-#     "ApprovedTransactions": []
-# }
-
-# transacciones_aprobadas = ["tx1", "tx3"]
-# update_transactions(nodo_ejemplo, transacciones_aprobadas)
-
-# print(nodo_ejemplo)
-
-
-# def update_transactions(node, received_transaction):
-#     """
-#     Actualiza la lista de transacciones aprobadas del nodo, moviendo las transacciones de "Tips" a "ApprovedTransactions".
-#     Además, verifica las transacciones aprobadas desde la transacción recibida.
-#     node: Diccionario del nodo.
-#     received_transaction: Transacción recibida que contiene detalles de aprobaciones.
-#     """
-#     print('Nodo que se va a actualizar : ', node)
-
-#     # Extraer ID de la transacción recibida y las aprobaciones
-#     transaction_id = received_transaction.get("ID")
-#     approved_tips = received_transaction.get("ApprovedTx", [])
-
-#     # Validar que approved_tips sea una lista
-#     if not isinstance(approved_tips, list):
-#         print(f"Error: La transacción recibida tiene un campo 'ApprovedTx' inválido: {approved_tips}")
-#         return
-
-#     print ('Tips que se deben aprobar : ', approved_tips)
-
-#     # Verificar las transacciones aprobadas y moverlas
-#     for tip in approved_tips:
-#         print('Tips a mover :', tip)
-#         if tip in node["Tips"]:
-#             # Mover de Tips a ApprovedTransactions
-#             node["Tips"].remove(tip)
-#             #verificar duplicados
-#             if tip not in node["ApprovedTransactions"]:
-#                 node["ApprovedTransactions"].append(tip)
-#             else:
-#                 print('El tips ya esta agregado...')
-
-#     # # Agregar la transacción recibida a ApprovedTransactions
-#     # if transaction_id not in node["Tips"]:
-#     #     node["Tips"].append(transaction_id)
-
-#     print('Nodo actualizado en sus ApprovedTx : ', node["ApprovedTransactions"], ' -> ID : ', node['NodeID'])
-
-# # Ejemplo de uso
-# nodo_ejemplo = {
-#     "NodeID": 1,
-#     "Tips": ["tx4", "tx5", "tx6"],
-#     "ApprovedTransactions": []
-# }
-
-# # Ejemplo de transacción recibida que aprueba otras transacciones
-# transaccion_recibida = {
-#     "ID": "tx7",
-#     "ApprovedTransactions": ["tx4", "tx5"]
-# }
-
-# update_transactions(nodo_ejemplo, transaccion_recibida)
-# print(nodo_ejemplo)
+    return stats
 
 
 # Nueva función de update_transactions

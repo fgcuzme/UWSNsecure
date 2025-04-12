@@ -311,23 +311,6 @@ stats_tx = {
     "times_propagation_response_tx": [],
 }
 
-# Almacenar estadisticas
-# Agregar al inicio del archivo
-stats_model = {
-    "tx_energy": {
-        "genesis_propagation_ch": [],
-        "cluster_propagation_genesis": [],
-        "tx_auth_response_ch": [],
-        "node_authentication": []
-    },
-
-    "time_metrics": {
-        "tx_creation": [],
-        "propagation_delays": [],
-        "verification_times": []
-    }
-}
-
 # Crear la Tx genesis
 print("-")
 print ('AUTENTICACIÓN CON TANGLE...')
@@ -368,7 +351,7 @@ for i in range(rondas):
     #  no valide la tx de respuesta
     # Este proceso solo se lleva a cabo siempre y cuando los ch esten sincronizados.t
     # Sink -> CH
-    recived, end_time_verify, times_propagation_tx, stats_proTx1, stats1, stats2 = propagate_tx_to_ch(node_sink, CH, node_uw, txgenesis)
+    recived, end_time_verify, times_propagation_tx, stats1, stats2 = propagate_tx_to_ch(node_sink, CH, node_uw, txgenesis)
     # stats_proTx["stats_proTx"].update(stats_proTx1)
     # print("Energia consumida hasta ahora : ", stats_proTx)
     # time.sleep(10)
@@ -376,7 +359,7 @@ for i in range(rondas):
     # Crear la tx de respuesta de los CH y transmitirlas al sink y los nodos del cluster
     # CH -> Sink
     # CH -> SN
-    end_time_responseCH, end_time_propagationTxCh, stats_proTx2, stats3 = propagate_tx_to_sink_and_cluster(node_sink, CH, node_uw)
+    end_time_responseCH, end_time_propagationTxCh, stats3 = propagate_tx_to_sink_and_cluster(node_sink, CH, node_uw)
     # stats_proTx["stats_proTx"].update(stats_proTx2)
     # print("Energia consumida hasta ahora : ", stats_proTx)
     # time.sleep(10)
@@ -385,7 +368,7 @@ for i in range(rondas):
     print('AUTENTICACIÓN DE LOS NODOS DEL CLUSTER')
     # Creación y propagación de la tx de autenticación de los nodos de cada cluster
     # SN -> CH
-    stats_proTx3, stats4 = authenticate_nodes_to_ch(node_uw, CH)
+    stats4 = authenticate_nodes_to_ch(node_uw, CH)
     # stats_proTx["stats_proTx"].update(stats_proTx3)
     # print("Energia consumida hasta ahora : ", stats_proTx)
     # time.sleep(10)
@@ -421,11 +404,6 @@ for i in range(rondas):
     save_stats_to_csv(stats3, "estadisticas_simulacion3.csv")
     save_stats_to_csv(stats4, "estadisticas_simulacion4.csv")
 
-    # Guarda las estadisticas del consumo de energia del proceso de autenticacion
-    # save_stats_energy_proTx_csv('sync_stats_energy_proTx.csv', stats_proTx)
-    save_stats_energy_proTx_csv('sync_stats_energy_proTx.csv', stats_proTx1)
-    save_stats_energy_proTx_csv('sync_stats_energy_proTx.csv', stats_proTx2)
-    save_stats_energy_proTx_csv('sync_stats_energy_proTx.csv', stats_proTx3)
 
     # Convertir las listas a cadenas para almacenarlas
     time_verify_str = ','.join(map(str, end_time_verify))

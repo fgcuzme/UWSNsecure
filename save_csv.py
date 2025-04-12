@@ -242,52 +242,83 @@ def save_stats_to_csv(stats, filename):
     """Guarda las estadísticas en un archivo CSV"""
     import csv
     
+    # Obtener la ruta actual y definir la carpeta 'stats' para guardar el archivo
+    current_dir = os.getcwd()
+    files_stats = os.path.join(current_dir, 'stats')
+    
+    # Crear la carpeta si no existe
+    if not os.path.exists(files_stats):
+        os.makedirs(files_stats)
+
+    # Ruta completa del archivo dentro de la carpeta 'stats'
+    ruta_stats = os.path.join(files_stats, filename)
+
     # Preparar datos para CSV
+    id_ch = stats["energy"]["CH"]["id"]
     energy_ch_tx = stats["energy"]["CH"]["tx"]
     energy_ch_rx = stats["energy"]["CH"]["rx"]
+    id_sn = stats["energy"]["SN"]["id"]
     energy_sn_tx = stats["energy"]["SN"]["tx"]
     energy_sn_rx = stats["energy"]["SN"]["rx"]
     times_prop = stats["times"]["propagation"]
+    times_prop_all = stats["times"]["propagation_all"]
     times_verif = stats["times"]["verification"]
+    times_response = stats["times"]["response"]
+    attempts = stats["attempts"]
     
     # Escribir archivo CSV
-    with open(filename, 'w', newline='') as csvfile:
+    with open(ruta_stats, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
         
         # Encabezados
         writer.writerow([
-            "Tipo", "Energía CH Tx", "Energía CH Rx", 
-            "Energía SN Tx", "Energía SN Rx",
-            "Tiempo Propagación", "Tiempo Verificación"
+            "Tipo", "Id_CH", "Energía CH Tx", "Energía CH Rx", 
+            "Id_SN", "Energía SN Tx", "Energía SN Rx",
+            "Tiempo Propagación", "Tiempo Propagación all", 
+            "Tiempo Verificación", "Tiempo de respuesta auth"
         ])
         
         # Datos (una fila por cada medición)
         max_len = max(
+            len(id_ch),
             len(energy_ch_tx), len(energy_ch_rx),
+            len(id_sn),
             len(energy_sn_tx), len(energy_sn_rx),
-            len(times_prop), len(times_verif)
+            len(times_prop), len(times_prop_all),
+            len(times_verif), len(times_response)
         )
         
         for i in range(max_len):
             writer.writerow([
                 f"Medición {i+1}",
+                id_ch[i] if i < len(id_ch) else "",
                 energy_ch_tx[i] if i < len(energy_ch_tx) else "",
                 energy_ch_rx[i] if i < len(energy_ch_rx) else "",
+                id_sn[i] if i < len(id_sn) else "",
                 energy_sn_tx[i] if i < len(energy_sn_tx) else "",
                 energy_sn_rx[i] if i < len(energy_sn_rx) else "",
                 times_prop[i] if i < len(times_prop) else "",
-                times_verif[i] if i < len(times_verif) else ""
+                times_prop_all[i] if i < len(times_prop_all) else "",
+                times_verif[i] if i < len(times_verif) else "",
+                times_response[i] if i < len(times_response) else ""
             ])
         
         # Totales
         writer.writerow([
-            "TOTALES",
+            "TOTALES","",
             sum(energy_ch_tx),
             sum(energy_ch_rx),
+            "",
             sum(energy_sn_tx),
             sum(energy_sn_rx),
             sum(times_prop),
-            sum(times_verif)
+            sum(times_prop_all),
+            sum(times_verif),
+            sum(times_response)
+        ])
+
+        writer.writerow([
+            "attempts", attempts,
         ])
     
     print(f"Estadísticas guardadas en {filename}")
