@@ -145,7 +145,7 @@ def compute_path_loss(frequency_khz: float, distance: float, spread_coef: float 
 
         # print(" attenuation_db : ", attenuation_db)
 
-        return attenuation_db, 10 ** (-attenuation_db / 10)  # Conversión de dB a fracción
+        return attenuation_db, 10 ** (-attenuation_db / 10)  # Conversión de dB a fracción lineal
 
 
 def compute_range(frequency: float, loss: float):

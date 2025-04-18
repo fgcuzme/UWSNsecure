@@ -427,6 +427,8 @@ print("FIN PROCESO DE AUTENTICACIÓN BASADO EN TX")
 
 print('Nodo Sink : ', node_sink)
 
+from energia_dinamica import calcular_energia_paquete
+from test_throp import propagation_time
 
 #%%
 ## INICIO PROCESO DE TRANSMISIÓN DE DATOS CIFRADOS CON ASCON
@@ -446,43 +448,104 @@ completed_transmissions = 0  # Contador de transmisiones realizadas
 max_attempts = 100  # Para evitar un bucle infinito si no hay nodos elegibles
 attempts = 0
 
-attempts = 0
-while completed_transmissions < total_transmissions and attempts < max_attempts:
-    attempts += 1  # Contador de intentos para evitar bucles infinitos
+# Buffers para cada CH y tiempos de último envío
+buffer_CH = {ch_id: [] for ch_id in CH}
+ultimo_envio_CH = {ch_id: time.time() for ch_id in CH}
+
+print("CHs : ", CH)
+print("buffer_CH : ", buffer_CH)
+print("ultimo_envio_CH", ultimo_envio_CH)
+
+# Parámetros realistas
+MAX_BUFFER = 5               # número máximo de datos antes de enviar al Sink
+AGGREGATION_TIMEOUT = 10/60     # segundos máximo antes de forzar envío
+
+# attempts = 0
+# while completed_transmissions < total_transmissions and attempts < max_attempts:
+#     attempts += 1  # Contador de intentos para evitar bucles infinitos
     
-    # Seleccionamos un nodo aleatorio
-    sender_index = np.random.randint(0, len(node_uw))  # Selección aleatoria de nodo
+#     # Seleccionamos un nodo aleatorio
+#     sender_index = np.random.randint(0, len(node_uw))  # Selección aleatoria de nodo
+#     sender = node_uw[sender_index]
+
+#     # Obtener el ID del Cluster Head (CH)
+#     # ch_id = sender.get("ClusterHead")
+#     ch_id = sender["ClusterHead"]
+#     # print("Sender : ", ch_id)
+
+#     # Validar que el nodo tiene un Cluster Head asignado
+#     if ch_id is None or ch_id == sender["NodeID"]:
+#         print("Detiene en caso de no tener CH asignado o es el mismo nodo...")
+#         continue  # Saltar si el nodo no tiene CH o si es su propio CH
+
+#     # Obtener el nodo Cluster Head
+#     receiver = node_uw[ch_id - 1]
+#     # print("Receiver : ", receiver["NodeID"])
+#     # time.sleep(1)
+
+#     # verificar que datos se envian
+#     # print(" Sender : ",sender["NodeID"],"-> Receiver : ", receiver["NodeID"])
+
+#     # Transmitir datos
+#     transmit_data("bbdd_keys_shared_sign_cipher.db", sender, receiver, f"Temperatura: {np.random.uniform(0, 30):.2f}°C")
+
+#     completed_transmissions += 1  # Incrementar transmisiones realizadas
+
+# # 📌 Simulación de CH enviando datos al Sink
+# for ch in CH:
+#     node_cluster = node_uw[ch]
+#     transmit_data("bbdd_keys_shared_sign_cipher.db", node_cluster, node_sink, "Datos agregados del cluster")
+
+# print(f"✅ Simulación completa: {completed_transmissions}/{total_transmissions} transmisiones realizadas.")
+
+
+while completed_transmissions < total_transmissions and attempts < max_attempts:
+    attempts += 1
+    sender_index = np.random.randint(0, len(node_uw))
     sender = node_uw[sender_index]
-
-    # Obtener el ID del Cluster Head (CH)
-    # ch_id = sender.get("ClusterHead")
     ch_id = sender["ClusterHead"]
-    # print("Sender : ", ch_id)
 
-    # Validar que el nodo tiene un Cluster Head asignado
     if ch_id is None or ch_id == sender["NodeID"]:
         print("Detiene en caso de no tener CH asignado o es el mismo nodo...")
-        continue  # Saltar si el nodo no tiene CH o si es su propio CH
+        continue
 
-    # Obtener el nodo Cluster Head
-    receiver = node_uw[ch_id - 1]
-    # print("Receiver : ", receiver["NodeID"])
-    # time.sleep(1)
+    receiver = node_uw[ch_id - 1]  # CH
+    # distancia = np.linalg.norm(sender["Position"] - receiver["Position"])
+    # t_prop = propagation_time(distancia,sender["Position"],receiver["Position"])
 
-    # verificar que datos se envian
-    # print(" Sender : ",sender["NodeID"],"-> Receiver : ", receiver["NodeID"])
+    # # Simular propagación
+    # time.sleep(t_prop)
 
-    # Transmitir datos
-    transmit_data("bbdd_keys_shared_sign_cipher.db", sender, receiver, f"Temperatura: {np.random.uniform(0, 30):.2f}°C")
+    # Registrar energía
+    energia_tx = calcular_energia_paquete("data", es_tx=True)
+    energia_rx = calcular_energia_paquete("data", es_tx=False)
 
-    completed_transmissions += 1  # Incrementar transmisiones realizadas
+    print("energia_tx : ", energia_tx," energia_rx : ", energia_rx)
 
-# 📌 Simulación de CH enviando datos al Sink
-for ch in CH:
-    node_cluster = node_uw[ch]
-    transmit_data("bbdd_keys_shared_sign_cipher.db", node_cluster, node_sink, "Datos agregados del cluster")
+    # Transmisión simulada
+    data_str = f"{np.random.uniform(0, 30):.2f}°C"
+    transmit_data("bbdd_keys_shared_sign_cipher.db", sender, receiver, str(data_str))
 
-print(f"✅ Simulación completa: {completed_transmissions}/{total_transmissions} transmisiones realizadas.")
+    print("CH_id : ", ch_id)
+    # Almacenar en buffer del CH
+    buffer_CH[ch_id - 1].append(data_str)
+    completed_transmissions += 1
+
+    # Verificar si CH debe transmitir al Sink
+    tiempo_desde_ultimo_envio = time.time() - ultimo_envio_CH[ch_id - 1]
+
+    if len(buffer_CH[ch_id - 1]) >= MAX_BUFFER or tiempo_desde_ultimo_envio >= AGGREGATION_TIMEOUT:
+        print("Envia el CH al Sink...")
+        ch_node = node_uw[ch_id - 1]
+        # distancia_sink = np.linalg.norm(ch_node["Position"] - node_sink["Position"])
+        # t_prop_sink = propagation_time(distancia_sink,ch_node["Position"], node_sink["Position"])
+        # time.sleep(t_prop_sink)
+
+        datos_agregados = "; ".join(buffer_CH[ch_id - 1])
+        transmit_data("bbdd_keys_shared_sign_cipher.db", ch_node, node_sink, datos_agregados)
+
+        buffer_CH[ch_id - 1] = []  # Vaciar buffer
+        ultimo_envio_CH[ch_id - 1] = time.time()
 
 
 print("-")

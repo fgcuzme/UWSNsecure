@@ -279,8 +279,8 @@ def transmit_data(db_path, sender_id, receiver_id, plaintext):
         if not success:
             print("⚠️ Paquete perdido durante la transmisión simulada")
 
-        summarize_metrics()
-        export_metrics_to_json()  # Puedes especificar otro nombre si lo deseas
+        # summarize_metrics()
+        # export_metrics_to_json()  # Puedes especificar otro nombre si lo deseas
         export_metrics_to_csv()
                                   
         print(f"📡 {sender} → {receiver} | 🔐 Cifrado: {encrypted_msg.hex()[:20]}... | 📥 Descifrado: {decrypted_msg}")
