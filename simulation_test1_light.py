@@ -180,11 +180,11 @@ for round in range(num_rounds):
 
                     node_uw[nodo_id]["NeighborNodes"] = vecinos_cercanos_ids
 
-# print(node_uw[1]['NodeID'])
-print('NeighboarSink : ', node_sink['NeighborCHs'])
+# # print(node_uw[1]['NodeID'])
+# print('NeighboarSink : ', node_sink['NeighborCHs'])
 
-for i in range(num_nodes):
-    print('indice : ' , i , node_uw[i]['NodeID'], ' - ', node_uw[i]['ClusterHead'], ' - ', node_uw[i]['NumCluster'], ' : ', node_uw[i]['NeighborNodes'])
+# for i in range(num_nodes):
+#     print('indice : ' , i , node_uw[i]['NodeID'], ' - ', node_uw[i]['ClusterHead'], ' - ', node_uw[i]['NumCluster'], ' : ', node_uw[i]['NeighborNodes'])
 
 print('FIN DE PROCESO DE CREACIÓN DE CLUSTER...')
 print('-')
@@ -294,7 +294,7 @@ print("INCIO PROCESO DE AUTENTICACIÓN BASADO EN TX")
 from propagacionTx_light import propagate_tx_to_ch, authenticate_nodes_to_ch, propagate_tx_to_sink_and_cluster
 from tangle2_light import create_gen_block, delete_tangle
 import time
-from save_csv import save_stats_tx, save_stats_energy_proTx_csv, save_stats_to_csv
+from save_csv import save_stats_tx, save_stats_energy_proTx_csv, save_stats_to_csv, save_stats_to_csv1, save_stats_to_csv2
 
 # Llamada a la función
 
@@ -344,14 +344,14 @@ for i in range(rondas):
     # stats_proTx = {
     #     "stats_proTx": {},  # Para guardar estadísticas por cada CH y nodo
     # }
-
+    stats_events = []
     # propagación de la tx genesis hacia los ch y nodos de cada cluster
     # en caso de recibir y verificar la tx genesis y verificarla la propaga hacia los nodos de su cluster
     # el ch prepara la tx de autenticación que la remite de vuelta al sink,el ch no se autentica mientras el sink
     #  no valide la tx de respuesta
     # Este proceso solo se lleva a cabo siempre y cuando los ch esten sincronizados.t
     # Sink -> CH
-    recived, end_time_verify, times_propagation_tx, stats1, stats2 = propagate_tx_to_ch(node_sink, CH, node_uw, txgenesis)
+    recived, end_time_verify, times_propagation_tx, stats1, stats2 = propagate_tx_to_ch(node_sink, CH, node_uw, txgenesis, E_schedule)
     # stats_proTx["stats_proTx"].update(stats_proTx1)
     # print("Energia consumida hasta ahora : ", stats_proTx)
     # time.sleep(10)
@@ -359,7 +359,7 @@ for i in range(rondas):
     # Crear la tx de respuesta de los CH y transmitirlas al sink y los nodos del cluster
     # CH -> Sink
     # CH -> SN
-    end_time_responseCH, end_time_propagationTxCh, stats3 = propagate_tx_to_sink_and_cluster(node_sink, CH, node_uw)
+    end_time_responseCH, end_time_propagationTxCh, stats3 = propagate_tx_to_sink_and_cluster(node_sink, CH, node_uw, E_schedule)
     # stats_proTx["stats_proTx"].update(stats_proTx2)
     # print("Energia consumida hasta ahora : ", stats_proTx)
     # time.sleep(10)
@@ -368,7 +368,7 @@ for i in range(rondas):
     print('AUTENTICACIÓN DE LOS NODOS DEL CLUSTER')
     # Creación y propagación de la tx de autenticación de los nodos de cada cluster
     # SN -> CH
-    stats4 = authenticate_nodes_to_ch(node_uw, CH)
+    stats4, stats_events = authenticate_nodes_to_ch(node_uw, CH, E_schedule)
     # stats_proTx["stats_proTx"].update(stats_proTx3)
     # print("Energia consumida hasta ahora : ", stats_proTx)
     # time.sleep(10)
@@ -387,16 +387,16 @@ for i in range(rondas):
     # #   Asignar al campo global
     # stats_proTx["stats_proTx"] = dict(acumulador)
     
-    # 4. Procesar estadísticas
-    print("\n=== Estadísticas completas ===")
-    print("Consumo energía CH (Tx):", sum(stats4["energy"]["CH"]["tx"]))
-    print("Consumo energía CH (Rx):", sum(stats4["energy"]["CH"]["rx"]))
-    print("Consumo energía SN (Tx):", sum(stats4["energy"]["SN"]["tx"]))
-    print("Consumo energía SN (Rx):", sum(stats4["energy"]["SN"]["rx"]))
-    print("Tiempo promedio propagación:", np.mean(stats4["times"]["propagation"]))
-    print("Tiempo promedio propagación por CH:", np.mean(stats4["times"]["propagation_all"]))
-    print("Tiempo promedio verificación:", np.mean(stats4["times"]["verification"]))
-    print("Total reintentos:", stats4["attempts"])
+    # # 4. Procesar estadísticas
+    # print("\n=== Estadísticas completas ===")
+    # print("Consumo energía CH (Tx):", sum(stats4["energy"]["CH"]["tx"]))
+    # print("Consumo energía CH (Rx):", sum(stats4["energy"]["CH"]["rx"]))
+    # print("Consumo energía SN (Tx):", sum(stats4["energy"]["SN"]["tx"]))
+    # print("Consumo energía SN (Rx):", sum(stats4["energy"]["SN"]["rx"]))
+    # print("Tiempo promedio propagación:", np.mean(stats4["times"]["propagation"]))
+    # print("Tiempo promedio propagación por CH:", np.mean(stats4["times"]["propagation_all"]))
+    # print("Tiempo promedio verificación:", np.mean(stats4["times"]["verification"]))
+    # print("Total reintentos:", stats4["attempts"])
 
     # 5. Guardar estadísticas en CSV
     save_stats_to_csv(stats1, "estadisticas_simulacion1.csv")
@@ -404,6 +404,8 @@ for i in range(rondas):
     save_stats_to_csv(stats3, "estadisticas_simulacion3.csv")
     save_stats_to_csv(stats4, "estadisticas_simulacion4.csv")
 
+    # save_stats_to_csv1(stats1, "estadisticas_simulacion5.csv")
+    save_stats_to_csv2(stats_events, "estadisticas_TxAuth.csv")
 
     # Convertir las listas a cadenas para almacenarlas
     time_verify_str = ','.join(map(str, end_time_verify))
@@ -425,7 +427,7 @@ print("FIN PROCESO DE AUTENTICACIÓN BASADO EN TX")
 
 # ####
 
-print('Nodo Sink : ', node_sink)
+# print('Nodo Sink : ', node_sink)
 
 from energia_dinamica import calcular_energia_paquete
 from test_throp import propagation_time
@@ -458,7 +460,7 @@ print("ultimo_envio_CH", ultimo_envio_CH)
 
 # Parámetros realistas
 MAX_BUFFER = 5               # número máximo de datos antes de enviar al Sink
-AGGREGATION_TIMEOUT = 10/60     # segundos máximo antes de forzar envío
+AGGREGATION_TIMEOUT = 30     # segundos máximo antes de forzar envío
 
 # attempts = 0
 # while completed_transmissions < total_transmissions and attempts < max_attempts:
@@ -516,11 +518,11 @@ while completed_transmissions < total_transmissions and attempts < max_attempts:
     # # Simular propagación
     # time.sleep(t_prop)
 
-    # Registrar energía
-    energia_tx = calcular_energia_paquete("data", es_tx=True)
-    energia_rx = calcular_energia_paquete("data", es_tx=False)
+    # # Registrar energía
+    # energia_tx = calcular_energia_paquete("data", es_tx=True)
+    # energia_rx = calcular_energia_paquete("data", es_tx=False)
 
-    print("energia_tx : ", energia_tx," energia_rx : ", energia_rx)
+    # print("energia_tx : ", energia_tx," energia_rx : ", energia_rx)
 
     # Transmisión simulada
     data_str = f"{np.random.uniform(0, 30):.2f}°C"

@@ -131,8 +131,64 @@ def calculate_timeout(sink_pos, ch_pos, bitrate=9200, packet_size=48):
 #     return max(guard_time, 0.05)  # Mínimo 50 ms
 
 
+
+
 # Función para actualizar la energía de un nodo basado en su distancia al CH o Sink
-def update_energy_node_tdma(node, target_pos, E_schedule, timeout, type_packet, is_ch=False):
+def update_energy_node_tdma(node, target_pos, E_schedule, timeout, type_packet, role="SN", action="tx", verbose=False):
+    """
+    Actualiza la energía del nodo considerando su rol (CH o SN) en TDMA.
+    Parámetros:
+    - node: Diccionario con los datos del nodo (incluye Position y ResidualEnergy)
+    - target_pos: Posición del objetivo (Sink para CHs, CH para SNs)
+    - is_ch: Booleano que indica si el nodo es Cluster Head
+    - E_schedule: Energía de programación TDMA (solo para CHs)
+    - timeout: Tiempo máximo de espera para ACK
+    
+    Retorna:
+    - El nodo con su energía residual actualizada
+    """
+    
+    # # 3. Margen científico (3 componentes) para el calculo de Guard_time
+    # jitter_margin = 0.01  # 10 ms (jitter de hardware)
+    # doppler_margin = 0.02 * delta_dist/v_sound  # Efecto Doppler (2%)
+    # safety_margin = 0.03  # 30 ms adicionales
+    
+    # Inicialización
+    E_tx = E_rx = E_sched = 0
+
+    # 1. Calcular distancia y tiempo de propagación (guard_time)
+    dist = np.linalg.norm(node["Position"] - target_pos)
+    guard_time = propagation_time(dist, node["Position"], target_pos)
+    
+    # Energía según acción
+    if action == "tx":
+        E_tx = calcular_energia_paquete(type_packet, es_tx=True)
+        if role == "CH":
+            E_sched = E_schedule
+    elif action == "rx":
+        E_rx = calcular_energia_paquete(type_packet, es_tx=False)
+
+    # Energía en escucha o standby (según rol)
+    if role in ["CH", "Sink"]:
+        E_guard = energy_listen(guard_time)
+        E_timeout = energy_listen(timeout)
+    else:
+        E_guard = energy_standby(guard_time)
+        E_timeout = energy_listen(timeout)
+    
+    # Total energía
+    E_total = E_tx + E_rx + E_guard + E_timeout + E_sched
+    node["ResidualEnergy"] = max(node["ResidualEnergy"] - E_total, 0)
+
+    if verbose:
+        print(f"[{role} - {action.upper()}] TX: {E_tx:.6f}, RX: {E_rx:.6f}, Guard: {E_guard:.6f}, Timeout: {E_timeout:.6f}, Schedule: {E_sched:.6f}")
+        print(f"→ Total: {E_total:.6f} J | Residual: {node['ResidualEnergy']:.6f} J")
+    
+    return node
+
+
+# Función para actualizar la energía de un nodo basado en su distancia al CH o Sink
+def update_energy_node_tdma1(node, target_pos, E_schedule, timeout, type_packet, is_ch=False):
     """
     Actualiza la energía del nodo considerando su rol (CH o SN) en TDMA.
     Parámetros:

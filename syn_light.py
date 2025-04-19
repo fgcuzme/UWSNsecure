@@ -94,7 +94,10 @@ def propagate_syn_to_CH_tdma(sink, CH_ids, node_uw, max_retries=3, timeout=2, E_
             initial_energy = node_uw[ch]["ResidualEnergy"]
 
             # Actualizar la energía del Cluster Head
-            node_uw[ch] = update_energy_node_tdma(node_uw[ch], sink["Position"], E_schedule, timeout, type_packet, is_ch=True)
+            node_uw[ch] = update_energy_node_tdma(node_uw[ch], sink["Position"], E_schedule, timeout, type_packet, role='CH', action='rx', verbose=True)
+            
+            # Actualiza energía de la tx de la confirmación (ACK)
+            node_uw[ch] = update_energy_node_tdma(node_uw[ch], sink["Position"], E_schedule, timeout, type_packet, role='CH', action='tx', verbose=True)
             # Estadistica
 
             # **Nuevo: Calcular la energía consumida**
@@ -109,6 +112,7 @@ def propagate_syn_to_CH_tdma(sink, CH_ids, node_uw, max_retries=3, timeout=2, E_
                 print(f"Cluster Head {ch + 1} no envió ACK, posible retransmisión necesaria.")
                 retries += 1
                 time.sleep(timeout)  # Esperar antes de retransmitir (simulando backoff)
+
             else:               
                 print(f"Cluster Head {ch + 1} sincronizado exitosamente.")
                 node_uw[ch]["IsSynced"] = True  # Marcar el nodo como sincronizado
@@ -119,6 +123,8 @@ def propagate_syn_to_CH_tdma(sink, CH_ids, node_uw, max_retries=3, timeout=2, E_
                 # Capturar estadísticas de sincronización del CH
                 sync_end_time = time.time() - start_time
                 stats["sync_stats"][f"CH_{node_uw[ch]['NodeID']}"] = {
+                    "disntance": dist,
+                    "delay": delay,
                     "energy_consumed": energy_consumed_ch,
                     "sync_time": sync_end_time,
                     "retransmissions": retries,
@@ -126,7 +132,7 @@ def propagate_syn_to_CH_tdma(sink, CH_ids, node_uw, max_retries=3, timeout=2, E_
                 }
 
                 # Sincronizar nodos bajo el CH
-                node_stats = synchronize_nodes_tdma(ch, syn_packet, node_uw, max_retries_sensor, timeout, type_packet)
+                node_stats = synchronize_nodes_tdma(ch, syn_packet, node_uw, max_retries_sensor, timeout, type_packet, E_schedule)
                 stats["sync_stats"].update(node_stats)
 
 
@@ -136,7 +142,7 @@ def propagate_syn_to_CH_tdma(sink, CH_ids, node_uw, max_retries=3, timeout=2, E_
 
 
 # Función para sincronizar nodos con el Cluster Head, incluyendo retransmisiones en nodos sensores
-def synchronize_nodes_tdma(CH_id, syn_packet, node_uw, max_retries_sensor, timeout_node, type_packet):
+def synchronize_nodes_tdma(CH_id, syn_packet, node_uw, max_retries_sensor, timeout_node, type_packet, E_schedule):
     print(f"Sincronizando Cluster Head {CH_id + 1} con Timestamp: {syn_packet['Timestamp']} y Hops: {syn_packet['Hops']}")
 
     # print(' Verificar CH_id en nodes : ', CH_id)
@@ -145,7 +151,6 @@ def synchronize_nodes_tdma(CH_id, syn_packet, node_uw, max_retries_sensor, timeo
     cluster_nodes = [node for node in node_uw if node["ClusterHead"] == (CH_id + 1) and node["NodeID"] != (CH_id + 1)]
 
     ack_received_node = False
-    E_schedule = 0
 
     # Diccionario para capturar estadísticas de cada nodo
     node_stats = {}
@@ -156,14 +161,20 @@ def synchronize_nodes_tdma(CH_id, syn_packet, node_uw, max_retries_sensor, timeo
         ack_received_node = False
         start_time_node = time.time()
         energy_consumed_node = 0
+        
 
         while retries < max_retries_sensor and not node["IsSynced"]:
             # Aqui toca agregar el delay de propagación basasdo en la formula de distancia/velocidad
 
+            # Calcular el timeout de espera
+            timeout = calculate_timeout(node_uw[CH_id]["Position"], node["Position"], bitrate=9200, packet_size=48)
+        
+            # Actualizar la energía del Cluster Head
+            node_uw[CH_id] = update_energy_node_tdma(node_uw[CH_id], node["Position"], E_schedule, timeout, type_packet, role='CH', action='tx', verbose=True)
+
             # delay = random_sync_delay()  # Generar un tiempo de retraso aleatorio
             # calcular la distancia entre los nodos
             dist = np.linalg.norm(node["Position"] - node_uw[CH_id]["Position"])
-
             start_position = node["Position"]
             end_position = node_uw[CH_id]["Position"]
             delay = propagation_time(dist, start_position, end_position)
@@ -175,7 +186,12 @@ def synchronize_nodes_tdma(CH_id, syn_packet, node_uw, max_retries_sensor, timeo
 
             # Actualizar la energía del nodo sensor
             #node = update_energy_node_tdma(node, node_uw[CH_id + 1]["Position"], size_packet, alpha_node, E_schedule, Ptr_node, freq_node, is_ch=False)
-            node = update_energy_node_tdma(node, node_uw[CH_id]["Position"], E_schedule, timeout_node, type_packet, is_ch=False)
+            node = update_energy_node_tdma(node, node_uw[CH_id]["Position"], E_schedule, timeout_node, type_packet, role='SN', action='rx', verbose=True)
+
+            # 
+            # Actualiza energía de la tx de la confirmación
+            node = update_energy_node_tdma(node, node_uw[CH_id]["Position"], E_schedule, timeout_node, type_packet, role='SN', action='tx', verbose=True)
+
             energy_consumed_node += ((initial_energy - node["ResidualEnergy"]))
 
             # print(node_uw)
@@ -189,6 +205,9 @@ def synchronize_nodes_tdma(CH_id, syn_packet, node_uw, max_retries_sensor, timeo
                 print(f"Nodo {node['NodeID']} sincronizado exitosamente.")
                 node["IsSynced"] = True  # Marcar el nodo como sincronizado
 
+                # Actualizar la energía del Cluster Head
+                node_uw[CH_id] = update_energy_node_tdma(node_uw[CH_id], node["Position"], E_schedule, timeout, type_packet, role='CH', action='rx', verbose=True)
+
                 # Registrar el nodo como sincronizado en el CH
                 register_node_to_ch(CH_id, node["NodeID"], node["IsSynced"], False, node_uw)  # Aquí asumimos que aún no está autenticado
 
@@ -200,6 +219,8 @@ def synchronize_nodes_tdma(CH_id, syn_packet, node_uw, max_retries_sensor, timeo
         sync_end_time_node = time.time() - start_time_node
 
         node_stats[f"Node_{node['NodeID']}"] = {
+            "disntance": dist,
+            "delay": delay,
             "energy_consumed": energy_consumed_node,
             "sync_time": sync_end_time_node,
             "retransmissions": retries,

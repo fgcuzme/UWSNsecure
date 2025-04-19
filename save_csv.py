@@ -172,7 +172,7 @@ def save_stats_to_syn_csv(file_name, stats, method_name):
         # Escribir encabezados si el archivo está vacío
         if file.tell() == 0:
             writer.writerow([
-                'ID', 'Tipo', 'Energía Consumida (J)', 
+                'ID', 'Tipo', 'CHoSN', 'Distancia', 'Delay', 'Energía Consumida (J)', 
                 'Tiempo de Sincronización (s)', 'Retransmisiones', 'IsSynStatus'
             ])
         
@@ -182,6 +182,8 @@ def save_stats_to_syn_csv(file_name, stats, method_name):
                 method_name,
                 key, 
                 "CH" if "CH" in key else "Nodo",
+                value.get("disntance", ''),
+                value.get("delay", ''),
                 value.get("energy_consumed", ''),
                 value.get("sync_time", ''),
                 value.get("retransmissions", ''),
@@ -255,11 +257,15 @@ def save_stats_to_csv(stats, filename):
 
     # Preparar datos para CSV
     id_ch = stats["energy"]["CH"]["id"]
+    stod_ch = stats["energy"]["CH"]["s-d"]
     energy_ch_tx = stats["energy"]["CH"]["tx"]
     energy_ch_rx = stats["energy"]["CH"]["rx"]
     id_sn = stats["energy"]["SN"]["id"]
+    stod_sn = stats["energy"]["SN"]["s-d"]
     energy_sn_tx = stats["energy"]["SN"]["tx"]
     energy_sn_rx = stats["energy"]["SN"]["rx"]
+    stod_id = stats["times"]["id"]
+    stod_times = stats["times"]["s-d"]
     times_prop = stats["times"]["propagation"]
     times_prop_all = stats["times"]["propagation_all"]
     times_verif = stats["times"]["verification"]
@@ -272,18 +278,20 @@ def save_stats_to_csv(stats, filename):
         
         # Encabezados
         writer.writerow([
-            "Tipo", "Id_CH", "Energía CH Tx", "Energía CH Rx", 
-            "Id_SN", "Energía SN Tx", "Energía SN Rx",
+            "Tipo", "Id_CH", "StoD_CH", "Energía CH Tx", "Energía CH Rx", 
+            "Id_SN", "StoD_SN", "Energía SN Tx", "Energía SN Rx",
+            "Id_node", "StoD_time",
             "Tiempo Propagación", "Tiempo Propagación all", 
             "Tiempo Verificación", "Tiempo de respuesta auth"
         ])
         
         # Datos (una fila por cada medición)
         max_len = max(
-            len(id_ch),
+            len(id_ch), len(stod_ch),
             len(energy_ch_tx), len(energy_ch_rx),
-            len(id_sn),
+            len(id_sn), len(stod_sn),
             len(energy_sn_tx), len(energy_sn_rx),
+            len(stod_id), len(stod_times),
             len(times_prop), len(times_prop_all),
             len(times_verif), len(times_response)
         )
@@ -292,11 +300,15 @@ def save_stats_to_csv(stats, filename):
             writer.writerow([
                 f"Medición {i+1}",
                 id_ch[i] if i < len(id_ch) else "",
+                stod_ch[i] if i < len(stod_ch) else "",
                 energy_ch_tx[i] if i < len(energy_ch_tx) else "",
                 energy_ch_rx[i] if i < len(energy_ch_rx) else "",
                 id_sn[i] if i < len(id_sn) else "",
+                stod_sn[i] if i < len(stod_sn) else "",
                 energy_sn_tx[i] if i < len(energy_sn_tx) else "",
                 energy_sn_rx[i] if i < len(energy_sn_rx) else "",
+                stod_id[i] if i < len(stod_id) else "",
+                stod_times[i] if i < len(stod_times) else "",
                 times_prop[i] if i < len(times_prop) else "",
                 times_prop_all[i] if i < len(times_prop_all) else "",
                 times_verif[i] if i < len(times_verif) else "",
@@ -305,12 +317,13 @@ def save_stats_to_csv(stats, filename):
         
         # Totales
         writer.writerow([
-            "TOTALES","",
+            "TOTALES","","",
             sum(energy_ch_tx),
             sum(energy_ch_rx),
-            "",
+            "","",
             sum(energy_sn_tx),
             sum(energy_sn_rx),
+            "","",
             sum(times_prop),
             sum(times_prop_all),
             sum(times_verif),
@@ -322,3 +335,86 @@ def save_stats_to_csv(stats, filename):
         ])
     
     print(f"Estadísticas guardadas en {filename}")
+
+
+
+def save_stats_to_csv1(stats, filename, method_name='TDMA'):
+    
+    current_dir = os.getcwd()
+    files_stats = os.path.join(current_dir, 'stats')
+
+    if not os.path.exists(files_stats):
+        os.makedirs(files_stats)
+
+    ruta_stats = os.path.join(files_stats, filename)
+
+    # Abrir archivo CSV para escritura
+    with open(ruta_stats, mode='w', newline='') as csvfile:
+        fieldnames = [
+            "ID_Node", "Rol_Node", "Origen->Destino",
+            "Energía_Tx", "Energía_Rx",
+            "T_Propagación", "T_Propagación_Total",
+            "T_Verificación", "T_Auth_Response",
+            "Intentos", "Método"
+        ]
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+
+        # Procesar CH
+        for i in range(len(stats["energy"]["CH"]["id"])):
+            writer.writerow({
+                "ID_Node": stats["energy"]["CH"]["id"][i],
+                "Rol_Node": "CH",
+                "Origen->Destino": stats["energy"]["CH"]["s-d"][i],
+                "Energía_Tx": stats["energy"]["CH"]["tx"][i],
+                "Energía_Rx": stats["energy"]["CH"]["rx"][i],
+                "T_Propagación": "",
+                "T_Propagación_Total": "",
+                "T_Verificación": "",
+                "T_Auth_Response": "",
+                "Intentos": stats["attempts"],
+                "Método": method_name
+            })
+
+        # Procesar SN
+        for i in range(len(stats["energy"]["SN"]["id"])):
+            writer.writerow({
+                "ID_Node": stats["energy"]["SN"]["id"][i],
+                "Rol_Node": "SN",
+                "Origen->Destino": stats["energy"]["SN"]["s-d"][i],
+                "Energía_Tx": stats["energy"]["SN"]["tx"][i],
+                "Energía_Rx": stats["energy"]["SN"]["rx"][i],
+                "T_Propagación": stats["times"]["propagation"][i],
+                "T_Propagación_Total": stats["times"]["propagation_all"][i],
+                "T_Verificación": stats["times"]["verification"][i],
+                "T_Auth_Response": stats["times"]["response"][i],
+                "Intentos": stats["attempts"],
+                "Método": method_name
+            })
+
+
+def save_stats_to_csv2(stats, filename):
+    """Guarda las estadísticas en un archivo CSV"""
+    import csv
+    
+    # Obtener la ruta actual y definir la carpeta 'stats' para guardar el archivo
+    current_dir = os.getcwd()
+    files_stats = os.path.join(current_dir, 'stats')
+    
+    # Crear la carpeta si no existe
+    if not os.path.exists(files_stats):
+        os.makedirs(files_stats)
+
+    # Ruta completa del archivo dentro de la carpeta 'stats'
+    ruta_stats = os.path.join(files_stats, filename)
+
+    # Obtener campos desde la primera fila
+    campos = list(stats[0].keys())
+
+    # Escribir CSV
+    with open(ruta_stats, mode='w', newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=campos)
+        writer.writeheader()
+        writer.writerows(stats)
+
+    print(f"[✅] Archivo guardado correctamente en: {ruta_stats}")
