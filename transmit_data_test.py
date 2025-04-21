@@ -1,6 +1,9 @@
 import sqlite3
 from metrics import (log_latency, log_throughput, log_energy, log_packet_result, 
                      get_packet_loss_percentage, summarize_metrics, export_metrics_to_json, export_metrics_to_csv)
+from transmission_logger import log_transmission_event
+from energia_dinamica import calcular_energia_paquete, energy_listen, energy_standby, calculate_timeout, update_energy_node_tdma
+from transmission_summary import summarize_per_node, summarize_global
 
 # Crea la tabla para almacenar las claves compartidas en la BBDD del nodo
 def create_shared_keys_table(db_path):
@@ -197,10 +200,12 @@ from test_throp import propagation_time, compute_path_loss
 # }
 
 
-def transmit_data(db_path, sender_id, receiver_id, plaintext):
+def transmit_data(db_path, sender_id, receiver_id, plaintext, E_schedule, role="SN", process='enc'):
     # """Simula la transmisión de datos cifrados entre nodos usando claves compartidas almacenadas en la base de datos."""
     # conn = sqlite3.connect(db_path)
     # cursor = conn.cursor()
+
+    msg_type = type_packet = 'data'
 
     # Obtener la ruta del directorio donde se encuentra el script actual
     # current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -226,17 +231,24 @@ def transmit_data(db_path, sender_id, receiver_id, plaintext):
 
     # Obtener la clave compartida entre los nodos
     # cursor.execute("SELECT shared_key FROM shared_keys WHERE node_id = ? AND peer_id = ?", (sender_id, receiver_id)) # accede al dato tipo blob
-    cursor.execute("SELECT shared_key FROM shared_keys WHERE node_id = ? AND peer_id = ?", (int(sender), int(receiver))) # accede al dato tipo int
+    cursor.execute("SELECT shared_key, id FROM shared_keys WHERE node_id = ? AND peer_id = ?", (int(sender), int(receiver))) # accede al dato tipo int
     row = cursor.fetchone()
     conn.close()
 
     if row:
         shared_key = row[0]
-        #print("shared_key : ", row[0].hex())
+        shared_key_id = row[1]
 
-        start_time = time.time()
-        encrypted_msg = encrypt_message(shared_key, plaintext)
-        end_time_encrypted = time.time()
+        if process == 'enc':
+            start_time = time.time()
+            encrypted_msg = encrypt_message(shared_key, plaintext)
+            end_time = time.time()
+        elif process == 'des':
+            start_time = time.time()
+            decrypted_msg = decrypt_message(shared_key, encrypted_msg)
+            end_time = time.time()
+        else:
+            print("Texto plano...")
 
         # Simulación de retardo en la propagación acústica
         # distance = np.random.uniform(100, 1000)  # Distancia aleatoria entre nodos
@@ -252,13 +264,11 @@ def transmit_data(db_path, sender_id, receiver_id, plaintext):
         # delay = distance / 1500  # Velocidad del sonido en agua ~1500 m/s
         # time.sleep(delay)
 
-        start_time_decrypt = time.time()
-        decrypted_msg = decrypt_message(shared_key, encrypted_msg)
-        end_time = time.time()
-
         # latency_ms_encrypted = (end_time_encrypted - start_time) * 1000
         # latency_ms_encrypted = (end_time_total - start_time_decrypt) * 1000
         # latency_ms = (end_time_total - start_time) * 1000
+
+        latency_ms = start_time - end_time
 
         # Registro de métricas
         log_latency(start_time, end_time)
@@ -271,21 +281,54 @@ def transmit_data(db_path, sender_id, receiver_id, plaintext):
         bits_received = len(encrypted_msg) * 8
         log_energy(bits_sent, bits_received)
 
+        # Energia antes de la trasmisión
+        # **Nuevo: Medir energía inicial del CH**
+        initial_energy = sender_id["ResidualEnergy"]
+        # Calcular el timeout de espera
+        timeout = calculate_timeout(start_position, end_position, bitrate=9200, packet_size=bits_sent)
+        sender_id = update_energy_node_tdma(sender_id, receiver_id["Position"], E_schedule, timeout, 
+                                            type_packet, role='SN', action='tx', verbose=True)
+        # energía despues de la trasmisión 
+        energy_consumed_sn += ((initial_energy - sender_id["ResidualEnergy"]))
+        log_transmission_event(sender_id=sender_id['NodeID'], receiver_id=receiver_id['NodeID'], 
+                               cluster_id=sender_id["ClusterHead"], distance_m=distance, latency_ms=latency_ms,
+                                bits_sent=bits_sent, bits_received=bits_received, packet_lost=packet_lost,
+                                energy_j=energy_consumed_sn, shared_key_id=shared_key_id, msg_type=msg_type)
+
+        # Energia antes de la trasmisión
+        # **Nuevo: Medir energía inicial del CH**
+        initial_energy = receiver_id["ResidualEnergy"]
+        # Calcular el timeout de espera
+        timeout = calculate_timeout(start_position, end_position, bitrate=9200, packet_size=bits_received)
+        receiver_id = update_energy_node_tdma(sender_id, receiver_id["Position"], E_schedule, timeout, 
+                                            type_packet, role='CH', action='rx', verbose=True)
+        # energía despues de la trasmisión 
+        energy_consumed_ch += ((initial_energy - receiver_id["ResidualEnergy"]))
+        log_transmission_event(sender_id=sender_id['NodeID'], receiver_id=receiver_id['NodeID'], 
+                               cluster_id=sender_id["ClusterHead"], distance_m=distance, latency_ms=latency_ms,
+                                bits_sent=bits_sent, bits_received=bits_received, packet_lost=packet_lost,
+                                energy_j=energy_consumed_ch, shared_key_id=shared_key_id, msg_type=msg_type)
+
         # Simular pérdida de paquetes
         import random
         success = random.random() > 0.15  # 95% éxito
         log_packet_result(success)
 
         if not success:
+            packet_lost = not success
             print("⚠️ Paquete perdido durante la transmisión simulada")
 
         # summarize_metrics()
         # export_metrics_to_json()  # Puedes especificar otro nombre si lo deseas
-        export_metrics_to_csv()
+        # export_metrics_to_csv()
                                   
         print(f"📡 {sender} → {receiver} | 🔐 Cifrado: {encrypted_msg.hex()[:20]}... | 📥 Descifrado: {decrypted_msg}")
     else:
         print(f"🚨 Error: No se encontró clave compartida entre {sender} y {receiver}")
+
+
+summarize_per_node()
+summarize_global()
 
 # # 📌 Ejemplo de simulación de transmisión:
 # transmit_data("bbdd_keys_shared_sign_cipher.db", 16, 402, "Temperatura: 15.2°C")

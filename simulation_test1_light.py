@@ -399,9 +399,9 @@ for i in range(rondas):
     # print("Total reintentos:", stats4["attempts"])
 
     # 5. Guardar estadísticas en CSV
-    save_stats_to_csv(stats1, "estadisticas_simulacion1.csv")
-    save_stats_to_csv(stats2, "estadisticas_simulacion2.csv")
-    save_stats_to_csv(stats3, "estadisticas_simulacion3.csv")
+    # save_stats_to_csv(stats1, "estadisticas_simulacion1.csv")
+    # save_stats_to_csv(stats2, "estadisticas_simulacion2.csv")
+    # save_stats_to_csv(stats3, "estadisticas_simulacion3.csv")
     save_stats_to_csv(stats4, "estadisticas_simulacion4.csv")
 
     # save_stats_to_csv1(stats1, "estadisticas_simulacion5.csv")
@@ -436,6 +436,7 @@ from test_throp import propagation_time
 ## INICIO PROCESO DE TRANSMISIÓN DE DATOS CIFRADOS CON ASCON
 print("-")
 print ('INICIO PROCESO DE TRANSMISIÓN DE DATOS CIFRADOS CON ASCON...')
+
 from transmit_data_test import create_shared_keys_table, generate_shared_keys, transmit_data
 
 # Se crea la tabla en la BBDD donde se van a crear las claves compartidas
@@ -445,7 +446,7 @@ create_shared_keys_table("bbdd_keys_shared_sign_cipher.db")
 generate_shared_keys("bbdd_keys_shared_sign_cipher.db", node_uw, CH, node_sink)
 
 # Número total de transmisiones que queremos completar
-total_transmissions = 30
+total_transmissions = 10
 completed_transmissions = 0  # Contador de transmisiones realizadas
 max_attempts = 100  # Para evitar un bucle infinito si no hay nodos elegibles
 attempts = 0
@@ -526,10 +527,11 @@ while completed_transmissions < total_transmissions and attempts < max_attempts:
 
     # Transmisión simulada
     data_str = f"{np.random.uniform(0, 30):.2f}°C"
-    transmit_data("bbdd_keys_shared_sign_cipher.db", sender, receiver, str(data_str))
+    transmit_data("bbdd_keys_shared_sign_cipher.db", sender, receiver, str(data_str), E_schedule, role="SN", action='enc')
 
     print("CH_id : ", ch_id)
     # Almacenar en buffer del CH
+    transmit_data("bbdd_keys_shared_sign_cipher.db", sender, receiver, str(data_str), E_schedule, role="CH", action='des')
     buffer_CH[ch_id - 1].append(data_str)
     completed_transmissions += 1
 
@@ -544,7 +546,7 @@ while completed_transmissions < total_transmissions and attempts < max_attempts:
         # time.sleep(t_prop_sink)
 
         datos_agregados = "; ".join(buffer_CH[ch_id - 1])
-        transmit_data("bbdd_keys_shared_sign_cipher.db", ch_node, node_sink, datos_agregados)
+        transmit_data("bbdd_keys_shared_sign_cipher.db", ch_node, node_sink, datos_agregados, E_schedule, role="CH")
 
         buffer_CH[ch_id - 1] = []  # Vaciar buffer
         ultimo_envio_CH[ch_id - 1] = time.time()
