@@ -431,6 +431,7 @@ print("FIN PROCESO DE AUTENTICACIÓN BASADO EN TX")
 
 from energia_dinamica import calcular_energia_paquete
 from test_throp import propagation_time
+from transmission_summary import summarize_per_node, summarize_global
 
 #%%
 ## INICIO PROCESO DE TRANSMISIÓN DE DATOS CIFRADOS CON ASCON
@@ -446,7 +447,7 @@ create_shared_keys_table("bbdd_keys_shared_sign_cipher.db")
 generate_shared_keys("bbdd_keys_shared_sign_cipher.db", node_uw, CH, node_sink)
 
 # Número total de transmisiones que queremos completar
-total_transmissions = 10
+total_transmissions = 30
 completed_transmissions = 0  # Contador de transmisiones realizadas
 max_attempts = 100  # Para evitar un bucle infinito si no hay nodos elegibles
 attempts = 0
@@ -525,13 +526,16 @@ while completed_transmissions < total_transmissions and attempts < max_attempts:
 
     # print("energia_tx : ", energia_tx," energia_rx : ", energia_rx)
 
+    # print(sender)
+    # print(receiver)
+    
     # Transmisión simulada
     data_str = f"{np.random.uniform(0, 30):.2f}°C"
-    transmit_data("bbdd_keys_shared_sign_cipher.db", sender, receiver, str(data_str), E_schedule, role="SN", action='enc')
+    transmit_data("bbdd_keys_shared_sign_cipher.db", sender, receiver, str(data_str), E_schedule, source='SN', dest='CH')
 
     print("CH_id : ", ch_id)
     # Almacenar en buffer del CH
-    transmit_data("bbdd_keys_shared_sign_cipher.db", sender, receiver, str(data_str), E_schedule, role="CH", action='des')
+    # transmit_data("bbdd_keys_shared_sign_cipher.db", sender, receiver, str(data_str), E_schedule, role="CH", process='des')
     buffer_CH[ch_id - 1].append(data_str)
     completed_transmissions += 1
 
@@ -546,11 +550,13 @@ while completed_transmissions < total_transmissions and attempts < max_attempts:
         # time.sleep(t_prop_sink)
 
         datos_agregados = "; ".join(buffer_CH[ch_id - 1])
-        transmit_data("bbdd_keys_shared_sign_cipher.db", ch_node, node_sink, datos_agregados, E_schedule, role="CH")
+        transmit_data("bbdd_keys_shared_sign_cipher.db", ch_node, node_sink, datos_agregados, E_schedule, source='CH', dest='Sink')
 
         buffer_CH[ch_id - 1] = []  # Vaciar buffer
         ultimo_envio_CH[ch_id - 1] = time.time()
 
+summarize_per_node()
+summarize_global()
 
 print("-")
 print ('FIN PROCESO DE TRANSMISIÓN DE DATOS CIFRADOS CON ASCON...')

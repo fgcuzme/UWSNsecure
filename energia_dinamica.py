@@ -36,7 +36,8 @@ def calcular_energia_paquete(tipo_paquete, es_tx=True):
         "sync": 6 * 8,      # 6 Bytes
         "tx": 200 * 8,      # 200 Bytes
         "data": 71 * 8,     # 71 Bytes
-        "agg": 520 * 8      # 520 Bytes
+        "agg": 520 * 8,     # 520 Bytes
+        "ack": 6 * 8        # 6 Bytes
     }
 
     if tipo_paquete not in tamanos:
@@ -54,7 +55,6 @@ def energy_listen(t_escucha_s):
 
 def energy_standby(t_standby_s):
     return P_STANDBY * t_standby_s
-
 
 
 def obtener_tipo_paquete(mensaje):
