@@ -300,7 +300,6 @@ from save_csv import save_stats_tx, save_stats_energy_proTx_csv, save_stats_to_c
 
 delete_tangle(node_sink, node_uw, CH)
 
-
 # Captura de estadisticas
 # Inicializar estadísticas
 stats_tx = {
@@ -351,7 +350,7 @@ for i in range(rondas):
     #  no valide la tx de respuesta
     # Este proceso solo se lleva a cabo siempre y cuando los ch esten sincronizados.t
     # Sink -> CH
-    recived, end_time_verify, times_propagation_tx, stats1, stats2 = propagate_tx_to_ch(node_sink, CH, node_uw, txgenesis, E_schedule)
+    recived, end_time_verify, times_propagation_tx = propagate_tx_to_ch(node_sink, CH, node_uw, txgenesis, E_schedule, i)
     # stats_proTx["stats_proTx"].update(stats_proTx1)
     # print("Energia consumida hasta ahora : ", stats_proTx)
     # time.sleep(10)
@@ -359,7 +358,7 @@ for i in range(rondas):
     # Crear la tx de respuesta de los CH y transmitirlas al sink y los nodos del cluster
     # CH -> Sink
     # CH -> SN
-    end_time_responseCH, end_time_propagationTxCh, stats3 = propagate_tx_to_sink_and_cluster(node_sink, CH, node_uw, E_schedule)
+    end_time_responseCH, end_time_propagationTxCh = propagate_tx_to_sink_and_cluster(node_sink, CH, node_uw, E_schedule, i)
     # stats_proTx["stats_proTx"].update(stats_proTx2)
     # print("Energia consumida hasta ahora : ", stats_proTx)
     # time.sleep(10)
@@ -368,7 +367,7 @@ for i in range(rondas):
     print('AUTENTICACIÓN DE LOS NODOS DEL CLUSTER')
     # Creación y propagación de la tx de autenticación de los nodos de cada cluster
     # SN -> CH
-    stats4, stats_events = authenticate_nodes_to_ch(node_uw, CH, E_schedule)
+    stats_events = authenticate_nodes_to_ch(node_uw, CH, E_schedule, i)
     # stats_proTx["stats_proTx"].update(stats_proTx3)
     # print("Energia consumida hasta ahora : ", stats_proTx)
     # time.sleep(10)
@@ -402,7 +401,7 @@ for i in range(rondas):
     # save_stats_to_csv(stats1, "estadisticas_simulacion1.csv")
     # save_stats_to_csv(stats2, "estadisticas_simulacion2.csv")
     # save_stats_to_csv(stats3, "estadisticas_simulacion3.csv")
-    save_stats_to_csv(stats4, "estadisticas_simulacion4.csv")
+    # save_stats_to_csv(stats4, "estadisticas_simulacion4.csv")
 
     # save_stats_to_csv1(stats1, "estadisticas_simulacion5.csv")
     save_stats_to_csv2(stats_events, "estadisticas_TxAuth.csv")

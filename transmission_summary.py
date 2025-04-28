@@ -6,6 +6,10 @@ import os
 import pandas as pd
 
 def summarize_per_node(input_csv="stats/data_transmission_log.csv", output_csv="stats/transmission_summary_per_node.csv"):
+    if not os.path.exists(input_csv):
+        print(f"🚨 Archivo no encontrado: {input_csv}. Asegúrate de que las transmisiones hayan sido registradas.")
+        return
+
     """Genera resumen de estadísticas por nodo emisor."""
     df = pd.read_csv(input_csv)
 
@@ -14,11 +18,13 @@ def summarize_per_node(input_csv="stats/data_transmission_log.csv", output_csv="
         "successes": 0,
         "total_energy": 0.0,
         "latencies": [],
-        "packets_lost": 0
+        "packets_lost": 0,
+        "cluster_id": None
     })
 
     for _, row in df.iterrows():
         sender = row["sender_id"]
+        cluster = row["cluster_id"]
         summary[sender]["transmissions"] += 1
         summary[sender]["total_energy"] += row["energy_j"]
         summary[sender]["latencies"].append(row["latency_ms"])
@@ -27,12 +33,16 @@ def summarize_per_node(input_csv="stats/data_transmission_log.csv", output_csv="
         else:
             summary[sender]["packets_lost"] += 1
 
+        # Asignar el primer cluster_id que se encuentre (o actualizar si es necesario)
+        if summary[sender]["cluster_id"] is None:
+            summary[sender]["cluster_id"] = cluster
+
     os.makedirs(os.path.dirname(output_csv), exist_ok=True)
 
     with open(output_csv, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow([
-            "node_id", "transmissions", "successes",
+            "node_id", "clusterId", "transmissions", "successes",
             "latency_avg_ms", "energy_total_j", "packet_loss_percent"
         ])
         for node_id, stats in summary.items():
@@ -40,6 +50,7 @@ def summarize_per_node(input_csv="stats/data_transmission_log.csv", output_csv="
             loss_pct = (stats["packets_lost"] / stats["transmissions"]) * 100 if stats["transmissions"] > 0 else 0
             writer.writerow([
                 node_id,
+                stats["cluster_id"],
                 stats["transmissions"],
                 stats["successes"],
                 round(latency_avg, 2),
@@ -50,6 +61,10 @@ def summarize_per_node(input_csv="stats/data_transmission_log.csv", output_csv="
     print(f"📁 Resumen por nodo exportado a {output_csv}")
 
 def summarize_global(input_csv="stats/data_transmission_log.csv", output_csv="stats/transmission_summary_global.csv"):
+    if not os.path.exists(input_csv):
+        print(f"🚨 Archivo no encontrado: {input_csv}. No se puede generar resumen global.")
+        return
+
     """Genera un resumen global de toda la simulación."""
     df = pd.read_csv(input_csv)
 

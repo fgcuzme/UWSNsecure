@@ -18,6 +18,7 @@ CSV_FIELDS = [
     "bits_sent",
     "bits_received",
     "packet_lost",
+    "success",
     "energy_j",
     "shared_key_id",
     "msg_type"
@@ -40,6 +41,7 @@ def log_transmission_event(
     bits_sent,
     bits_received,
     packet_lost,
+    success,
     energy_j,
     shared_key_id,
     msg_type,
@@ -60,6 +62,7 @@ def log_transmission_event(
             "bits_sent": bits_sent,
             "bits_received": bits_received,
             "packet_lost": packet_lost,
+            "success": success,
             "energy_j": round(energy_j, 8),
             "shared_key_id": shared_key_id,
             "msg_type": msg_type

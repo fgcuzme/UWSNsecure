@@ -302,11 +302,10 @@ def transmit_data(db_path, sender_id, receiver_id, plaintext, E_schedule, source
             energy_consumed_sn += ((initial_energy_sn - sender_id["ResidualEnergy"]))
             print('Energia consumida por el SN en este proceso : ', energy_consumed_sn)
             log_transmission_event(sender_id=sender_id['NodeID'], receiver_id=receiver_id['NodeID'], 
-                                cluster_id=sender_id["ClusterHead"], distance_m=distance, latency_ms=latency_ms,
-                                    bits_sent=bits_sent, bits_received=bits_sent, packet_lost=p_lost,
-                                    energy_j=energy_consumed_sn, shared_key_id=shared_key_id, msg_type=msg_type)
+                                   cluster_id=sender_id["ClusterHead"], distance_m=distance, latency_ms=latency_ms,
+                                   bits_sent=bits_sent, bits_received=bits_sent, packet_lost=p_lost, success=success,
+                                   energy_j=energy_consumed_sn, shared_key_id=shared_key_id, msg_type=msg_type)
         
-
             # Energia antes de la trasmisión
             # **Nuevo: Medir energía inicial del CH**
             initial_energy_ch = receiver_id['ResidualEnergy']
@@ -324,8 +323,16 @@ def transmit_data(db_path, sender_id, receiver_id, plaintext, E_schedule, source
             print('Energia consumida por el CH en este proceso :' ,energy_consumed_ch)
             log_transmission_event(sender_id=sender_id['NodeID'], receiver_id=receiver_id['NodeID'], 
                                 cluster_id=sender_id["ClusterHead"], distance_m=distance, latency_ms=latency_ms,
-                                    bits_sent=bits_sent, bits_received=bits_received, packet_lost=p_lost,
+                                    bits_sent=bits_sent, bits_received=bits_received, packet_lost=p_lost, success=success,
                                     energy_j=energy_consumed_ch, shared_key_id=shared_key_id, msg_type=msg_type)
+            
+            ack_result = simulate_ack_response(sender_id, receiver_id, E_schedule)
+
+            if ack_result["ack_success"]:
+                print("✅ ACK recibido correctamente")
+            else:
+                print("⚠️ ACK perdido — posible retransmisión")
+
             
         elif source == 'CH' and dest == 'Sink':
             # Energia antes de la trasmisión
@@ -342,7 +349,7 @@ def transmit_data(db_path, sender_id, receiver_id, plaintext, E_schedule, source
             print('Energia consumida por el CH : ', energy_consumed_ch)
             log_transmission_event(sender_id=sender_id['NodeID'], receiver_id=receiver_id['NodeID'], 
                                 cluster_id=sender_id["ClusterHead"], distance_m=distance, latency_ms=latency_ms,
-                                    bits_sent=bits_sent, bits_received=bits_sent, packet_lost=p_lost,
+                                    bits_sent=bits_sent, bits_received=bits_sent, packet_lost=p_lost, success=success,
                                     energy_j=energy_consumed_ch, shared_key_id=shared_key_id, msg_type=msg_type)
 
         # summarize_metrics()
