@@ -124,9 +124,9 @@ def propagate_syn_to_CH_tdma(sink, CH_ids, node_uw, max_retries=3, timeout=2, E_
                 sync_end_time = time.time() - start_time
                 stats["sync_stats"][f"CH_{node_uw[ch]['NodeID']}"] = {
                     "disntance": dist,
-                    "delay": delay,
+                    "delay": delay * 1000, # Milisegundos
                     "energy_consumed": energy_consumed_ch,
-                    "sync_time": sync_end_time,
+                    "sync_time": sync_end_time * 1000, # Milisegundos
                     "retransmissions": retries,
                     "is_syn": node_uw[ch]["IsSynced"]
                 }
@@ -220,9 +220,9 @@ def synchronize_nodes_tdma(CH_id, syn_packet, node_uw, max_retries_sensor, timeo
 
         node_stats[f"Node_{node['NodeID']}"] = {
             "disntance": dist,
-            "delay": delay,
+            "delay": delay * 1000, # Milisegundos
             "energy_consumed": energy_consumed_node,
-            "sync_time": sync_end_time_node,
+            "sync_time": sync_end_time_node * 1000, # Milisegundos
             "retransmissions": retries,
             "is_syn": node["IsSynced"]
         }
@@ -381,7 +381,7 @@ def propagate_syn_to_CH_cdma(sink, CH_ids, node_uw, max_retries=3, timeout=2, fr
                 sync_end_time = time.time() - start_time
                 stats["sync_stats"][f"CH_{node_uw[ch]['NodeID']}"] = {
                     "energy_consumed": energy_consumed_ch,
-                    "sync_time": sync_end_time,
+                    "sync_time": sync_end_time * 1000, # Milisegundos
                     "retransmissions": retries,
                     "is_syn": node_uw[ch]["IsSynced"]
                 }
@@ -474,7 +474,7 @@ def synchronize_nodes_cdma(CH_id, syn_packet, node_uw, timeout, freq, processing
         
         node_stats[f"Node_{node['NodeID']}"] = {
             "energy_consumed": energy_consumed_node,
-            "sync_time": sync_end_time_node,
+            "sync_time": sync_end_time_node * 1000, # Milisegudnos
             "retransmissions": retries,
             "is_syn": node["IsSynced"]
         }

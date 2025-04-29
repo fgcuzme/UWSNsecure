@@ -172,7 +172,7 @@ def save_stats_to_syn_csv(file_name, stats, method_name):
         # Escribir encabezados si el archivo está vacío
         if file.tell() == 0:
             writer.writerow([
-                'ID', 'Tipo', 'CHoSN', 'Distancia', 'Delay', 'Energía Consumida (J)', 
+                'ID', 'Node', 'Rol', 'Distancia', 'Delay', 'Energía Consumida (J)', 
                 'Tiempo de Sincronización (s)', 'Retransmisiones', 'IsSynStatus'
             ])
         
@@ -352,10 +352,10 @@ def save_stats_to_csv1(stats, filename, method_name='TDMA'):
     with open(ruta_stats, mode='w', newline='') as csvfile:
         fieldnames = [
             "ID_Node", "Rol_Node", "Origen->Destino",
-            "Energía_Tx", "Energía_Rx",
-            "T_Propagación", "T_Propagación_Total",
-            "T_Verificación", "T_Auth_Response",
-            "Intentos", "Método"
+            "Energia_Tx", "Energia_Rx",
+            "T_Propagacion", "T_Propagacion_Total",
+            "T_Verificacion", "T_Auth_Response",
+            "Intentos", "Metodo"
         ]
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
@@ -366,14 +366,14 @@ def save_stats_to_csv1(stats, filename, method_name='TDMA'):
                 "ID_Node": stats["energy"]["CH"]["id"][i],
                 "Rol_Node": "CH",
                 "Origen->Destino": stats["energy"]["CH"]["s-d"][i],
-                "Energía_Tx": stats["energy"]["CH"]["tx"][i],
-                "Energía_Rx": stats["energy"]["CH"]["rx"][i],
-                "T_Propagación": "",
-                "T_Propagación_Total": "",
-                "T_Verificación": "",
+                "Energia_Tx": stats["energy"]["CH"]["tx"][i],
+                "Energia_Rx": stats["energy"]["CH"]["rx"][i],
+                "T_Propagacion": "",
+                "T_Propagacion_Total": "",
+                "T_Verificacion": "",
                 "T_Auth_Response": "",
                 "Intentos": stats["attempts"],
-                "Método": method_name
+                "Metodo": method_name
             })
 
         # Procesar SN
@@ -382,14 +382,14 @@ def save_stats_to_csv1(stats, filename, method_name='TDMA'):
                 "ID_Node": stats["energy"]["SN"]["id"][i],
                 "Rol_Node": "SN",
                 "Origen->Destino": stats["energy"]["SN"]["s-d"][i],
-                "Energía_Tx": stats["energy"]["SN"]["tx"][i],
-                "Energía_Rx": stats["energy"]["SN"]["rx"][i],
-                "T_Propagación": stats["times"]["propagation"][i],
-                "T_Propagación_Total": stats["times"]["propagation_all"][i],
-                "T_Verificación": stats["times"]["verification"][i],
+                "Energia_Tx": stats["energy"]["SN"]["tx"][i],
+                "Energia_Rx": stats["energy"]["SN"]["rx"][i],
+                "T_Propagacion": stats["times"]["propagation"][i],
+                "T_Propagacion_Total": stats["times"]["propagation_all"][i],
+                "T_Verificacion": stats["times"]["verification"][i],
                 "T_Auth_Response": stats["times"]["response"][i],
                 "Intentos": stats["attempts"],
-                "Método": method_name
+                "Metodo": method_name
             })
 
 

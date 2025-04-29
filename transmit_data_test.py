@@ -272,6 +272,8 @@ def transmit_data(db_path, sender_id, receiver_id, plaintext, E_schedule, source
         time.sleep(delay)
 
         latency_ms = ((end_time_enc - start_time_enc) + delay + (end_time_dec - start_time_dec) + 0.02) * 1000  # en milisegundos
+        latency_encryp_ms = ((end_time_enc - start_time_enc) + delay + 0.02) * 1000  # en milisegundos
+        latency_dec_ms = ( delay + (end_time_dec - start_time_dec) + 0.02) * 1000  # en milisegundos
 
         # bits_sent = len(plaintext.encode()) * 8
         bits_sent = len(encrypted_msg) * 8
@@ -302,7 +304,7 @@ def transmit_data(db_path, sender_id, receiver_id, plaintext, E_schedule, source
             energy_consumed_sn += ((initial_energy_sn - sender_id["ResidualEnergy"]))
             print('Energia consumida por el SN en este proceso : ', energy_consumed_sn)
             log_transmission_event(sender_id=sender_id['NodeID'], receiver_id=receiver_id['NodeID'], 
-                                   cluster_id=sender_id["ClusterHead"], distance_m=distance, latency_ms=latency_ms,
+                                   cluster_id=sender_id["ClusterHead"], distance_m=distance, latency_ms=latency_encryp_ms,
                                    bits_sent=bits_sent, bits_received=bits_sent, packet_lost=p_lost, success=success,
                                    energy_j=energy_consumed_sn, shared_key_id=shared_key_id, msg_type=msg_type)
         
@@ -322,7 +324,7 @@ def transmit_data(db_path, sender_id, receiver_id, plaintext, E_schedule, source
             energy_consumed_ch += ((initial_energy_ch - receiver_id["ResidualEnergy"]))
             print('Energia consumida por el CH en este proceso :' ,energy_consumed_ch)
             log_transmission_event(sender_id=sender_id['NodeID'], receiver_id=receiver_id['NodeID'], 
-                                cluster_id=sender_id["ClusterHead"], distance_m=distance, latency_ms=latency_ms,
+                                cluster_id=sender_id["ClusterHead"], distance_m=distance, latency_ms=latency_dec_ms,
                                     bits_sent=bits_sent, bits_received=bits_received, packet_lost=p_lost, success=success,
                                     energy_j=energy_consumed_ch, shared_key_id=shared_key_id, msg_type=msg_type)
             
@@ -348,9 +350,16 @@ def transmit_data(db_path, sender_id, receiver_id, plaintext, E_schedule, source
             energy_consumed_ch += ((initial_energy - sender_id["ResidualEnergy"]))
             print('Energia consumida por el CH : ', energy_consumed_ch)
             log_transmission_event(sender_id=sender_id['NodeID'], receiver_id=receiver_id['NodeID'], 
-                                cluster_id=sender_id["ClusterHead"], distance_m=distance, latency_ms=latency_ms,
+                                cluster_id=sender_id["ClusterHead"], distance_m=distance, latency_ms=latency_encryp_ms,
                                     bits_sent=bits_sent, bits_received=bits_sent, packet_lost=p_lost, success=success,
                                     energy_j=energy_consumed_ch, shared_key_id=shared_key_id, msg_type=msg_type)
+
+            ack_result = simulate_ack_response(sender_id, receiver_id, E_schedule, sink=True)
+
+            if ack_result["ack_success"]:
+                print("✅ ACK recibido correctamente")
+            else:
+                print("⚠️ ACK perdido — posible retransmisión")
 
         # summarize_metrics()
         # export_metrics_to_json()  # Puedes especificar otro nombre si lo deseas
@@ -440,12 +449,13 @@ import numpy as np
 import random
 import time
 
-def simulate_ack_response(sender_node, receiver_node, E_schedule, ack_size_bits=64, bitrate=9200):
+def simulate_ack_response(sender_node, receiver_node, E_schedule, ack_size_bits=48, bitrate=9200, sink=False):
     # 1. Calcular distancia
     distance = np.linalg.norm(np.array(sender_node["Position"]) - np.array(receiver_node["Position"]))
 
     # 2. Simular retardo de propagación
-    delay = propagation_time(distance, receiver_node["Position"], sender_node["Position"])  # retorno
+    delay = (propagation_time(distance, receiver_node["Position"], sender_node["Position"]))
+    latencia_ms = delay * 1000  # delay en milisegundos
     time.sleep(delay)
 
     # 3. Simular pérdida de ACK
@@ -455,21 +465,36 @@ def simulate_ack_response(sender_node, receiver_node, E_schedule, ack_size_bits=
     # 4. Timeout basado en distancia y tamaño de ACK
     timeout = calculate_timeout(receiver_node["Position"], sender_node["Position"], bitrate=bitrate, packet_size=ack_size_bits)
 
+    # 6. Tiempo estimado del ACK
+    ack_tx_time = (ack_size_bits / bitrate) * 1000
+    total_ack_time = latencia_ms + ack_tx_time
+
     # 5. Calcular energía para TX (receptor) y RX (emisor)
     # ACK va del receptor (CH o Sink) al emisor (SN o CH)
-    receiver_initial_energy = receiver_node["ResidualEnergy"]
-    receiver_node = update_energy_node_tdma(receiver_node, sender_node["Position"], E_schedule, timeout,
-                                            type_packet="ack", role="ACK_SENDER", action="tx", verbose=True)
-    E_tx = receiver_initial_energy - receiver_node["ResidualEnergy"]
+    if sink == False:
+        receiver_initial_energy = receiver_node["ResidualEnergy"]
+        receiver_node = update_energy_node_tdma(receiver_node, sender_node["Position"], E_schedule, timeout,
+                                                type_packet="ack", role="ACK_SENDER", action="tx", verbose=True)
+        E_tx = receiver_initial_energy - receiver_node["ResidualEnergy"]
+
+        log_transmission_event(sender_id=receiver_node['NodeID'], receiver_id=sender_node['NodeID'], 
+                                cluster_id=sender_node["ClusterHead"], distance_m=distance, latency_ms=total_ack_time,
+                                    bits_sent=ack_size_bits, bits_received=ack_size_bits, packet_lost=ack_lost, success=ack_success,
+                                    energy_j=E_tx, shared_key_id=None, msg_type="ACK_SENDER")
+    else:
+        E_tx = 0
 
     sender_initial_energy = sender_node["ResidualEnergy"]
     sender_node = update_energy_node_tdma(sender_node, receiver_node["Position"], E_schedule, timeout,
                                           type_packet="ack", role="ACK_RECEIVER", action="rx", verbose=True)
     E_rx = sender_initial_energy - sender_node["ResidualEnergy"]
 
-    # 6. Tiempo estimado del ACK
-    ack_tx_time = ack_size_bits / bitrate
-    total_ack_time = delay + ack_tx_time
+    log_transmission_event(sender_id=receiver_node['NodeID'], receiver_id=sender_node['NodeID'], 
+                                cluster_id=sender_node["ClusterHead"], distance_m=distance, latency_ms=total_ack_time,
+                                    bits_sent=ack_size_bits, bits_received=ack_size_bits, packet_lost=ack_lost, success=ack_success,
+                                    energy_j=E_rx, shared_key_id=None, msg_type="ACK_RECEIVER")
+
+   
 
     return {
         "ack_success": ack_success,

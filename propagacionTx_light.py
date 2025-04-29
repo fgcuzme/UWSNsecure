@@ -139,8 +139,8 @@ def propagate_tx_to_ch(sink1, ch_list, node_uw1, genesis_tx, E_schedule, ronda, 
                     rol_destino = 'CH'
                     energia_tx = None
                     energia_rx = energy_consumed_ch
-                    t_prop = delay
-                    t_verif = end_time_verify
+                    t_prop = delay * 1000 # Milisegundos
+                    t_verif = end_time_verify * 1000  # Milisegundos
                     t_auth = None
                     t_resp = None
                     ClusterID = Ch_node['NodeID']  # o node_dest si es CH
@@ -174,7 +174,7 @@ def propagate_tx_to_ch(sink1, ch_list, node_uw1, genesis_tx, E_schedule, ronda, 
                         rol_destino = 'Sink'
                         energia_tx = energy_consumed_ch
                         energia_rx = None
-                        t_prop = delay
+                        t_prop = delay * 1000 # Milisegundos
                         t_verif = None
                         t_auth = None
                         t_resp = None
@@ -294,7 +294,7 @@ def propagate_genesis_to_cluster(node_uw2, ch_index, genesis_tx, E_schedule, ron
                 rol_destino = 'SN'
                 energia_tx = energy_consumed_ch
                 energia_rx = None
-                t_prop = delay
+                t_prop = delay * 1000 # Milisegundos
                 t_verif = None
                 t_auth = None
                 t_resp = None
@@ -333,8 +333,8 @@ def propagate_genesis_to_cluster(node_uw2, ch_index, genesis_tx, E_schedule, ron
                     rol_destino = 'SN'
                     energia_tx = None
                     energia_rx = energy_consumed_sn
-                    t_prop = delay
-                    t_verif = end_time_verify
+                    t_prop = delay * 1000 # Milisegundos
+                    t_verif = end_time_verify * 1000 # Milisegundos
                     t_auth = None
                     t_resp = None
                     ClusterID = ch_node1['ClusterHead']  # o node_dest si es CH
@@ -371,7 +371,7 @@ def propagate_genesis_to_cluster(node_uw2, ch_index, genesis_tx, E_schedule, ron
                         rol_destino = 'CH'
                         energia_tx = energy_consumed_sn
                         energia_rx = None
-                        t_prop = delay
+                        t_prop = delay * 1000 # Milisegundos
                         t_verif = None
                         t_auth = None
                         t_resp = None
@@ -403,7 +403,7 @@ def propagate_genesis_to_cluster(node_uw2, ch_index, genesis_tx, E_schedule, ron
                         rol_destino = 'SN'
                         energia_tx = None
                         energia_rx = energy_consumed_ch
-                        t_prop = delay
+                        t_prop = delay * 1000 # Milisegundos
                         t_verif = None
                         t_auth = None
                         t_resp = None
@@ -600,10 +600,10 @@ def propagate_tx_to_sink_and_cluster(sink1, list_ch, node_uw3, E_schedule, ronda
             rol_destino = 'Sink'
             energia_tx = energy_consumed_ch
             energia_rx = None
-            t_prop = delay
+            t_prop = delay * 1000 # Milisegundos
             t_verif = None
             t_auth = None
-            t_resp = end_time_responseCH
+            t_resp = end_time_responseCH * 1000 # Milisegundos
             ClusterID = ch_node1['ClusterHead']  # o node_dest si es CH
             RoundID = ronda  # si haces múltiples rondas
             # Registrar evento Sink to CH
@@ -668,8 +668,8 @@ def propagate_tx_to_sink_and_cluster(sink1, list_ch, node_uw3, E_schedule, ronda
                 rol_destino = 'CH'
                 energia_tx = None
                 energia_rx = energy_consumed_ch
-                t_prop = delay
-                t_verif = end_time_verify
+                t_prop = delay * 1000 # Milisegundos
+                t_verif = end_time_verify * 1000 # Milisegundos
                 t_auth = None
                 t_resp = None
                 ClusterID = ch_node1['ClusterHead']  # o node_dest si es CH
@@ -759,7 +759,7 @@ def propagate_tx_to_sink_and_cluster(sink1, list_ch, node_uw3, E_schedule, ronda
                     rol_destino = 'SN'
                     energia_tx = energy_consumed_ch
                     energia_rx = None
-                    t_prop = delay
+                    t_prop = delay * 1000 # Milisegundos
                     t_verif = None
                     t_auth = None
                     t_resp = None
@@ -808,8 +808,8 @@ def propagate_tx_to_sink_and_cluster(sink1, list_ch, node_uw3, E_schedule, ronda
                         rol_destino = 'SN'
                         energia_tx = None
                         energia_rx = energy_consumed_sn
-                        t_prop = delay
-                        t_verif = end_time_verify1
+                        t_prop = delay * 1000 # Milisegundos
+                        t_verif = end_time_verify1 * 1000 # Milisegundos
                         t_auth = None
                         t_resp = None
                         ClusterID = ch_node1['ClusterHead']  # o node_dest si es CH
@@ -839,7 +839,7 @@ def propagate_tx_to_sink_and_cluster(sink1, list_ch, node_uw3, E_schedule, ronda
                         rol_destino = 'CH'
                         energia_tx = energy_consumed_sn
                         energia_rx = None
-                        t_prop = delay
+                        t_prop = delay * 1000 # Milisegundos
                         t_verif = None
                         t_auth = None
                         t_resp = None
@@ -876,7 +876,7 @@ def propagate_tx_to_sink_and_cluster(sink1, list_ch, node_uw3, E_schedule, ronda
                             rol_destino = 'CH'
                             energia_tx = None
                             energia_rx = energy_consumed_ch
-                            t_prop = delay
+                            t_prop = delay * 1000 # Milisegundos
                             t_verif = None
                             t_auth = None
                             t_resp = None
@@ -999,10 +999,10 @@ def authenticate_nodes_to_ch(nodes, chead, E_schedule, ronda, max_retries=3, tim
                 rol_destino = 'CH'
                 energia_tx = energy_consumed_sn
                 energia_rx = None
-                t_prop = delay
+                t_prop = delay * 1000 # Milisegundos
                 t_verif = None
                 t_auth = None
-                t_resp = end_time_responseSN
+                t_resp = end_time_responseSN * 1000 # Milisegundos
                 ClusterID = node4['ClusterHead']  # o node_dest si es CH
                 RoundID = ronda  # si haces múltiples rondas
                 # Registrar evento Sink to CH
@@ -1046,8 +1046,8 @@ def authenticate_nodes_to_ch(nodes, chead, E_schedule, ronda, max_retries=3, tim
                         rol_destino = 'CH'
                         energia_tx = None
                         energia_rx = energy_consumed_ch
-                        t_prop = delay
-                        t_verif = end_time_verify1
+                        t_prop = delay * 1000 # Milisegundos
+                        t_verif = end_time_verify1 * 1000 # Milisegundos
                         t_auth = None
                         t_resp = None
                         ClusterID = node4['ClusterHead']  # o node_dest si es CH
@@ -1077,7 +1077,7 @@ def authenticate_nodes_to_ch(nodes, chead, E_schedule, ronda, max_retries=3, tim
                         rol_destino = 'SN'
                         energia_tx = energy_consumed_ch
                         energia_rx = None
-                        t_prop = delay
+                        t_prop = delay * 1000 # Milisegundos
                         t_verif = None
                         t_auth = None
                         t_resp = None
@@ -1109,7 +1109,7 @@ def authenticate_nodes_to_ch(nodes, chead, E_schedule, ronda, max_retries=3, tim
                         rol_destino = 'SN'
                         energia_tx = None
                         energia_rx = energy_consumed_sn
-                        t_prop = delay
+                        t_prop = delay * 1000 # Milisegundos
                         t_verif = None
                         t_auth = None
                         t_resp = None
@@ -1294,10 +1294,10 @@ def registrar_evento_tabla(tabla, id_evento, tipo, origen, destino, rol_origen, 
         "Destino": destino,
         "Rol_Origen": rol_origen,
         "Rol_Destino": rol_destino,
-        "Energía_Tx": energia_tx,
-        "Energía_Rx": energia_rx,
-        "T_Propagación": t_prop,
-        "T_Verificación": t_verif,
+        "Energia_Tx": energia_tx,
+        "Energia_Rx": energia_rx,
+        "T_Propagaciin": t_prop,
+        "T_Verificaciin": t_verif,
         "T_Auth": t_auth,
         "T_Respuesta": t_resp,
         "ClusterID": clusterID,  # o node_dest si es CH
