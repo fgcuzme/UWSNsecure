@@ -185,7 +185,7 @@ def propagate_tx_to_ch(sink1, ch_list, node_uw1, genesis_tx, E_schedule, ronda, 
                         registrar_evento_tabla(table_events, CONTADOR_EVENTOS, tipo, origen, destino, rol_origen, rol_destino,
                             energia_tx, energia_rx, t_prop, t_verif, t_auth, t_resp, ClusterID, RoundID)
                         
-                        # Ch_node['Tips'].append(genesis_tx['ID'])    # Se guarda la Tx genesis en el CH
+                        Ch_node['Tips'].append(genesis_tx['ID'])    # Se guarda la Tx genesis en el CH
                     
                         # Propagar la Tx Génesis a los nodos del cluster del CH
                         # CH -> SN
@@ -349,7 +349,7 @@ def propagate_genesis_to_cluster(node_uw2, ch_index, genesis_tx, E_schedule, ron
                         print(f"Nodo {node1['NodeID']} en cluster {ch_node1['NodeID']} recibió y verificó la Tx génesis.")
                         
                         #id_genesis_tx1 = copy.deepcopy(genesis_tx)
-                        # node1['Tips'].append(genesis_tx['ID'])   # El nodo agrega la Tx genesis propagada por el CH
+                        node1['Tips'].append(genesis_tx['ID'])   # El nodo agrega la Tx genesis propagada por el CH
 
                         # Actualizar la energia del SN en Tx del ACK
                         initial_energy_sn = node1["ResidualEnergy"]
