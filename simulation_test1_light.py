@@ -5,11 +5,11 @@ from bbdd2_sqlite3 import generarte_keys_shared_without_cipher, generarte_keys_s
 print ('PARAMETROS DE SIMULACIÓN...')
 # PARAMETROS DE LA RED INICIAL
 # Parámetros de la red de nodos
-num_nodes = 20  # Número de nodos
-dim_x = 200  # Dimensiones del área de despliegue (en metros)
-dim_y = 200
-dim_z = -200  # Profundidad (en metros)
-sink_pos = np.array([100, 100, 0])  # Posición del Sink en el centro
+num_nodes = 50  # Número de nodos
+dim_x = 1000  # Dimensiones del área de despliegue (en metros)
+dim_y = 1000
+dim_z = -1000  # Profundidad (en metros)
+sink_pos = np.array([500, 500, 0])  # Posición del Sink en el centro
 # E_init = 10  # Energía inicial de cada nodo (en Joules)
 
 # Estimación de la capacidad de batería necesaria para tus nodos acústicos subacuáticos, 
