@@ -1,6 +1,6 @@
 import time
 import numpy as np
-from test_throp import propagation_time, compute_path_loss
+from test_throp import propagation_time, compute_path_loss, propagation_time1
 from energia_dinamica import calcular_energia_paquete, energy_listen, energy_standby, calculate_timeout, update_energy_node_tdma
 
 
@@ -78,13 +78,16 @@ def propagate_syn_to_CH_tdma(sink, CH_ids, node_uw, max_retries=3, timeout=2, E_
 
             # delay = random_sync_delay()  # Generar un tiempo de retraso aleatorio
             # calcular la distancia entre los nodos
-            dist = np.linalg.norm(node_uw[ch]["Position"] - sink["Position"])
+            dist = np.linalg.norm(node_uw[ch]["Position"] - sink["Position"])   # Se debe comentar 10/09/2025
 
             start_position = sink["Position"]
             end_position = node_uw[ch]["Position"]
-            delay = propagation_time(dist, start_position, end_position)
+            # delay = propagation_time(dist, start_position, end_position)    # se comenta 10/09/2025
+
+            delay = propagation_time1(start_position, end_position)
 
             print(f"Sincronizando el CH {node_uw[ch]['NodeID']} bajo el Cluster Head Sink con un retraso de {delay:.2f} segundos, distancia calculada {dist:.2f}")
+
             time.sleep(delay)  # Simular el tiempo de sincronización
 
             # Calcular el timeout de espera
@@ -174,10 +177,11 @@ def synchronize_nodes_tdma(CH_id, syn_packet, node_uw, max_retries_sensor, timeo
 
             # delay = random_sync_delay()  # Generar un tiempo de retraso aleatorio
             # calcular la distancia entre los nodos
-            dist = np.linalg.norm(node["Position"] - node_uw[CH_id]["Position"])
+            dist = np.linalg.norm(node["Position"] - node_uw[CH_id]["Position"])    # se debe comentar 10/09/2025
             start_position = node["Position"]
             end_position = node_uw[CH_id]["Position"]
-            delay = propagation_time(dist, start_position, end_position)
+            #delay = propagation_time(dist, start_position, end_position)    # se comenta 10/09/2025
+            delay = propagation_time1(start_position, end_position)
 
             print(f"Sincronizando nodo {node['NodeID']} bajo el Cluster Head {CH_id + 1} con un retraso de {delay:.2f} segundos, distancia calculada {dist:.2f}")
             time.sleep(delay)  # Simular el tiempo de sincronización
@@ -328,11 +332,12 @@ def propagate_syn_to_CH_cdma(sink, CH_ids, node_uw, max_retries=3, timeout=2, fr
             # Aqui toca agregar el delay de propagación basasdo en la formula de distancia/velocidad
             # delay = random_sync_delay()  # Generar un tiempo de retraso aleatorio
             # calcular la distancia entre los nodos
-            dist = np.linalg.norm(node_uw[ch]["Position"] - sink["Position"])
+            dist = np.linalg.norm(node_uw[ch]["Position"] - sink["Position"]) # se debe comentar 10/09/2025
             
             start_position = sink["Position"]
             end_position = node_uw[ch]["Position"]
-            delay = propagation_time(dist, start_position, end_position)
+            # delay = propagation_time(dist, start_position, end_position)    # se comenta 10/09/2025
+            delay = propagation_time1(start_position, end_position)
 
             print(f"Sincronizando el CH {node_uw[ch]['NodeID']} bajo el Sink, retraso de {delay:.2f} segundos, distancia calculada {dist:.2f}")
             time.sleep(delay)  # Simular el tiempo de sincronización
@@ -365,11 +370,12 @@ def propagate_syn_to_CH_cdma(sink, CH_ids, node_uw, max_retries=3, timeout=2, fr
                 # Aqui toca agregar el delay de propagación basasdo en la formula de distancia/velocidad
                 # delay = random_sync_delay()  # Generar un tiempo de retraso aleatorio
                 # calcular la distancia entre los nodos
-                dist = np.linalg.norm(node_uw[ch]["Position"] - sink["Position"])
+                dist = np.linalg.norm(node_uw[ch]["Position"] - sink["Position"])   # se debe comentar 10/09/2025
                 
                 start_position = sink["Position"]
                 end_position = node_uw[ch]["Position"]
-                delay = propagation_time(dist, start_position, end_position)
+                # delay = propagation_time(dist, start_position, end_position)    # se comenta 10/09/2025
+                delay = propagation_time1(start_position, end_position)
 
                 print(f"CH {node_uw[ch]['NodeID']} sicronizado exitosamente bajo el Sink, retraso de {delay:.2f} segundos, distancia calculada {dist:.2f}")
                 time.sleep(delay)  # Simular el tiempo de sincronización
@@ -422,11 +428,12 @@ def synchronize_nodes_cdma(CH_id, syn_packet, node_uw, timeout, freq, processing
             # Aqui toca agregar el delay de propagación basasdo en la formula de distancia/velocidad
             # delay = random_sync_delay()  # Generar un tiempo de retraso aleatorio
             # calcular la distancia entre los nodos
-            dist = np.linalg.norm(node["Position"] - node_uw[CH_id]["Position"])
+            dist = np.linalg.norm(node["Position"] - node_uw[CH_id]["Position"])    # se debe comentar 10/09/2025
             
             start_position = node["Position"]
             end_position = node_uw[CH_id]["Position"]
-            delay = propagation_time(dist, start_position, end_position)
+            # delay = propagation_time(dist, start_position, end_position)    # se comenta 10/09/2025
+            delay = propagation_time1(start_position, end_position)
 
             print(f"Sincronizando nodo {node['NodeID']} bajo el Cluster Head {CH_id + 1}, retraso de {delay:.2f} segundos, distancia calculada {dist:.2f}")
             time.sleep(delay)  # Simular el tiempo de sincronización
@@ -453,11 +460,12 @@ def synchronize_nodes_cdma(CH_id, syn_packet, node_uw, timeout, freq, processing
                 # Aqui toca agregar el delay de propagación basasdo en la formula de distancia/velocidad
                 # delay = random_sync_delay()  # Generar un tiempo de retraso aleatorio
                 # calcular la distancia entre los nodos
-                dist = np.linalg.norm(node["Position"] - node_uw[CH_id]["Position"])
+                dist = np.linalg.norm(node["Position"] - node_uw[CH_id]["Position"])    # se debe comentar 10/09/2025
                 
                 start_position = node["Position"]
                 end_position = node_uw[CH_id]["Position"]
-                delay = propagation_time(dist, start_position, end_position)
+                #delay = propagation_time(dist, start_position, end_position)    # se comenta 10/09/2025
+                delay = propagation_time1(start_position, end_position)
 
                 print(f"Nodo {node['NodeID']} sincronizado exitosamente bajo el Cluster Head {CH_id + 1}, retraso de {delay:.2f} segundos, distancia calculada {dist:.2f}")
                 time.sleep(delay)  # Simular el tiempo de sincronización

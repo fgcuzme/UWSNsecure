@@ -182,7 +182,7 @@ def decrypt_message(shared_key, encrypted_message):
 
 import time
 import numpy as np
-from test_throp import propagation_time, compute_path_loss
+from test_throp import propagation_time, compute_path_loss, propagation_time1
 
 # data_packet = {
 #     "PacketType": 0x03,           # Identificador de tipo DATA
@@ -264,10 +264,11 @@ def transmit_data(db_path, sender_id, receiver_id, plaintext, E_schedule, source
         
         # Simulación de retardo en la propagación acústica
         # distance = np.random.uniform(100, 1000)  # Distancia aleatoria entre nodos
-        distance = np.linalg.norm(sender_id["Position"] - receiver_id["Position"])
+        distance = np.linalg.norm(sender_id["Position"] - receiver_id["Position"])  # se debe comentar 10/09/2025
         start_position = sender_id["Position"]
         end_position = receiver_id["Position"]
-        delay = propagation_time(distance, start_position, end_position)
+        #delay = propagation_time(distance, start_position, end_position)    # se comenta 10/09/2025
+        delay = propagation_time1(start_position, end_position)
         print(f"delay of propagation data :  {delay}")
         time.sleep(delay)
 
@@ -451,10 +452,11 @@ import time
 
 def simulate_ack_response(sender_node, receiver_node, E_schedule, ack_size_bits=48, bitrate=9200, sink=False):
     # 1. Calcular distancia
-    distance = np.linalg.norm(np.array(sender_node["Position"]) - np.array(receiver_node["Position"]))
+    distance = np.linalg.norm(np.array(sender_node["Position"]) - np.array(receiver_node["Position"]))  # se debe comentar 10/09/2025
 
     # 2. Simular retardo de propagación
-    delay = (propagation_time(distance, receiver_node["Position"], sender_node["Position"]))
+    #delay = (propagation_time(distance, receiver_node["Position"], sender_node["Position"]))    # se comenta 10/09/2025
+    delay = (propagation_time1(receiver_node["Position"], sender_node["Position"]))
     latencia_ms = delay * 1000  # delay en milisegundos
     time.sleep(delay)
 

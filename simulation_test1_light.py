@@ -8,7 +8,7 @@ print ('PARAMETROS DE SIMULACIÓN...')
 num_nodes = 50  # Número de nodos
 dim_x = 1000  # Dimensiones del área de despliegue (en metros)
 dim_y = 1000
-dim_z = -1000  # Profundidad (en metros)
+dim_z = -500  # Profundidad (en metros)
 sink_pos = np.array([500, 500, 0])  # Posición del Sink en el centro
 # E_init = 10  # Energía inicial de cada nodo (en Joules)
 
@@ -429,7 +429,7 @@ print("FIN PROCESO DE AUTENTICACIÓN BASADO EN TX")
 # print('Nodo Sink : ', node_sink)
 
 from energia_dinamica import calcular_energia_paquete
-from test_throp import propagation_time
+from test_throp import propagation_time, propagation_time1
 from transmission_summary import summarize_per_node, summarize_global
 
 #%%

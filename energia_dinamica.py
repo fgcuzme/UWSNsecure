@@ -1,4 +1,4 @@
-from test_throp import propagation_time, compute_path_loss
+from test_throp import propagation_time, compute_path_loss, propagation_time1
 import numpy as np
 import time
 
@@ -81,10 +81,11 @@ def obtener_tipo_paquete(mensaje):
 # Margen 20 - 30% del tiempo estimado
 def calculate_timeout(sink_pos, ch_pos, bitrate=9200, packet_size=48):
     # # Calcular distancia máxima al CH más lejano
-    dist = np.linalg.norm(sink_pos - ch_pos)
+    dist = np.linalg.norm(sink_pos - ch_pos)    # se debe comentar 10/09/2025
     # t_prop = dist / 1500  # Velocidad del sonido ≈ 1500 m/s
 
-    t_prop = propagation_time(dist, sink_pos, ch_pos)
+    # t_prop = propagation_time(dist, sink_pos, ch_pos)   # se comenta 10/09/2025
+    t_prop = propagation_time1(sink_pos, ch_pos)
     
     # Tiempo de transmisión
     t_tx = packet_size / bitrate
@@ -157,9 +158,12 @@ def update_energy_node_tdma(node, target_pos, E_schedule, timeout, type_packet, 
     E_tx = E_rx = E_sched = 0
 
     # 1. Calcular distancia y tiempo de propagación (guard_time)
-    dist = np.linalg.norm(node["Position"] - target_pos)
-    guard_time = propagation_time(dist, node["Position"], target_pos)
+    dist = np.linalg.norm(node["Position"] - target_pos)    # se debe comentar 10/09/2025
+
+    # guard_time = propagation_time(dist, node["Position"], target_pos)   # se comenta 10/09/2025
     
+    guard_time = propagation_time1(node["Position"], target_pos)
+
     # Energía según acción
     if action == "tx":
         E_tx = calcular_energia_paquete(type_packet, es_tx=True)
@@ -208,9 +212,12 @@ def update_energy_node_tdma1(node, target_pos, E_schedule, timeout, type_packet,
     # safety_margin = 0.03  # 30 ms adicionales
 
     # 1. Calcular distancia y tiempo de propagación (guard_time)
-    dist = np.linalg.norm(node["Position"] - target_pos)
-    guard_time = propagation_time(dist, node["Position"], target_pos)
+    dist = np.linalg.norm(node["Position"] - target_pos)    # se debe comentar 10/09/2025
+
+    # guard_time = propagation_time(dist, node["Position"], target_pos)   # se comenta
     
+    guard_time = propagation_time1(node["Position"], target_pos)
+
     # 2. Calcular energía de transmisión según rol
     if is_ch:
         # CH: energía de tx + scheduling TDMA
