@@ -429,7 +429,8 @@ print("FIN PROCESO DE AUTENTICACIÓN BASADO EN TX")
 # print('Nodo Sink : ', node_sink)
 
 from energia_dinamica import calcular_energia_paquete
-from test_throp import propagation_time, propagation_time1
+# from test_throp import propagation_time, propagation_time1
+from path_loss import propagation_time, propagation_time1
 from transmission_summary import summarize_per_node, summarize_global
 
 #%%

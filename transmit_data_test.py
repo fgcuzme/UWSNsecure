@@ -182,7 +182,8 @@ def decrypt_message(shared_key, encrypted_message):
 
 import time
 import numpy as np
-from test_throp import propagation_time, compute_path_loss, propagation_time1
+# from test_throp import propagation_time, compute_path_loss, propagation_time1
+from path_loss import propagation_time, compute_path_loss, propagation_time1
 
 # data_packet = {
 #     "PacketType": 0x03,           # Identificador de tipo DATA
@@ -268,7 +269,7 @@ def transmit_data(db_path, sender_id, receiver_id, plaintext, E_schedule, source
         start_position = sender_id["Position"]
         end_position = receiver_id["Position"]
         #delay = propagation_time(distance, start_position, end_position)    # se comenta 10/09/2025
-        delay = propagation_time1(start_position, end_position)
+        delay = propagation_time1(start_position, end_position, depth=None, region="standard")
         print(f"delay of propagation data :  {delay}")
         time.sleep(delay)
 
@@ -456,7 +457,7 @@ def simulate_ack_response(sender_node, receiver_node, E_schedule, ack_size_bits=
 
     # 2. Simular retardo de propagación
     #delay = (propagation_time(distance, receiver_node["Position"], sender_node["Position"]))    # se comenta 10/09/2025
-    delay = (propagation_time1(receiver_node["Position"], sender_node["Position"]))
+    delay = (propagation_time1(receiver_node["Position"], sender_node["Position"], depth=None, region="standard"))
     latencia_ms = delay * 1000  # delay en milisegundos
     time.sleep(delay)
 

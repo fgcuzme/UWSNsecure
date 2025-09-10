@@ -1,4 +1,5 @@
-from test_throp import propagation_time, compute_path_loss, propagation_time1
+# from test_throp import propagation_time, compute_path_loss, propagation_time1
+from path_loss import propagation_time, compute_path_loss, propagation_time1
 import numpy as np
 import time
 
@@ -85,7 +86,7 @@ def calculate_timeout(sink_pos, ch_pos, bitrate=9200, packet_size=48):
     # t_prop = dist / 1500  # Velocidad del sonido ≈ 1500 m/s
 
     # t_prop = propagation_time(dist, sink_pos, ch_pos)   # se comenta 10/09/2025
-    t_prop = propagation_time1(sink_pos, ch_pos)
+    t_prop = propagation_time1(sink_pos, ch_pos, depth=None, region="standard")
     
     # Tiempo de transmisión
     t_tx = packet_size / bitrate
@@ -162,7 +163,7 @@ def update_energy_node_tdma(node, target_pos, E_schedule, timeout, type_packet, 
 
     # guard_time = propagation_time(dist, node["Position"], target_pos)   # se comenta 10/09/2025
     
-    guard_time = propagation_time1(node["Position"], target_pos)
+    guard_time = propagation_time1(node["Position"], target_pos, depth=None, region="standard")
 
     # Energía según acción
     if action == "tx":
@@ -216,7 +217,7 @@ def update_energy_node_tdma1(node, target_pos, E_schedule, timeout, type_packet,
 
     # guard_time = propagation_time(dist, node["Position"], target_pos)   # se comenta
     
-    guard_time = propagation_time1(node["Position"], target_pos)
+    guard_time = propagation_time1(node["Position"], target_pos, depth=None, region="standard")
 
     # 2. Calcular energía de transmisión según rol
     if is_ch:
