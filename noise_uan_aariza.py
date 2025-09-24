@@ -47,11 +47,11 @@ def compute_uan_noise(frequency_khz, shipping, wind_speed_mps):
     }
 
 
-freq = 20  # kHz
-shipping = 0.5
-wind_speed = 5.0
+# freq = 40  # kHz
+# shipping = 0.5
+# wind_speed = 5.0
 
-total_db, components = compute_uan_noise(freq, shipping, wind_speed)
-print(f"Ruido total a {freq} kHz: {total_db:.2f} dB re 1 µPa^2/Hz")
-for k, v in components.items():
-    print(f"  {k.capitalize():<10}: {v:.2f} dB")
+# total_db, components = compute_uan_noise(freq, shipping, wind_speed)
+# print(f"Ruido total a {freq} kHz: {total_db:.2f} dB re 1 µPa^2/Hz")
+# for k, v in components.items():
+#     print(f"  {k.capitalize():<10}: {v:.2f} dB")
