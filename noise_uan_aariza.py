@@ -47,7 +47,7 @@ def compute_uan_noise(frequency_khz, shipping, wind_speed_mps):
     }
 
 
-# freq = 40  # kHz
+# freq = 20  # kHz
 # shipping = 0.5
 # wind_speed = 5.0
 

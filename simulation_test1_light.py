@@ -1,14 +1,50 @@
 # %% PARAMETROS INICIALES DE SIMULACIÓN
 import numpy as np
 from bbdd2_sqlite3 import generarte_keys_shared_without_cipher, generarte_keys_sign_without_cipher
+from clock_uan import sim_advance, sim_now_ms
+import csv, math
+
+num_nodes = 20  # Número de nodos
+
+## 28/09/2025
+# === Reproducibilidad y metadatos del experimento ===
+import os, json, datetime, random
+
+SEED = int(os.environ.get("UWSN_SEED", "1337"))
+random.seed(SEED); np.random.seed(SEED)
+
+SCENARIO_ID = os.environ.get("SCENARIO_ID", "1000km_W5_Sh0.5")  # si quieres, ajusta luego
+RUN_NUM = int(os.environ.get("RUN", "1"))
+RUN_ID = f"{SCENARIO_ID}_seed{SEED}_run{RUN_NUM:02d}"
+
+os.makedirs("stats", exist_ok=True)
+manifest = {
+    "run_id": RUN_ID,
+    "seed": SEED,
+    "scenario": {
+        "num_nodes": num_nodes,
+        "freq_khz": 20, "bitrate_bps": 9200, 
+        "traffic_shipping = 0.5": 0.5, "wind_mps": 5,
+        "spreading": 1.5,
+        "E_init_J": 5000, "threshold_bateria": float(0.357*5000)
+    },
+    "start_time": datetime.datetime.utcnow().isoformat(),
+    "code_version": "v1.0-main"
+}
+with open(f"stats/manifest_{RUN_ID}.json","w") as f:
+    json.dump(manifest, f, indent=2)
+
+
+###########################    
+###########################
 
 print ('PARAMETROS DE SIMULACIÓN...')
 # PARAMETROS DE LA RED INICIAL
 # Parámetros de la red de nodos
-num_nodes = 50  # Número de nodos
+# num_nodes = 20  # Número de nodos
 dim_x = 1000  # Dimensiones del área de despliegue (en metros)
 dim_y = 1000
-dim_z = -500  # Profundidad (en metros)
+dim_z = -1000  # Profundidad (en metros)
 sink_pos = np.array([500, 500, 0])  # Posición del Sink en el centro
 # E_init = 10  # Energía inicial de cada nodo (en Joules)
 
@@ -105,7 +141,7 @@ print ('INICIO DE PROCESO DE CREACIÓN DE CLUSTER...')
 ## Proceso de generación de cluster
 num_rounds = 1
 num_niveles = 3
-radio_comunicacion = 100
+radio_comunicacion = 500
 
 # Inicialización de energía
 energia_nodos = np.full(num_nodes, E_init)
@@ -113,7 +149,7 @@ energia_nodos = np.full(num_nodes, E_init)
 # Precalcular la matriz de distancias entre todos los nodos
 distancias = np.linalg.norm(pos_nodes[:, np.newaxis] - pos_nodes, axis=2)
 
-for round in range(num_rounds):
+for iteration in range(num_rounds):
     # Calcular distancias al sink y niveles de los nodos
     dist_al_sink = np.linalg.norm(pos_nodes - sink_pos, axis=1)
 
@@ -125,7 +161,7 @@ for round in range(num_rounds):
 
     # Verificar si se seleccionaron CHs suficientes
     if len(CH) == 0:
-        print(f"No se seleccionaron Cluster Heads en la ronda {round + 1}.")
+        print(f"No se seleccionaron Cluster Heads en la ronda {iteration + 1}.")
         continue  # Saltar a la siguiente ronda
 
     # Asociación de nodos a Cluster Heads
@@ -133,7 +169,7 @@ for round in range(num_rounds):
 
     # Verificar si la asignación fue exitosa
     if len(idx_CH) == 0:
-        print(f"La asignación de nodos a Cluster Heads falló en la ronda {round + 1}.")
+        print(f"La asignación de nodos a Cluster Heads falló en la ronda {iteration + 1}.")
         continue  # Saltar a la siguiente ronda
 
     for c, CH_id in enumerate(CH):
@@ -185,6 +221,28 @@ for round in range(num_rounds):
 
 # for i in range(num_nodes):
 #     print('indice : ' , i , node_uw[i]['NodeID'], ' - ', node_uw[i]['ClusterHead'], ' - ', node_uw[i]['NumCluster'], ' : ', node_uw[i]['NeighborNodes'])
+
+## EXPORTAR MAPA DEL CLUSTER
+# === Export map cluster (formal) ===
+with open(f"stats/cluster_map_{RUN_ID}.csv","w",newline="") as f:
+    w = csv.DictWriter(f, fieldnames=[
+        "run_id","node_id","role","cluster_id","cluster_head","dist_to_sink_m","neighbor_count"
+    ])
+    w.writeheader()
+    for i in range(num_nodes):
+        node = node_uw[i]
+        dist_sink = float(np.linalg.norm(node["Position"] - sink_pos))
+        print(dist_sink)
+        w.writerow({
+            "run_id": RUN_ID,
+            "node_id": node["NodeID"],
+            "role": node["Role"],                 # 1=CH, 2=SN
+            "cluster_id": node["NumCluster"],
+            "cluster_head": node["ClusterHead"],
+            "dist_to_sink_m": round(dist_sink, 2),
+            "neighbor_count": len(node.get("NeighborNodes",[]))
+        })
+############################
 
 print('FIN DE PROCESO DE CREACIÓN DE CLUSTER...')
 print('-')
@@ -273,7 +331,7 @@ print("INCIO PROCESO DE SINCRONIZACIÓN CON TDMA")
 
 # Sincronización basada en CDMA
 # syn_packet, stats_cdma = propagate_syn_to_CH_cdma(node_sink, CH, node_uw, max_retries, timeout, freq)
-syn_packet, stats_tdma = propagate_syn_to_CH_tdma(node_sink, CH, node_uw, max_retries, timeout, E_schedule)
+syn_packet, stats_tdma = propagate_syn_to_CH_tdma(RUN_ID, node_sink, CH, node_uw, max_retries, timeout, E_schedule)
 
 print(" - ")
 print('Resultados TDMA')
@@ -350,7 +408,7 @@ for i in range(rondas):
     #  no valide la tx de respuesta
     # Este proceso solo se lleva a cabo siempre y cuando los ch esten sincronizados.t
     # Sink -> CH
-    recived, end_time_verify, times_propagation_tx = propagate_tx_to_ch(node_sink, CH, node_uw, txgenesis, E_schedule, i)
+    recived, end_time_verify, times_propagation_tx = propagate_tx_to_ch(RUN_ID, node_sink, CH, node_uw, txgenesis, E_schedule, i)
     # stats_proTx["stats_proTx"].update(stats_proTx1)
     # print("Energia consumida hasta ahora : ", stats_proTx)
     # time.sleep(10)

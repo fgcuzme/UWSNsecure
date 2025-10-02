@@ -12,10 +12,10 @@ def transmission_power_db():
     Potencia de transmisión en dB re 1 µPa²/Hz.
     Valores típicos: 160–190 dB para transmisores acústicos.
     """
-    return 180.0  # ejemplo
+    return 158.16 #170  # ejemplo
 
 
-def compute_snr(frequency_khz, distance_m, spread_coef=1.5, shipping=0.5, wind_speed=5.0):
+def compute_snr(frequency_khz, distance_m, spread_coef, shipping, wind_speed):
     """
     Calcula la relación señal/ruido (SNR) en dB.
     """
@@ -42,7 +42,7 @@ def compute_snr(frequency_khz, distance_m, spread_coef=1.5, shipping=0.5, wind_s
 def evaluate_link_quality(start_position, end_position, frequency_khz, spread_coef, shipping, wind_speed, region="standard"):
     distance_m = np.linalg.norm(np.array(end_position) - np.array(start_position))
     snr_db, snr_details = compute_snr(frequency_khz, distance_m, spread_coef, shipping, wind_speed)
-    delay_s = propagation_time1(start_position, end_position, depth=None, region="standard")
+    delay_s = propagation_time1(start_position, end_position, depth=None, region=region)
     return {
         "snr_db": snr_db,
         "delay_s": delay_s,
@@ -68,11 +68,11 @@ wind_speed = 5.0
 spread_coef = 1.5
 
 start_position = (1000, 1000, 0)  # Coordenadas (x, y, z) del transmisor
-end_position = (1000, 1000, 1000.71)  # Coordenadas (x, y, z) del receptor
+end_position = (1000, 1000, 1000)  # Coordenadas (x, y, z) del receptor
 
 distance = np.linalg.norm(np.array(end_position) - np.array(start_position)) # Distancia en metros
 
-snr, details = compute_snr(freq, distance, spread_coef=1.5, shipping=shipping, wind_speed=wind_speed)
+snr, details = compute_snr(freq, distance, spread_coef, shipping=shipping, wind_speed=wind_speed)
 print(f"SNR a {freq} kHz y {distance} m: {snr:.2f} dB")
 for k, v in details.items():
     print(f"  {k:<15}: {v:.2f} dB")
