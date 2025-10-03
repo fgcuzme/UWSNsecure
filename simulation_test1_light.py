@@ -342,6 +342,8 @@ save_stats_to_syn_csv('sync_stats_tdma.csv', stats_tdma, 'TDMA')
 print("FIN PROCESO DE SINCRONIZACIÓN CON TDMA")
 print("-")
 
+
+##
 ######################
 
 # %%    AUTENTICACIÓN CON TANGLE
@@ -382,6 +384,8 @@ for i in range(rondas):
     print('Clave del sink : ', node_sink["PrivateKey_sign"])
 
     node_sink["PrivateKey_sign"]
+    
+    import hashlib
 
     timestart = time.time() # inicio de la creación de tx genesis
     txgenesis = create_gen_block(node_sink["NodeID"], node_sink["PrivateKey_sign"])
@@ -395,6 +399,12 @@ for i in range(rondas):
 
     print("-")
     print ('PROPAGACIÓN DE LA TX GENESIS A LOS CH...')
+
+    txgenesis.setdefault("TS", time.time())
+    txgenesis.setdefault("TTL", 120.0)
+    txgenesis.setdefault("Nonce", hashlib.sha256(str(node_sink["NodeID"]).encode()+os.urandom(4)).hexdigest()[:16])
+    node_sink["Tips"].append(txgenesis["ID"])
+    node_sink["Tips"] = node_sink["Tips"][-128:]  # LRU simple
 
     # # Capturar estadisticas
     # # Diccionario para capturar estadísticas individuales
@@ -416,7 +426,7 @@ for i in range(rondas):
     # Crear la tx de respuesta de los CH y transmitirlas al sink y los nodos del cluster
     # CH -> Sink
     # CH -> SN
-    end_time_responseCH, end_time_propagationTxCh = propagate_tx_to_sink_and_cluster(node_sink, CH, node_uw, E_schedule, i)
+    end_time_responseCH, end_time_propagationTxCh = propagate_tx_to_sink_and_cluster(RUN_ID, node_sink, CH, node_uw, E_schedule, i)
     # stats_proTx["stats_proTx"].update(stats_proTx2)
     # print("Energia consumida hasta ahora : ", stats_proTx)
     # time.sleep(10)

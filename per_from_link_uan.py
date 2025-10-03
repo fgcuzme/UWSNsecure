@@ -49,14 +49,24 @@ def ber_bpsk_awgn(EbN0_db, floor=1e-10):
     ber = 0.5 * math.erfc(math.sqrt(10**(EbN0_db / 10)) / math.sqrt(2))
     return max(floor, ber)
 
-def propagate_with_probability(per: float = 0.05) -> bool:
+def propagate_with_probability(per: float = 0.05, override_per: float = None) -> bool:
     """
     Devuelve True si el paquete llega (éxito), False si se pierde.
-    per: Packet Error Rate [0..1]
+    - per: Packet Error Rate [0..1]
+    - override_per: Si se especifica, se usa como PER fija en lugar del valor calculado
+    Retorna:
+    - True si el paquete se recibe (random >= PER), False si se pierde
     """
-    per = max(0.0, min(1.0, per))
-    print("per : ", per)
-    return random.random() >= per
+    # Usar PER fija si se proporciona
+    effective_per = override_per if override_per is not None else per
+    effective_per = max(0.0, min(1.0, effective_per))  # asegurar rango válido
+
+    print("effective_per : ", effective_per)
+
+    # per = max(0.0, min(1.0, per))
+    # print("per : ", per)
+
+    return random.random() >= effective_per
 
 
 for d in [100, 500, 1000, 1500, 2000, 2500, 3000]:
