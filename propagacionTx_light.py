@@ -146,7 +146,7 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
                 # print('speed_propagation', speed_propagation)
                 # times_propagation_tx = times_propagation_tx + (time.time() - time_start_ptx)
                 times_propagation_tx = delay
-                
+
                 # Simular probabilidad de recepción
                 if success_auth:
                     ack_received_SinktoCH = True
@@ -189,25 +189,6 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
                         )
 
                     # Sink to CH
-                    # #
-                    # tipo = "Tx_Auth_gen"
-                    # origen = sink1['NodeID']
-                    # destino = Ch_node['NodeID']
-                    # rol_origen = 'Sink'
-                    # rol_destino = 'CH'
-                    # energia_tx = None
-                    # energia_rx = energy_consumed_ch_rx
-                    # t_prop = delay * 1000 # Milisegundos
-                    # t_verif = end_time_verify  # Milisegundos
-                    # t_auth = None
-                    # t_resp = None
-                    # ClusterID = Ch_node['NodeID']  # o node_dest si es CH
-                    # RoundID = ronda  # si haces múltiples rondas
-                    # # Registrar evento Sink to CH
-                    # CONTADOR_EVENTOS += 1
-                    # registrar_evento_tabla(table_events, CONTADOR_EVENTOS, tipo, origen, destino, rol_origen, rol_destino,
-                    #                        energia_tx, energia_rx, t_prop, t_verif, t_auth, t_resp, ClusterID, RoundID)
-                    
                     # Verifcar la tx recibida del Sink
                     if isverify:
                         auth_isverify = True
@@ -242,7 +223,7 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
                                     run_id=RUN_ID, phase="auth", module="tangle", msg_type="AUTH:GEN:ACK",
                                     sender_id=Ch_node["NodeID"], receiver_id=sink1["NodeID"], cluster_id=Ch_node["ClusterHead"],
                                     start_pos=start_position, end_pos=end_position,
-                                
+
                                     bits_sent=bits_sent_auth_ack, bits_received=bits_received_auth_ack,
                                     success=success_auth_ack, packet_lost=p_lost_auth_ack,
                                     energy_event_type='tx', energy_j=energy_consumed_ch_tx,
@@ -265,25 +246,6 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
                             node_uw1 = update_energy_standby_others(node_uw1, active_ids, timeout_chtosink, verbose=True)
 
                             # # Ch to Sink
-                            # tipo = "Ack-Tx_Auth_gen"
-                            # origen = Ch_node['NodeID']
-                            # destino = sink1['NodeID']
-                            # rol_origen = 'CH'
-                            # rol_destino = 'Sink'
-                            # energia_tx = energy_consumed_ch_tx
-                            # energia_rx = None
-                            # t_prop = delay * 1000 # Milisegundos
-                            # t_verif = None
-                            # t_auth = None
-                            # t_resp = None
-                            # ClusterID = Ch_node['ClusterHead']  # o node_dest si es CH
-                            # RoundID = ronda  # si haces múltiples rondas
-                            # # Registrar evento Sink to CH
-                            # CONTADOR_EVENTOS += 1
-                            # registrar_evento_tabla(table_events, CONTADOR_EVENTOS, tipo, origen, destino, rol_origen, rol_destino,
-                            #     energia_tx, energia_rx, t_prop, t_verif, t_auth, t_resp, ClusterID, RoundID)
-
-
                             # Propagar la Tx Génesis a los nodos del cluster del CH
                             # CH -> SN
                             times_propagation_tx_nodes = propagate_genesis_to_cluster(RUN_ID, node_uw1, index_ch, genesis_tx,
@@ -305,7 +267,7 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
 
                 # Se actualiza la energia de los demas nodos exista o no recepción del mensaje en el nodo
                 active_ids = [Ch_node["NodeID"]]
-                node_uw1 = update_energy_standby_others(node_uw1, active_ids, timeout_sinktoch, verbose=True)  
+                node_uw1 = update_energy_standby_others(node_uw1, active_ids, timeout_sinktoch, verbose=True)
 
             else:
                 print(f"CH {Ch_node['NodeID']} no está sincronizado. Omitido.")
@@ -415,27 +377,8 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                 # Se actualiza la energia de los demas nodos
                 active_ids = [ch_node1["NodeID"],node1["NodeID"]]
                 node_uw2 = update_energy_standby_others(node_uw2, active_ids, timeout_ch_to_sn, verbose=True)
-                
+
                 # CH to SN
-                # # Registrar
-                # # estadisticas nuevas
-                # tipo = "Tx_Auth_gen"
-                # origen = ch_node1['NodeID']
-                # destino = node1['NodeID']
-                # rol_origen = 'CH'
-                # rol_destino = 'SN'
-                # energia_tx = energy_consumed_ch
-                # energia_rx = None
-                # t_prop = delay * 1000 # Milisegundos
-                # t_verif = None
-                # t_auth = None
-                # t_resp = None
-                # ClusterID = ch_node1['ClusterHead']  # o node_dest si es CH
-                # RoundID = ronda  # si haces múltiples rondas
-                # # Registrar evento Sink to CH
-                # CONTADOR_EVENTOS += 1
-                # registrar_evento_tabla(table_events, CONTADOR_EVENTOS, tipo, origen, destino, rol_origen, rol_destino,
-                #                         energia_tx, energia_rx, t_prop, t_verif, t_auth, t_resp, ClusterID, RoundID)
 
                 if success_auth:
                     ack_received_SN = True
@@ -474,25 +417,6 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                     )
 
                     # CH to SN
-                    # # Registrar
-                    # # estadisticas nuevas
-                    # tipo = "Tx_Auth_gen"
-                    # origen = ch_node1['NodeID']
-                    # destino = node1['NodeID']
-                    # rol_origen = 'CH'
-                    # rol_destino = 'SN'
-                    # energia_tx = None
-                    # energia_rx = energy_consumed_sn
-                    # t_prop = delay * 1000 # Milisegundos
-                    # t_verif = end_time_verify * 1000 # Milisegundos
-                    # t_auth = None
-                    # t_resp = None
-                    # ClusterID = ch_node1['ClusterHead']  # o node_dest si es CH
-                    # RoundID = ronda  # si haces múltiples rondas
-                    # # Registrar evento Sink to CH
-                    # CONTADOR_EVENTOS += 1
-                    # registrar_evento_tabla(table_events, CONTADOR_EVENTOS, tipo, origen, destino, rol_origen, rol_destino,
-                    #                         energia_tx, energia_rx, t_prop, t_verif, t_auth, t_resp, ClusterID, RoundID)
 
                     # Verificar la Tx con la clave pública del Sink
                     if isverify:
@@ -542,30 +466,10 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                             # Se actualiza la energia de los demas nodos
                             active_ids = [node1["NodeID"], ch_node1["NodeID"]]
                             node_uw2 = update_energy_standby_others(node_uw2, active_ids, timeout_ch_to_sn, verbose=True)
-                            
+
                             if success_gen_ack:
                                 ack_received_CH = True
                                 # SN to CH
-                                # # Registrar
-                                # # estadisticas nuevas
-                                # tipo = "Ack-Tx_Auth_gen"
-                                # origen = node1['NodeID']
-                                # destino = ch_node1['NodeID']
-                                # rol_origen = 'SN'
-                                # rol_destino = 'CH'
-                                # energia_tx = energy_consumed_sn
-                                # energia_rx = None
-                                # t_prop = delay * 1000 # Milisegundos
-                                # t_verif = None
-                                # t_auth = None
-                                # t_resp = None
-                                # ClusterID = node1['ClusterHead']  # o node_dest si es CH
-                                # RoundID = ronda  # si haces múltiples rondas
-                                # # Registrar evento Sink to CH
-                                # CONTADOR_EVENTOS += 1
-                                # registrar_evento_tabla(table_events, CONTADOR_EVENTOS, tipo, origen, destino, rol_origen, rol_destino,
-                                #                         energia_tx, energia_rx, t_prop, t_verif, t_auth, t_resp, ClusterID, RoundID)
-
 
                                 # Recepción del paquete ACK del SN
                                 # guardar la energía antes de actualizar
@@ -593,26 +497,6 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                                         lat_dag_ms=0.0
                                         )
                                 # SN to CH
-                                # # Registrar
-                                # # estadisticas nuevas
-                                # tipo = "Ack-Tx_Auth_gen"
-                                # origen = ch_node1['NodeID']
-                                # destino = node1['NodeID']
-                                # rol_origen = 'CH'
-                                # rol_destino = 'SN'
-                                # energia_tx = None
-                                # energia_rx = energy_consumed_ch
-                                # t_prop = delay * 1000 # Milisegundos
-                                # t_verif = None
-                                # t_auth = None
-                                # t_resp = None
-                                # ClusterID = ch_node1['ClusterHead']  # o node_dest si es CH
-                                # RoundID = ronda  # si haces múltiples rondas
-                                # # Registrar evento Sink to CH
-                                # CONTADOR_EVENTOS += 1
-                                # registrar_evento_tabla(table_events, CONTADOR_EVENTOS, tipo, origen, destino, rol_origen, rol_destino,
-                                #                         energia_tx, energia_rx, t_prop, t_verif, t_auth, t_resp, ClusterID, RoundID)
-
                                 # break  # Salir del bucle de reintentos si la verificación es exitosa
                             else:
                                 retries_SNtoCH += 1
@@ -735,8 +619,11 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
     # Variable para almacenar el tiempo de propagación de tx respuesta del CH
     # al sink y nodos del cluster
     times_propagation_tx_response = 0
+    ack_received_chtosink= False
 
     for ch_index in list_ch:
+        ack_received_chtosink = False
+
         print('Iniciando propagación de la transacción respuesta del CH al sink y dentro del cluster...')
         indexCH = node_uw3[ch_index]['NodeID']
 
@@ -759,7 +646,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
 
         # Eliminar la tx que genera conflicto, para solucionar la eliminación de tx aprobada
         id_transaction = auth_response_tx_ch['ID']
-        
+
         # Eliminar la transacción
         delete_transaction(ch_node1, id_transaction) # corregido
 
@@ -770,7 +657,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
         ch_node1['Transactions'].append(auth_response_tx_ch)    # corregido
 
         retries = 0
-        while retries < max_retries:
+        while retries < max_retries and not ack_received_chtosink:
             start_response_tx_ch = time.time()
             # Se puede medir el tiempo de propagación de la Tx dentro del cluster
             # Aqui toca agregar el delay de propagación basasdo en la formula de distancia/velocidad
@@ -788,37 +675,47 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
             # times_propagation_tx_response = times_propagation_tx_response + (time.time() - start_response_tx_ch)
             times_propagation_tx_response = delay
 
+            # calculos de calidad del enlace
+            per_resp_auth_ch_sink, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=1600, bitrate=9200)
+
+            # CH crea y firma tx de respuesta
+            t_proc_ch_resp_auth = estimate_proc_time_s(do_sign=True, do_tips=True)
+
+            success_resp_auth = propagate_with_probability(per=per_resp_auth_ch_sink, override_per=PER_VARIABLE)
+            p_lost_resp_auth = not success_resp_auth
+            bits_sent_resp_auth = 1600 # bits
+            bits_received_resp_auth = 1600 if success_resp_auth else 0
+
             # guardar la energía antes de actualizar
-            initial_energy_ch = ch_node1["ResidualEnergy"]
+            initial_energy_ch_tx = ch_node1["ResidualEnergy"]
             # Calcular el timeout de espera
-            lat_prop, lat_tx, lat_proc, timeout_ch = calculate_timeout(start_position, end_position, bitrate=9200, packet_size=1600)
+            lat_prop, lat_tx, _, timeout_ch_resp_auth = calculate_timeout(start_position, end_position, bitrate=9200, packet_size=1600)
             # Actualiza energía del nodo
             ch_node1 = update_energy_node_tdma(ch_node1, sink1["Position"], E_schedule,
-                                                timeout_ch, type_packet, role='CH', action='tx', verbose=True)
-            energy_consumed_ch = ((initial_energy_ch - ch_node1["ResidualEnergy"]))
-            print(f'Energy consumed del CH en Tx - Tx-genesis : ', energy_consumed_ch)
+                                                timeout_ch_resp_auth, type_packet, role='CH', action='tx', verbose=True, t_verif_s=t_proc_ch_resp_auth)
+            energy_consumed_ch_tx = ((initial_energy_ch_tx - ch_node1["ResidualEnergy"]))
+            print(f'Energy consumed del CH en Tx - Tx-genesis : ', energy_consumed_ch_tx)
+
+            # Se almacena en log_event de la tx del ack:auth
+            log_event(
+                run_id=RUN_ID, phase="auth", module="tangle", msg_type="AUTH:RESP",
+                sender_id=ch_node1["NodeID"], receiver_id=sink1["NodeID"], cluster_id=ch_node1["ClusterHead"],
+                start_pos=start_position, end_pos=end_position,
+                bits_sent=bits_sent_resp_auth, bits_received=bits_received_resp_auth,
+                success=success_resp_auth, packet_lost=p_lost_resp_auth,
+                energy_event_type='tx', energy_j=energy_consumed_ch_tx,
+                residual_sender=ch_node1["ResidualEnergy"], residual_receiver=None,
+                bitrate=9200, freq_khz=20,
+                lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=t_proc_ch_resp_auth,
+                snr_db=snr_db, per=per_resp_auth_ch_sink,
+                lat_dag_ms=0.0
+                )
+
+            ## Energia de los demas nodos
+            active_ids = [ch_node1["NodeID"]]
+            node_uw3 = update_energy_standby_others(node_uw3, active_ids, t_proc_ch_resp_auth, verbose=True)
 
             # # CH to Sink
-            # # Medición por cada transmisión CH→Sink
-            # # estadisticas nuevas
-            # tipo = "Tx_Auth_respCH"
-            # origen = ch_node1['NodeID']
-            # destino = sink1['NodeID']
-            # rol_origen = 'CH'
-            # rol_destino = 'Sink'
-            # energia_tx = energy_consumed_ch
-            # energia_rx = None
-            # t_prop = delay * 1000 # Milisegundos
-            # t_verif = None
-            # t_auth = None
-            # t_resp = end_time_responseCH * 1000 # Milisegundos
-            # ClusterID = ch_node1['ClusterHead']  # o node_dest si es CH
-            # RoundID = ronda  # si haces múltiples rondas
-            # # Registrar evento Sink to CH
-            # CONTADOR_EVENTOS += 1
-            # registrar_evento_tabla(table_events, CONTADOR_EVENTOS, tipo, origen, destino, rol_origen, rol_destino,
-            #                        energia_tx, energia_rx, t_prop, t_verif, t_auth, t_resp, ClusterID, RoundID)
-
             # print('####')
             # print('Antes de actualizar el CH imprimimos el esatdo del nodo : ', ch_node1)
             # print('####')
@@ -833,15 +730,11 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
             # print('Despues de actualizar el CH imprimimos el esatdo del nodo : ', ch_node1)
             # print('####')
 
-            per_ch_sink, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=1600, bitrate=9200)
-
-            # Simular la probabiidad de recepción
-            if propagate_with_probability(per=per_ch_sink, override_per=PER_VARIABLE):
-
+            # Simular la probabiidad de recepción AL SINK
+            if success_resp_auth:
+                ack_received_chtosink = True
                 # El CH coloca su estado de autenticado cuando inicia el proceso de propagación de la TX
                 ch_node1['Authenticated'] = True
-
-                # print(f"El sink recibio la Tx del CH {ch['NodeID']}")
 
                 payload = auth_response_tx1['Payload']
                 # Dividir el payload por el separador ";"
@@ -859,40 +752,35 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                 end_time_verify = time.time() - time_start
 
                 # guardar la energía antes de actualizar, recibir el ACK del sink
-                initial_energy_ch = ch_node1["ResidualEnergy"]
+                initial_energy_ch_rx = ch_node1["ResidualEnergy"]
                 # Calcular el timeout de espera
                 lat_prop, lat_tx, lat_proc, timeout_ch = calculate_timeout(start_position, end_position, bitrate=9200, packet_size=48)
                 # Actualiza energía del nodo
                 ch_node1 = update_energy_node_tdma(ch_node1, sink1["Position"], E_schedule,
                                                    timeout_ch, type_packet_control, role='CH', action='rx', verbose=True)
-                energy_consumed_ch = ((initial_energy_ch - ch_node1["ResidualEnergy"]))
-                print(f'Energy consumed del CH en Tx - Tx-genesis : ', energy_consumed_ch)
+                energy_consumed_ch_rx = ((initial_energy_ch_rx - ch_node1["ResidualEnergy"]))
+                print(f'Energy consumed del CH en Tx - Tx-genesis : ', energy_consumed_ch_rx)
 
-                # CH to Sink
-                # Medición por cada transmisión CH→Sink
-                # estadisticas nuevas
-                tipo = "Ack-Tx_Auth_respCH"
-                origen = sink1['NodeID']
-                destino = ch_node1['NodeID']
-                rol_origen = 'Sink'
-                rol_destino = 'CH'
-                energia_tx = None
-                energia_rx = energy_consumed_ch
-                t_prop = delay * 1000 # Milisegundos
-                t_verif = end_time_verify * 1000 # Milisegundos
-                t_auth = None
-                t_resp = None
-                ClusterID = ch_node1['ClusterHead']  # o node_dest si es CH
-                RoundID = ronda  # si haces múltiples rondas
-                # Registrar evento Sink to CH
-                CONTADOR_EVENTOS += 1
-                registrar_evento_tabla(table_events, CONTADOR_EVENTOS, tipo, origen, destino, rol_origen, rol_destino,
-                                    energia_tx, energia_rx, t_prop, t_verif, t_auth, t_resp, ClusterID, RoundID)
+                 # Se almacena en log_event
+                log_event(
+                    run_id=RUN_ID, phase="auth", module="tangle", msg_type="AUTH:RESP",
+                    sender_id=ch_node1["NodeID"], receiver_id=sink1["NodeID"], cluster_id=ch_node1["ClusterHead"],
+                    start_pos=start_position, end_pos=end_position,
+                    bits_sent=bits_sent_resp_auth, bits_received=bits_received_resp_auth,
+                    success=success_resp_auth, packet_lost=p_lost_resp_auth,
+                    energy_event_type='rx', energy_j=energy_consumed_ch_rx,
+                    residual_sender=None, residual_receiver=ch_node1["ResidualEnergy"],
+                    bitrate=9200, freq_khz=20,
+                    lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=lat_proc,
+                    snr_db=snr_db, per=per_resp_auth_ch_sink,
+                    lat_dag_ms=0.0
+                    )
+
+                # # CH to Sink
 
                 # La tx es verificada por el sink con la firma publica obtenida de la bbdd, el identificador
                 # de la firma se envio en el payload
                 if isverify:
-
                     print(f"El Sink recibió y verificó la Tx de Response_auth_to_sink de CH {ch_node1['NodeID']}")
                     sink1['Tips'].append(auth_response_tx1['ID'])
 
@@ -907,11 +795,13 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
 
                     # print('Verificamos que el sink ha actualizado las tx de forma correcta : ', sink1)
 
-                    break
+                    # break
                 else:
                     print(f"El Sink falló en la verificación de la Tx de CH {ch_node1['NodeID']}")
                     retries += 1
                     # time.sleep(timeout)
+            else:
+                ack_received_chtosink = False
 
         if retries == max_retries:
             print(f"Sink {sink1['NodeID']} no respondió tras {max_retries} reintentos.")
@@ -923,15 +813,19 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
         # # Actualizar la tx de Tips a ApprovedTransactions del ch
         # update_transactions(ch_node1, auth_response_tx1)
 
+        ack_received_chtosn = False
         ##
         ##
         # Propagar la respuesta del CH a los nodos del cluster
         # CH -> SN
         for node2 in node_uw3:
+            retries_SNtoCH = 0
+            ack_received_chtosn = False
+            ack_received_sntoch = False
             if node2['ClusterHead'] == ch_node1['NodeID'] and node2['IsSynced'] and node2['NodeID'] != ch_node1['NodeID']:  # Excluir el propio CH
                 retries = 0
 
-                while retries < max_retries:
+                while retries < max_retries and not ack_received_chtosn:
                     start_response_tx_ch = time.time()
 
                     # Aqui toca agregar el delay de propagación basasdo en la formula de distancia/velocidad
@@ -950,40 +844,44 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                     # times_propagation_tx_response = times_propagation_tx_response + (time.time() - start_response_tx_ch)
                     times_propagation_tx_response = delay
 
+                    per_resp_auth_ch_sn, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=1600, bitrate=9200)
+                    success_resp_auth = propagate_with_probability(per=per_resp_auth_ch_sn, override_per=PER_VARIABLE)
+                    p_lost_resp_auth = not success_resp_auth
+                    bits_sent_resp_auth = 1600 # bits
+                    bits_received_resp_auth = 1600 if success_resp_auth else 0
+
                     # guardar la energía antes de actualizar
-                    initial_energy_ch = ch_node1["ResidualEnergy"]
+                    initial_energy_ch_tx = ch_node1["ResidualEnergy"]
                     # Calcular el timeout de espera
                     lat_prop, lat_tx, lat_proc, timeout_ch = calculate_timeout(start_position, end_position, bitrate=9200, packet_size=1600)
                     # Actualiza energía del nodo
                     ch_node1 = update_energy_node_tdma(ch_node1, node2["Position"], E_schedule,
                                                         timeout_ch, type_packet, role='CH', action='tx', verbose=True)
-                    energy_consumed_ch = ((initial_energy_ch - ch_node1["ResidualEnergy"]))
-                    print(f'Energy consumed del CH en Tx - Tx-response : ', energy_consumed_ch)
+                    energy_consumed_ch_tx = ((initial_energy_ch_tx - ch_node1["ResidualEnergy"]))
+                    print(f'Energy consumed del CH en Tx - Tx-response : ', energy_consumed_ch_tx)
 
-                    # CH to SN
-                    # Medición por cada transmisión CH→Sink
-                    # estadisticas nuevas
-                    tipo = "Tx_Auth_respCH"
-                    origen = ch_node1['NodeID']
-                    destino = node2['NodeID']
-                    rol_origen = 'CH'
-                    rol_destino = 'SN'
-                    energia_tx = energy_consumed_ch
-                    energia_rx = None
-                    t_prop = delay * 1000 # Milisegundos
-                    t_verif = None
-                    t_auth = None
-                    t_resp = None
-                    ClusterID = ch_node1['ClusterHead']  # o node_dest si es CH
-                    RoundID = ronda  # si haces múltiples rondas
-                    # Registrar evento Sink to CH
-                    CONTADOR_EVENTOS += 1
-                    registrar_evento_tabla(table_events, CONTADOR_EVENTOS, tipo, origen, destino, rol_origen, rol_destino,
-                                        energia_tx, energia_rx, t_prop, t_verif, t_auth, t_resp, ClusterID, RoundID)
+                    # Se almacena en log_event de la tx del ack:auth
+                    log_event(
+                        run_id=RUN_ID, phase="auth", module="tangle", msg_type="AUTH:RESP",
+                        sender_id=ch_node1["NodeID"], receiver_id=node2["NodeID"], cluster_id=node2["ClusterHead"],
+                        start_pos=start_position, end_pos=end_position,
+                        bits_sent=bits_sent_resp_auth, bits_received=bits_received_resp_auth,
+                        success=success_resp_auth, packet_lost=p_lost_resp_auth,
+                        energy_event_type='tx', energy_j=energy_consumed_ch_tx,
+                        residual_sender=ch_node1["ResidualEnergy"], residual_receiver=node2["ResidualEnergy"],
+                        bitrate=9200, freq_khz=20,
+                        lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=lat_proc,
+                        snr_db=snr_db, per=per_resp_auth_ch_sn,
+                        lat_dag_ms=0.0
+                        )
 
-                    per_ch_sn, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=1600, bitrate=9200)
+                    ## Energia de los demas nodos
+                    active_ids = [ch_node1["NodeID"], node2["NodeID"]]
+                    node_uw3 = update_energy_standby_others(node_uw3, active_ids, t_proc_ch_resp_auth, verbose=True)
 
-                    if propagate_with_probability(per_ch_sn):
+                    # # CH to SN
+                    if success_resp_auth:
+                        ack_received_chtosn = True
                         # Los nodos que reciben la Tx de respuesta del CH, tambien deben buscar la clave en la bbd y verificarl
                         # print(f"El nodo sensor {node['NodeID']} recibio la Tx del CH {ch['NodeID']}...")
 
@@ -1001,109 +899,108 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                         isverify2 = verify_transaction_signature(auth_response_tx1['ID'], auth_response_tx1['Signature'], key_public_sign)
                         end_time_verify1 = time.time() - time_start1
 
+                        # SN recibe y verifica la tx del ch
+                        t_proc_ch_resp_auth = estimate_proc_time_s(do_verify=True, do_tips=True)
+
                         # guardar la energía antes de actualizar
-                        initial_energy_sn = node2["ResidualEnergy"]
+                        initial_energy_sn_rx = node2["ResidualEnergy"]
                         # Calcular el timeout de espera
                         lat_prop, lat_tx, lat_proc, timeout_sn = calculate_timeout(start_position, end_position, bitrate=9200, packet_size=1600)
                         # Actualiza energía del nodo
                         node2 = update_energy_node_tdma(node2, ch_node1["Position"], E_schedule,
-                                                            timeout_sn, type_packet, role='SN', action='rx', verbose=True)
-                        energy_consumed_sn = ((initial_energy_sn - node2["ResidualEnergy"]))
-                        print(f'Energy consumed del CH en Tx - Tx-response : ', energy_consumed_sn)
+                                                            timeout_sn, type_packet, role='SN', action='rx', verbose=True, t_verif_s=t_proc_ch_resp_auth)
+                        energy_consumed_sn_rx = ((initial_energy_sn_rx - node2["ResidualEnergy"]))
+                        print(f'Energy consumed del CH en Tx - Tx-response : ', energy_consumed_sn_rx)
 
-                        # CH to SN
-                        # Medición por cada transmisión CH→Sink
-                        # estadisticas nuevas
-                        tipo = "Tx_Auth_respCH"
-                        origen = ch_node1['NodeID']
-                        destino = node2['NodeID']
-                        rol_origen = 'CH'
-                        rol_destino = 'SN'
-                        energia_tx = None
-                        energia_rx = energy_consumed_sn
-                        t_prop = delay * 1000 # Milisegundos
-                        t_verif = end_time_verify1 * 1000 # Milisegundos
-                        t_auth = None
-                        t_resp = None
-                        ClusterID = ch_node1['ClusterHead']  # o node_dest si es CH
-                        RoundID = ronda  # si haces múltiples rondas
-                        # Registrar evento Sink to CH
-                        CONTADOR_EVENTOS += 1
-                        registrar_evento_tabla(table_events, CONTADOR_EVENTOS, tipo, origen, destino, rol_origen, rol_destino,
-                                            energia_tx, energia_rx, t_prop, t_verif, t_auth, t_resp, ClusterID, RoundID)
+                        # Se almacena en log_event de la tx del ack:auth
+                        log_event(
+                            run_id=RUN_ID, phase="auth", module="tangle", msg_type="AUTH:RESP",
+                            sender_id=ch_node1["NodeID"], receiver_id=node2["NodeID"], cluster_id=node2["ClusterHead"],
+                            start_pos=start_position, end_pos=end_position,
+                            bits_sent=bits_sent_resp_auth, bits_received=bits_received_resp_auth,
+                            success=success_resp_auth, packet_lost=p_lost_resp_auth,
+                            energy_event_type='rx', energy_j=energy_consumed_sn_rx,
+                            residual_sender=ch_node1["ResidualEnergy"], residual_receiver=node2["ResidualEnergy"],
+                            bitrate=9200, freq_khz=20,
+                            lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=t_proc_ch_resp_auth,
+                            snr_db=snr_db, per=per_resp_auth_ch_sn,
+                            lat_dag_ms=0.0
+                            )
 
-                        # guardar la energía antes de actualizar
-                        initial_energy_sn = node2["ResidualEnergy"]
-                        # Calcular el timeout de espera
-                        lat_prop, lat_tx, lat_proc, timeout_sn = calculate_timeout(start_position, end_position, bitrate=9200, packet_size=48)
-                        # Actualiza energía del nodo
-                        node2 = update_energy_node_tdma(node2, ch_node1["Position"], E_schedule,
-                                                            timeout_sn, type_packet_control, role='SN', action='tx', verbose=True)
-                        energy_consumed_sn = ((initial_energy_sn - node2["ResidualEnergy"]))
-                        print(f'Energy consumed del CH en Tx - Tx-response : ', energy_consumed_sn)
+                        # # CH to SN
 
-                        # SN to CH
-                        # Medición por cada transmisión CH→Sink
-                        # estadisticas nuevas
-                        tipo = "Ack-Tx_Auth_respCH"
-                        origen = node2['NodeID']
-                        destino = ch_node1['NodeID']
-                        rol_origen = 'SN'
-                        rol_destino = 'CH'
-                        energia_tx = energy_consumed_sn
-                        energia_rx = None
-                        t_prop = delay * 1000 # Milisegundos
-                        t_verif = None
-                        t_auth = None
-                        t_resp = None
-                        ClusterID = ch_node1['ClusterHead']  # o node_dest si es CH
-                        RoundID = ronda  # si haces múltiples rondas
-                        # Registrar evento Sink to CH
-                        CONTADOR_EVENTOS += 1
-                        registrar_evento_tabla(table_events, CONTADOR_EVENTOS, tipo, origen, destino, rol_origen, rol_destino,
-                                            energia_tx, energia_rx, t_prop, t_verif, t_auth, t_resp, ClusterID, RoundID)
-
-                        # El nodo verifica la tx de autenticación creada y enviada por el CH
-                        # Esta se verifica con la clave publica obtenida de la BBDD.
                         if isverify2:
                             print(f"Nodo {node2['NodeID']} recibió y verifico la Tx Response_auth_to_sink de CH {ch_node1['NodeID']}")
-
-                            # guardar la energía antes de actualizar
-                            initial_energy_ch = ch_node1["ResidualEnergy"]
-                            # Calcular el timeout de espera
-                            lat_prop, lat_tx, lat_proc, timeout_ch = calculate_timeout(start_position, end_position, bitrate=9200, packet_size=48)
-                            # Actualiza energía del nodo
-                            ch_node1 = update_energy_node_tdma(ch_node1, node2["Position"], E_schedule,
-                                                                timeout_ch, type_packet_control, role='CH', action='rx', verbose=True)
-                            energy_consumed_ch = ((initial_energy_ch - ch_node1["ResidualEnergy"]))
-
-                            print(f'Energy consumed del CH en Tx - Tx-response : ', energy_consumed_ch)
-
-                            # SN to CH
-                            # Medición por cada transmisión CH→Sink
-                            # estadisticas nuevas
-                            tipo = "Ack-Tx_Auth_respCH"
-                            origen = node2['NodeID']
-                            destino = ch_node1['NodeID']
-                            rol_origen = 'SN'
-                            rol_destino = 'CH'
-                            energia_tx = None
-                            energia_rx = energy_consumed_ch
-                            t_prop = delay * 1000 # Milisegundos
-                            t_verif = None
-                            t_auth = None
-                            t_resp = None
-                            ClusterID = ch_node1['ClusterHead']  # o node_dest si es CH
-                            RoundID = ronda  # si haces múltiples rondas
-                            # Registrar evento Sink to CH
-                            CONTADOR_EVENTOS += 1
-                            registrar_evento_tabla(table_events, CONTADOR_EVENTOS, tipo, origen, destino, rol_origen, rol_destino,
-                                                energia_tx, energia_rx, t_prop, t_verif, t_auth, t_resp, ClusterID, RoundID)
 
                             # Se actualiza el ID del tip en el nodo
                             node2['Tips'].append(auth_response_tx1['ID']) # corregido
 
-                            break
+                            # break
+                            while retries_SNtoCH < max_retries and not ack_received_sntoch:
+                                # calular el per
+                                per_sn_resp_ack, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=48, bitrate=9200)
+                                success_resp_ack = propagate_with_probability(per=per_sn_resp_ack, override_per=PER_VARIABLE)
+                                p_lost_resp_ack = not success_resp_ack
+                                bits_sent_resp_ack = 48 # bits
+                                bits_received_resp_ack = 48 if success_resp_ack else 0
+
+                                # guardar la energía antes de actualizar
+                                initial_energy_sn_tx = node2["ResidualEnergy"]
+                                # Calcular el timeout de espera
+                                lat_prop, lat_tx, lat_proc, timeout_sn = calculate_timeout(start_position, end_position, bitrate=9200, packet_size=48)
+                                # Actualiza energía del nodo
+                                node2 = update_energy_node_tdma(node2, ch_node1["Position"], E_schedule,
+                                                                    timeout_sn, type_packet_control, role='SN', action='tx', verbose=True)
+                                energy_consumed_sn_tx = ((initial_energy_sn_tx - node2["ResidualEnergy"]))
+                                
+                                ## Energia de los demas nodos
+                                active_ids = [ch_node1["NodeID"], node2["NodeID"]]
+                                node_uw3 = update_energy_standby_others(node_uw3, active_ids, t_proc_ch_resp_auth, verbose=True)
+
+                                # Se almacena en log_event de la tx del ack:auth
+                                log_event(
+                                    run_id=RUN_ID, phase="auth", module="tangle", msg_type="AUTH:RESP:ACK",
+                                    sender_id=node2["NodeID"], receiver_id=ch_node1["NodeID"], cluster_id=node2["ClusterHead"],
+                                    start_pos=start_position, end_pos=end_position,
+                                    bits_sent=bits_sent_resp_ack, bits_received=bits_received_resp_ack,
+                                    success=success_resp_ack, packet_lost=p_lost_resp_ack,
+                                    energy_event_type='tx', energy_j=energy_consumed_sn_tx,
+                                    residual_sender=node2["ResidualEnergy"], residual_receiver=ch_node1["ResidualEnergy"],
+                                    bitrate=9200, freq_khz=20,
+                                    lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=lat_proc,
+                                    snr_db=snr_db, per=per_sn_resp_ack,
+                                    lat_dag_ms=0.0
+                                    )
+
+                                if success_resp_ack:
+                                    ack_received_sntoch = True
+                                    # guardar la energía antes de actualizar
+                                    initial_energy_ch_rx = ch_node1["ResidualEnergy"]
+                                    # Calcular el timeout de espera
+                                    lat_prop, lat_tx, lat_proc, timeout_ch = calculate_timeout(start_position, end_position, bitrate=9200, packet_size=48)
+                                    # Actualiza energía del nodo
+                                    ch_node1 = update_energy_node_tdma(ch_node1, node2["Position"], E_schedule,
+                                                                        timeout_ch, type_packet_control, role='CH', action='rx', verbose=True)
+                                    energy_consumed_ch_rx = ((initial_energy_ch_rx - ch_node1["ResidualEnergy"]))
+
+                                    # Se almacena en log_event de la tx del ack:auth
+                                    log_event(
+                                        run_id=RUN_ID, phase="auth", module="tangle", msg_type="AUTH:RESP:ACK",
+                                        sender_id=node2["NodeID"], receiver_id=ch_node1["NodeID"], cluster_id=node2["ClusterHead"],
+                                        start_pos=start_position, end_pos=end_position,
+                                        bits_sent=bits_sent_resp_ack, bits_received=bits_received_resp_ack,
+                                        success=success_resp_ack, packet_lost=p_lost_resp_ack,
+                                        energy_event_type='rx', energy_j=energy_consumed_ch_rx,
+                                        residual_sender=node2["ResidualEnergy"], residual_receiver=ch_node1["ResidualEnergy"],
+                                        bitrate=9200, freq_khz=20,
+                                        lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=lat_proc,
+                                        snr_db=snr_db, per=per_sn_resp_ack,
+                                        lat_dag_ms=0.0
+                                        )
+                                else:
+                                    # En caso de que el sn no reciba el ack de confirmación
+                                    ack_received_sntoch = False
+                                    retries_SNtoCH += 1
                         else:
                             print(f"Nodo {node2['NodeID']} falló en la verificación de la Tx de autenticación.")
                             retries += 1
@@ -1125,7 +1022,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
 
 # Función para propagar la tx de respuesta de los nodos de cada cluster
 # SN -> CH
-def authenticate_nodes_to_ch(nodes, chead, E_schedule, ronda, max_retries=3, timeout=2):
+def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retries=3, timeout=2):
     """
     Función para que los nodos del clúster generen una Tx de autenticación y la envíen al CH.
     nodes: Diccionario con los nodos de la red.
@@ -1135,8 +1032,8 @@ def authenticate_nodes_to_ch(nodes, chead, E_schedule, ronda, max_retries=3, tim
     """
     print('El ch que se pasa : ', chead)
     CONTADOR_EVENTOS = 0
-    initial_energy_sn = 0
-    initial_energy_ch = 0
+    initial_energy_sn_rx = initial_energy_sn_tx = 0
+    initial_energy_ch_rx = initial_energy_ch_tx = 0
 
     type_packet = "tx"
     type_packet_control = "sync"
@@ -1156,16 +1053,9 @@ def authenticate_nodes_to_ch(nodes, chead, E_schedule, ronda, max_retries=3, tim
         diccionary_nodes = create_diccionary_nodes(node_ch['RegisterNodes'])
 
         for node4 in cluster_nodes:
-
-            # node_stats = {
-            #     "tx_attempts": 0,
-            #     "energy_consumed": 0.0
-            # }
-
-            retries = 0
+            retries = retries_sntoch = 0
             authenticated = False
-
-            # print('Nodo del cluster : ', node4)
+            authenticated_ack = False
 
             # Response_auth_to_CH
             time_start_responseSN = time.time() # Incia tiempo de medición de la creación de la nueva Tx de response
@@ -1193,40 +1083,41 @@ def authenticate_nodes_to_ch(nodes, chead, E_schedule, ronda, max_retries=3, tim
                 print(f"Nodo {node4['NodeID']} envia Tx Response_auth_to_ch al CH {node_ch['NodeID']}, retraso de {delay:.2f} segundos, distancia calculada {dist:.2f}")
                 # time.sleep(delay)  # Simular el tiempo de sincronización
 
+                per_sn_resp_ch, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=1600, bitrate=9200)
+                # SN crea y firma tx de respuesta al CH
+                t_proc_sn_resp_auth = estimate_proc_time_s(do_sign=True, do_tips=True)
+                
+                success_resp_auth = propagate_with_probability(per=per_sn_resp_ch, override_per=PER_VARIABLE)
+                p_lost_resp_auth = not success_resp_auth
+                bits_sent_resp_auth = 1600 # bits
+                bits_received_resp_auth = 1600 if success_resp_auth else 0
+
                 # guardar la energía antes de actualizar
-                initial_energy_sn = node4["ResidualEnergy"]
+                initial_energy_sn_tx = node4["ResidualEnergy"]
                 # Calcular el timeout de espera
                 lat_prop, lat_tx, lat_proc, timeout_sn = calculate_timeout(start_position, end_position, bitrate=9200, packet_size=1600)
                 # Actualiza energía del nodo
                 node4 = update_energy_node_tdma(node4, node_ch["Position"], E_schedule,
-                                                            timeout_sn, type_packet, role='SN', action='tx', verbose=True)
-                energy_consumed_sn = ((initial_energy_sn - node4["ResidualEnergy"]))
-                print(f'Energy consumed del SN en Tx - Tx-responseSN : ', energy_consumed_sn)
+                                                            timeout_sn, type_packet, role='SN', action='tx', verbose=True, t_verif_s=t_proc_sn_resp_auth)
+                energy_consumed_sn_tx = ((initial_energy_sn_tx - node4["ResidualEnergy"]))
+                print(f'Energy consumed del SN en Tx - Tx-responseSN : ', energy_consumed_sn_tx)
 
-                # Sn to CH
-                # Cálculo de energía por intento
-                # estadisticas nuevas
-                tipo = "Tx_Auth_respSN"
-                origen = node4['NodeID']
-                destino = node_ch['NodeID']
-                rol_origen = 'SN'
-                rol_destino = 'CH'
-                energia_tx = energy_consumed_sn
-                energia_rx = None
-                t_prop = delay * 1000 # Milisegundos
-                t_verif = None
-                t_auth = None
-                t_resp = end_time_responseSN * 1000 # Milisegundos
-                ClusterID = node4['ClusterHead']  # o node_dest si es CH
-                RoundID = ronda  # si haces múltiples rondas
-                # Registrar evento Sink to CH
-                CONTADOR_EVENTOS += 1
-                registrar_evento_tabla(table_events, CONTADOR_EVENTOS, tipo, origen, destino, rol_origen, rol_destino,
-                                    energia_tx, energia_rx, t_prop, t_verif, t_auth, t_resp, ClusterID, RoundID)
+                # Se almacena en log_event de la tx del ack:auth
+                log_event(
+                    run_id=RUN_ID, phase="auth", module="tangle", msg_type="AUTH:RESP",
+                    sender_id=node4["NodeID"], receiver_id=node_ch["NodeID"], cluster_id=node4["ClusterHead"],
+                    start_pos=start_position, end_pos=end_position,
+                    bits_sent=bits_sent_resp_auth, bits_received=bits_received_resp_auth,
+                    success=success_resp_auth, packet_lost=p_lost_resp_auth, 
+                    energy_event_type='tx', energy_j=energy_consumed_sn_tx,
+                    residual_sender=node4["ResidualEnergy"], residual_receiver=node_ch["ResidualEnergy"],
+                    bitrate=9200, freq_khz=20,
+                    lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=t_proc_sn_resp_auth,
+                    snr_db=snr_db, per=per_sn_resp_ch,
+                    lat_dag_ms=0.0
+                    )
 
-                per_sn_ch, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=1600, bitrate=9200)
-
-                if propagate_with_probability(per_sn_ch):
+                if success_resp_auth:
                     # CH recibe la transacción y verifica si el nodo está sincronizado
                     if node4['IsSynced']:
                         # Dividir el payload para obtener el identificador de la firma
@@ -1244,108 +1135,36 @@ def authenticate_nodes_to_ch(nodes, chead, E_schedule, ronda, max_retries=3, tim
                         end_time_verify1 = time.time() - time_start1
 
                         # guardar la energía antes de actualizar
-                        initial_energy_ch = node_ch["ResidualEnergy"]
+                        initial_energy_ch_rx = node_ch["ResidualEnergy"]
                         # Calcular el timeout de espera
                         lat_prop, lat_tx, lat_proc, timeout_ch = calculate_timeout(start_position, end_position, bitrate=9200, packet_size=1600)
                         # Actualiza energía del nodo
                         node_ch = update_energy_node_tdma(node_ch, node4["Position"], E_schedule,
                                                             timeout_ch, type_packet, role='CH', action='rx', verbose=True)
-                        energy_consumed_ch = ((initial_energy_ch - node_ch["ResidualEnergy"]))
-                        print(f'Energy consumed del CH en Rx - Tx-responseSN : ', energy_consumed_ch)
+                        energy_consumed_ch_rx = ((initial_energy_ch_rx - node_ch["ResidualEnergy"]))
+                        print(f'Energy consumed del CH en Rx - Tx-responseSN : ', energy_consumed_ch_rx)
 
-                        # SN to CH
-                        # estadisticas nuevas
-                        tipo = "Tx_Auth_respSN"
-                        origen = node4['NodeID']
-                        destino = node_ch['NodeID']
-                        rol_origen = 'SN'
-                        rol_destino = 'CH'
-                        energia_tx = None
-                        energia_rx = energy_consumed_ch
-                        t_prop = delay * 1000 # Milisegundos
-                        t_verif = end_time_verify1 * 1000 # Milisegundos
-                        t_auth = None
-                        t_resp = None
-                        ClusterID = node4['ClusterHead']  # o node_dest si es CH
-                        RoundID = ronda  # si haces múltiples rondas
-                        # Registrar evento Sink to CH
-                        CONTADOR_EVENTOS += 1
-                        registrar_evento_tabla(table_events, CONTADOR_EVENTOS, tipo, origen, destino, rol_origen, rol_destino,
-                                            energia_tx, energia_rx, t_prop, t_verif, t_auth, t_resp, ClusterID, RoundID)
-
-                        # confirma la Rx con ACK
-                        # guardar la energía antes de actualizar
-                        initial_energy_ch = node_ch["ResidualEnergy"]
-                        # Calcular el timeout de espera
-                        lat_prop, lat_tx, lat_proc, timeout_ch = calculate_timeout(start_position, end_position, bitrate=9200, packet_size=48)
-                        # Actualiza energía del nodo
-                        node_ch = update_energy_node_tdma(node_ch, node4["Position"], E_schedule,
-                                                            timeout_ch, type_packet_control, role='CH', action='tx', verbose=True)
-                        energy_consumed_ch = ((initial_energy_ch - node_ch["ResidualEnergy"]))
-                        print(f'Energy consumed del CH en Tx - Tx-response-ACK : ', energy_consumed_ch)
+                        # Se almacena en log_event de la tx del ack:auth
+                        log_event(
+                            run_id=RUN_ID, phase="auth", module="tangle", msg_type="AUTH:RESP",
+                            sender_id=node4["NodeID"], receiver_id=node_ch["NodeID"], cluster_id=node4["ClusterHead"],
+                            start_pos=start_position, end_pos=end_position,
+                            bits_sent=bits_sent_resp_auth, bits_received=bits_received_resp_auth,
+                            success=success_resp_auth, packet_lost=p_lost_resp_auth, 
+                            energy_event_type='rx', energy_j=energy_consumed_ch_rx,
+                            residual_sender=node4["ResidualEnergy"], residual_receiver=node_ch["ResidualEnergy"],
+                            bitrate=9200, freq_khz=20,
+                            lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=lat_proc,
+                            snr_db=snr_db, per=per_sn_resp_ch,
+                            lat_dag_ms=0.0
+                            )
 
                         # CH to SN
-                        # estadisticas nuevas
-                        tipo = "Ack-Tx_Auth_respSN"
-                        origen = node_ch['NodeID']
-                        destino = node4['NodeID']
-                        rol_origen = 'CH'
-                        rol_destino = 'SN'
-                        energia_tx = energy_consumed_ch
-                        energia_rx = None
-                        t_prop = delay * 1000 # Milisegundos
-                        t_verif = None
-                        t_auth = None
-                        t_resp = None
-                        ClusterID = node4['ClusterHead']  # o node_dest si es CH
-                        RoundID = ronda  # si haces múltiples rondas
-                        # Registrar evento Sink to CH
-                        CONTADOR_EVENTOS += 1
-                        registrar_evento_tabla(table_events, CONTADOR_EVENTOS, tipo, origen, destino, rol_origen, rol_destino,
-                                            energia_tx, energia_rx, t_prop, t_verif, t_auth, t_resp, ClusterID, RoundID)
-
-                        # Recepción del ACK del CH
-                        # guardar la energía antes de actualizar
-                        initial_energy_sn = node4["ResidualEnergy"]
-                        # Calcular el timeout de espera
-                        lat_prop, lat_tx, lat_proc, timeout_sn = calculate_timeout(start_position, end_position, bitrate=9200, packet_size=48)
-                        # Actualiza energía del nodo
-                        node4 = update_energy_node_tdma(node4, node_ch["Position"], E_schedule,
-                                                                    timeout_sn, type_packet_control, role='SN', action='rx', verbose=True)
-                        energy_consumed_sn = ((initial_energy_sn - node4["ResidualEnergy"]))
-                        print(f'Energy consumed del SN en Tx - Tx-responseSN : ', energy_consumed_sn)
-
-                        # CH to SN
-                        # Cálculo de energía por intento
-                        # estadisticas nuevas
-                        tipo = "Ack-Tx_Auth_respSN"
-                        origen = node_ch['NodeID']
-                        destino = node4['NodeID']
-                        rol_origen = 'CH'
-                        rol_destino = 'SN'
-                        energia_tx = None
-                        energia_rx = energy_consumed_sn
-                        t_prop = delay * 1000 # Milisegundos
-                        t_verif = None
-                        t_auth = None
-                        t_resp = None
-                        ClusterID = node4['ClusterHead']  # o node_dest si es CH
-                        RoundID = ronda  # si haces múltiples rondas
-                        # Registrar evento Sink to CH
-                        CONTADOR_EVENTOS += 1
-                        registrar_evento_tabla(table_events, CONTADOR_EVENTOS, tipo, origen, destino, rol_origen, rol_destino,
-                                            energia_tx, energia_rx, t_prop, t_verif, t_auth, t_resp, ClusterID, RoundID)
-
                         # Verificar la transacción con la clave pública
                         if isverify2:
                             print(f"CH {node_ch['NodeID']} recibió y verificó la Tx Response_auth_to_ch del Nodo {node4['NodeID']}.")
-
                             node4['Authenticated'] = True  # Se autentica exitosamente
                             authenticated = True
-
-                            # print("Tx agregada al Tips :", node_auth_tx['ID'])
-
-                            # print("Tx agregadas : ", node_ch['Tips'])
 
                             # Se agrega el id de tx al ch
                             node_ch['Tips'].append(node_auth_tx['ID'])  # corregido
@@ -1365,7 +1184,75 @@ def authenticate_nodes_to_ch(nodes, chead, E_schedule, ronda, max_retries=3, tim
                             # node_ch['RegisterNodes'][index_node]['Status_auth'] = True
                             # print('Nodo actualizado : ', node_ch['RegisterNodes'][index_node]['Status_auth'])
                             # time.sleep(5)
+                            
+                            ## while 
+                            while retries_sntoch < max_retries and not authenticated_ack:        
+                                # confirma la Rx con ACK
+                                # guardar la energía antes de actualizar
+                                per_sn_resp_ack_ch, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=48, bitrate=9200)
+                                
+                                # CH confirma el ack                                
+                                success_resp_auth_ack = propagate_with_probability(per=per_sn_resp_ack_ch, override_per=PER_VARIABLE)
+                                p_lost_resp_auth_ack = not success_resp_auth_ack
+                                bits_sent_resp_auth_ack = 48 # bits
+                                bits_received_resp_auth_ack = 48 if success_resp_auth else 0
 
+                                # Calcular el timeout de espera
+                                lat_prop, lat_tx, lat_proc, timeout_ch = calculate_timeout(start_position, end_position, bitrate=9200, packet_size=48)
+
+                                initial_energy_ch_tx = node_ch["ResidualEnergy"]
+                                # Actualiza energía del nodo
+                                node_ch = update_energy_node_tdma(node_ch, node4["Position"], E_schedule,
+                                                                    timeout_ch, type_packet_control, role='CH', action='tx', verbose=True)
+                                energy_consumed_ch_tx = ((initial_energy_ch_tx - node_ch["ResidualEnergy"]))
+                                print(f'Energy consumed del CH en Tx - Tx-response-ACK : ', energy_consumed_ch_tx)
+
+                                # Se almacena en log_event de la tx del ack:auth
+                                log_event(
+                                    run_id=RUN_ID, phase="auth", module="tangle", msg_type="AUTH:RESP:ACK",
+                                    sender_id=node_ch["NodeID"], receiver_id=node4["NodeID"], cluster_id=node4["ClusterHead"],
+                                    start_pos=start_position, end_pos=end_position,
+                                    bits_sent=bits_sent_resp_auth_ack, bits_received=bits_received_resp_auth_ack,
+                                    success=success_resp_auth_ack, packet_lost=p_lost_resp_auth_ack, 
+                                    energy_event_type='tx', energy_j=energy_consumed_ch_tx,
+                                    residual_sender=node_ch["ResidualEnergy"], residual_receiver=node4["ResidualEnergy"],
+                                    bitrate=9200, freq_khz=20,
+                                    lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=lat_proc,
+                                    snr_db=snr_db, per=per_sn_resp_ch,
+                                    lat_dag_ms=0.0
+                                    )
+
+                                if success_resp_auth_ack:
+                                    authenticated_ack = True
+                                    # Recepción del ACK del CH
+                                    # guardar la energía antes de actualizar
+                                    initial_energy_sn_rx = node4["ResidualEnergy"]
+                                    # Calcular el timeout de espera
+                                    lat_prop, lat_tx, lat_proc, timeout_sn = calculate_timeout(start_position, end_position, bitrate=9200, packet_size=48)
+                                    # Actualiza energía del nodo
+                                    node4 = update_energy_node_tdma(node4, node_ch["Position"], E_schedule,
+                                                                                timeout_sn, type_packet_control, role='SN', action='rx', verbose=True)
+                                    energy_consumed_sn_rx = ((initial_energy_sn_rx - node4["ResidualEnergy"]))
+                                    print(f'Energy consumed del SN en Tx - Tx-responseSN : ', energy_consumed_sn_rx)
+                                    
+                                    # Se almacena en log_event de la tx del ack:auth
+                                    log_event(
+                                        run_id=RUN_ID, phase="auth", module="tangle", msg_type="AUTH:RESP:ACK",
+                                        sender_id=node_ch["NodeID"], receiver_id=node4["NodeID"], cluster_id=node4["ClusterHead"],
+                                        start_pos=start_position, end_pos=end_position,
+                                        bits_sent=bits_sent_resp_auth_ack, bits_received=bits_received_resp_auth_ack,
+                                        success=success_resp_auth_ack, packet_lost=p_lost_resp_auth_ack, 
+                                        energy_event_type='rx', energy_j=energy_consumed_sn_rx,
+                                        residual_sender=node_ch["ResidualEnergy"], residual_receiver=node4["ResidualEnergy"],
+                                        bitrate=9200, freq_khz=20,
+                                        lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=lat_proc,
+                                        snr_db=snr_db, per=per_sn_resp_ch,
+                                        lat_dag_ms=0.0
+                                        )
+                                else:
+                                    ## en caso del que nodo SN no reciba el ack del CH
+                                    authenticated_ack = False
+                                    retries_sntoch += 1
                         else:
                             print(f"CH {node_ch['NodeID']} falló en la verificación de la autenticación de Nodo {node4['NodeID']}.")
                             retries += 1
@@ -1377,12 +1264,9 @@ def authenticate_nodes_to_ch(nodes, chead, E_schedule, ronda, max_retries=3, tim
                     print(f"CH {node_ch['NodeID']} no recibió la Tx de autenticación. Reintentando... ({retries + 1}/{max_retries})")
                     retries += 1
                     # time.sleep(timeout)
-
-
             if retries == max_retries:
                 print(f"CH {node_ch['NodeID']} no autenticó al Nodo {node4['NodeID']} tras {max_retries} reintentos.")
-    #print("Que valor tiene : ", node_auth_tx)
-    return table_events
+    return
 
 
 # Nueva función de update_transactions
@@ -1488,10 +1372,8 @@ def find_node_index(register_nodes, target_node_id):
 def create_diccionary_nodes(register_nodes):
     """
     Crea un diccionario que asocia cada NodeID al índice correspondiente.
-
     Parámetros:
       - register_nodes: lista de diccionarios, cada uno representando un nodo.
-
     Retorna:
       - Un diccionario {NodeID: índice}
     """

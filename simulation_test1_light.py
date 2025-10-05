@@ -23,7 +23,7 @@ manifest = {
     "seed": SEED,
     "scenario": {
         "num_nodes": num_nodes,
-        "freq_khz": 20, "bitrate_bps": 9200, 
+        "freq_khz": 20, "bitrate_bps": 9200,
         "traffic_shipping = 0.5": 0.5, "wind_mps": 5,
         "spreading": 1.5,
         "E_init_J": 5000, "threshold_bateria": float(0.357*5000)
@@ -35,7 +35,7 @@ with open(f"stats/manifest_{RUN_ID}.json","w") as f:
     json.dump(manifest, f, indent=2)
 
 
-###########################    
+###########################
 ###########################
 
 print ('PARAMETROS DE SIMULACIÓN...')
@@ -48,12 +48,12 @@ dim_z = -1000  # Profundidad (en metros)
 sink_pos = np.array([500, 500, 0])  # Posición del Sink en el centro
 # E_init = 10  # Energía inicial de cada nodo (en Joules)
 
-# Estimación de la capacidad de batería necesaria para tus nodos acústicos subacuáticos, 
-# basado en las especificaciones del módem S2CR 15/27 (15–27 kHz) y tu perfil de tráfico. 
+# Estimación de la capacidad de batería necesaria para tus nodos acústicos subacuáticos,
+# basado en las especificaciones del módem S2CR 15/27 (15–27 kHz) y tu perfil de tráfico.
 # Este diseño es ideal para despliegues controlados (12–24 h), como misiones de muestreo
 #  temporal o experimentación oceanográfica.
 # Ref: chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://www.evologics.com/web/content/15634?unique=be7aa65d1c113e56664940ddea7cf65757e6648e
-E_init = 5000  # Energía inicial realista en julios (≈ 0.9 Ah @ 3.7V)
+E_init = 10  # Energía inicial realista en julios (≈ 0.9 Ah @ 3.7V)
 
 # Frecuencia de transmisión en kHz
 freq = 20  # Ajusta la frecuencia según el entorno de la red subacuática
@@ -154,7 +154,7 @@ for iteration in range(num_rounds):
     dist_al_sink = np.linalg.norm(pos_nodes - sink_pos, axis=1)
 
     # Clasificación en niveles
-    niveles = classify_levels(dist_al_sink, num_niveles)  
+    niveles = classify_levels(dist_al_sink, num_niveles)
 
     # Selección de Cluster Heads
     CH = select_cluster_heads(energia_nodos, niveles, threshold_bateria)
@@ -331,13 +331,14 @@ print("INCIO PROCESO DE SINCRONIZACIÓN CON TDMA")
 
 # Sincronización basada en CDMA
 # syn_packet, stats_cdma = propagate_syn_to_CH_cdma(node_sink, CH, node_uw, max_retries, timeout, freq)
-syn_packet, stats_tdma = propagate_syn_to_CH_tdma(RUN_ID, node_sink, CH, node_uw, max_retries, timeout, E_schedule)
+# syn_packet = propagate_syn_to_CH_tdma(RUN_ID, node_sink, CH, node_uw, max_retries, timeout, E_schedule)
+propagate_syn_to_CH_tdma(RUN_ID, node_sink, CH, node_uw, max_retries, timeout, E_schedule)
 
-print(" - ")
-print('Resultados TDMA')
+# print(" - ")
+# print('Resultados TDMA')
 
 # save_stats_to_csv_cdma('sync_stats_tdma.csv', stats_tdma, 'TDMA')
-save_stats_to_syn_csv('sync_stats_tdma.csv', stats_tdma, 'TDMA')
+# save_stats_to_syn_csv('sync_stats_tdma.csv', stats_tdma, 'TDMA')
 
 print("FIN PROCESO DE SINCRONIZACIÓN CON TDMA")
 print("-")
@@ -384,8 +385,9 @@ for i in range(rondas):
     print('Clave del sink : ', node_sink["PrivateKey_sign"])
 
     node_sink["PrivateKey_sign"]
-    
+
     import hashlib
+    import ascon
 
     timestart = time.time() # inicio de la creación de tx genesis
     txgenesis = create_gen_block(node_sink["NodeID"], node_sink["PrivateKey_sign"])
@@ -403,6 +405,7 @@ for i in range(rondas):
     txgenesis.setdefault("TS", time.time())
     txgenesis.setdefault("TTL", 120.0)
     txgenesis.setdefault("Nonce", hashlib.sha256(str(node_sink["NodeID"]).encode()+os.urandom(4)).hexdigest()[:16])
+    txgenesis.setdefault("Nonce1", ascon.hash((str(node_sink["NodeID"]) + str(time.time())).encode(), "Ascon-Hash", 32).hex()[:16])
     node_sink["Tips"].append(txgenesis["ID"])
     node_sink["Tips"] = node_sink["Tips"][-128:]  # LRU simple
 
@@ -435,7 +438,7 @@ for i in range(rondas):
     print('AUTENTICACIÓN DE LOS NODOS DEL CLUSTER')
     # Creación y propagación de la tx de autenticación de los nodos de cada cluster
     # SN -> CH
-    stats_events = authenticate_nodes_to_ch(node_uw, CH, E_schedule, i)
+    authenticate_nodes_to_ch(RUN_ID, node_uw, CH, E_schedule, i)
     # stats_proTx["stats_proTx"].update(stats_proTx3)
     # print("Energia consumida hasta ahora : ", stats_proTx)
     # time.sleep(10)
@@ -453,7 +456,7 @@ for i in range(rondas):
 
     # #   Asignar al campo global
     # stats_proTx["stats_proTx"] = dict(acumulador)
-    
+
     # # 4. Procesar estadísticas
     # print("\n=== Estadísticas completas ===")
     # print("Consumo energía CH (Tx):", sum(stats4["energy"]["CH"]["tx"]))
@@ -472,7 +475,7 @@ for i in range(rondas):
     # save_stats_to_csv(stats4, "estadisticas_simulacion4.csv")
 
     # save_stats_to_csv1(stats1, "estadisticas_simulacion5.csv")
-    save_stats_to_csv2(stats_events, "estadisticas_TxAuth.csv")
+    # save_stats_to_csv2(stats_events, "estadisticas_TxAuth.csv")
 
     # Convertir las listas a cadenas para almacenarlas
     time_verify_str = ','.join(map(str, end_time_verify))
@@ -535,7 +538,7 @@ AGGREGATION_TIMEOUT = 30     # segundos máximo antes de forzar envío
 # attempts = 0
 # while completed_transmissions < total_transmissions and attempts < max_attempts:
 #     attempts += 1  # Contador de intentos para evitar bucles infinitos
-    
+
 #     # Seleccionamos un nodo aleatorio
 #     sender_index = np.random.randint(0, len(node_uw))  # Selección aleatoria de nodo
 #     sender = node_uw[sender_index]
@@ -596,7 +599,7 @@ while completed_transmissions < total_transmissions and attempts < max_attempts:
 
     # print(sender)
     # print(receiver)
-    
+
     # Transmisión simulada
     data_str = f"{np.random.uniform(0, 30):.2f}°C"
     transmit_data("bbdd_keys_shared_sign_cipher.db", sender, receiver, str(data_str), E_schedule, source='SN', dest='CH')

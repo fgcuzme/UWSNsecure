@@ -32,7 +32,7 @@ def verify_transaction_signature(transaction_data, signature, public_key_bytes):
     else:
         # Cargar la clave pública desde los bytes
         actual_pulic_key = ed25519.Ed25519PublicKey.from_public_bytes(public_key_bytes)
-    
+
     # Verificar la firma
 
     try:
@@ -69,7 +69,7 @@ def sign_transaction(transaction_id, private_key_bytes):
         # Cargar la clave privada desde los bytes
         actual_private_key = ed25519.Ed25519PrivateKey.from_private_bytes(private_key_bytes)
 
-    print('Clave privada usada : ', actual_private_key)
+    # print('Clave privada usada : ', actual_private_key)
 
     # private_key_byte_ed25519 = private_key.private_bytes_raw()
     # print('Clave privada combertida a raw : ', private_key_byte_ed25519.hex())
@@ -141,12 +141,24 @@ def generate_unique_id_asconhash(node_id):
     # Si tienes la implementación de Ascon, puedes cambiar hashlib por ascon.hash
     # ascon_hash = ascon.hash(py.bytes(data), 'Ascon-Hash', hash_length)  # Ejemplo con Ascon
     # digest1 = hashlib.sha256(data).hexdigest()  # Usamos SHA-256 en este ejemplo
-    digest = ascon.hash(data, "Ascon-Hash", hash_length).hex()
+    digest = ascon.hash(data, "Ascon-Hash", hash_length).hex() # sin truncar 256 bits = 64 hex # Se puede reducir a 16, 32 o 64 hex
+    # digest = ascon.hash(data, "Ascon-Hash", hash_length).hex()[:16] # Se puede reducir a 16, 32 o 64 hex
 
     # print('Hash Firma : ', digest, ' -> Tamaño del Hash', len(digest))
 
     # Retornar el ID único de la transacción
     return digest
+
+### UNa opcion
+# def generate_unique_id_asconhash(node_id, domain=b"U-Tangle:v1", tx_type=b"GEN", round_id=0, extra_nonce=None):
+#     import os, ascon, time
+#     ts = str(int(time.time()*1000)).encode()
+#     rnd = os.urandom(8) if extra_nonce is None else extra_nonce
+#     data = b"|".join([
+#         domain, tx_type, str(node_id).encode(), str(round_id).encode(), ts, rnd
+#     ])
+#     return ascon.hash(data, "Ascon-Hash", 32).hex()
+
 
 # # Ejemplo de uso
 # node_id = 1
@@ -184,13 +196,28 @@ def create_transaction(node_id, payload, transaction_type, approvedtips, private
         "ApprovedTx": approvedtips,        # Lista de transacciones aprobadas por esta transacción -> 64 bytes
         # "Weight": 1.0,                       # Peso inicial de la transacción -> Eliminar
         # "TipSelectionCount": 0,              # Contador de veces seleccionada como tip -> Eliminar
-        "Signature": sign_transaction(transaction_id, private_key)  # Firma con clave privada -> 32 bytes 
+        "Signature": sign_transaction(transaction_id, private_key)  # Firma con clave privada -> 32 bytes
     }
-    
+
     return transaction
 
 # TAMAÑO TX -> 32 + 2 + 2 + 64 + 64 + 32 = 196 bytes = 1568 bits
 # TAMAÑO TX -> 32 + 2 + 2 + 64 + 64 + 20 = 184 bytes = 1472 bits
+#### MEJORA EN LA TX
+# def create_transaction(node_id, node_key_id, private_key, payload, approvedtips, transaction_type=b"DATA", round_id=0):
+#     tx_id = generate_unique_id_asconhash(node_id=node_id, tx_type=transaction_type, round_id=round_id)
+#     transaction = {
+#         "ID": tx_id,
+#         "NodeID": node_id,
+#         "KeyID": node_key_id,           # [ADD]
+#         "Type": transaction_type.decode() if isinstance(transaction_type, (bytes, bytearray)) else transaction_type,  # [ADD]
+#         "Payload": payload,
+#         "ApprovedTx": approvedtips
+#     }
+#     signature = sign_transaction(tx_id, private_key)
+#     transaction["Signature"] = signature
+#     return transaction
+
 
 
 # Función para crear el bloque génesis
@@ -221,7 +248,7 @@ def create_gen_block(sink_id, private_key):
     genesis_block = create_transaction(sink_id, 'AUTH-REQUEST = 1 -> Génesis de la red', '1', approved_tips, private_key)
 
     # Agrega la Tx a la lista
-    
+
 
     # Mostrar mensaje
     # print(f'Bloque génesis creado con ID: {genesis_block["ID"]}')

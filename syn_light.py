@@ -45,11 +45,6 @@ def propagate_syn_to_CH_tdma(RUN_ID, sink, CH_ids, node_uw, max_retries=3, timeo
 
     type_packet = "sync"
 
-    # Diccionario para capturar estadísticas individuales
-    stats = {
-        "sync_stats": {},  # Para guardar estadísticas por cada CH y nodo
-    }
-
     # Intentar sincronizar cada CH
     for ch in CH_ids:
         retries_sinktoch = 0
@@ -178,22 +173,9 @@ def propagate_syn_to_CH_tdma(RUN_ID, sink, CH_ids, node_uw, max_retries=3, timeo
                         # Si el CH se sincroniza exitosamente el Sink lo habilita como sincronizado
                         sink['RegisterNodes'][ch]['Status_syn'] = True
 
-                        # # Capturar estadísticas de sincronización del CH
-                        # sync_end_time = time.time() - start_time
-                        # stats["sync_stats"][f"CH_{node_uw[ch]['NodeID']}"] = {
-                        #     "disntance": dist,
-                        #     "delay": delay * 1000, # Milisegundos
-                        #     "energy_consumed": energy_consumed_ch,
-                        #     "sync_time": sync_end_time * 1000, # Milisegundos
-                        #     "retransmissions": retries_ChtoSink,
-                        #     "is_syn": node_uw[ch]["IsSynced"]
-                        # }
-
                     # Sincronizar nodos bajo el CH, auqnue el ack de respuesta no se haya recibido por el sink
-                    node_stats = synchronize_nodes_tdma(RUN_ID, ch, syn_packet, node_uw, max_retries_sensor, timeout_sinktoch, type_packet, E_schedule)
-                    stats["sync_stats"].update(node_stats)
+                    synchronize_nodes_tdma(RUN_ID, ch, syn_packet, node_uw, max_retries_sensor, timeout_sinktoch, type_packet, E_schedule)
                     success_syn = False
-
                     # # Los nodos consumen cuando no estan transmitiendo.
                     # active_ids = [node_uw[ch]["NodeID"]]
                     # node_uw = update_energy_standby_others(node_uw, active_ids, timeout_sinktoch, verbose=True)
@@ -204,7 +186,7 @@ def propagate_syn_to_CH_tdma(RUN_ID, sink, CH_ids, node_uw, max_retries=3, timeo
 
         # if not node_uw[ch]["IsSynced"] and retries == max_retries:
         #     print(f"Fallo la sincronización con el Cluster Head {ch + 1} después de {retries} intentos.")
-    return syn_packet, stats
+    return #syn_packet
 
 
 # Función para sincronizar nodos con el Cluster Head, incluyendo retransmisiones en nodos sensores
@@ -367,19 +349,10 @@ def synchronize_nodes_tdma(RUN_ID, CH_id, syn_packet, node_uw, max_retries_senso
 
         # sync_end_time_node = time.time() - start_time_node
 
-        # node_stats[f"Node_{node['NodeID']}"] = {
-        #     "disntance": dist,
-        #     "delay": delay * 1000, # Milisegundos
-        #     "energy_consumed": energy_consumed_ch_tx + energy_consumed_ch_rx + energy_consumed_sn_rx + energy_consumed_sn_tx,
-        #     "sync_time": sync_end_time_node * 1000, # Milisegundos
-        #     "retransmissions": retries_ChtoSn,
-        #     "is_syn": node["IsSynced"]
-        # }
-
         if not node["IsSynced"] and retries_ChtoSn == max_retries_sensor:
             print(f"Nodo {node['NodeID']} no pudo sincronizarse después de {retries_ChtoSn} intentos.")
 
-    return node_stats  # ACK del CH fue recibido correctamente
+    return # node_stats  # ACK del CH fue recibido correctamente
 
 
 
