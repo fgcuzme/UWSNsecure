@@ -150,9 +150,9 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
                     ack_received_SinktoCH = True
                     # Verificar la Tx con la clave pública del Sink
                     # calcular el tiempo de verificación tx por parte del CH
-                    time_start = time.time()
+                    time_start = time.perf_counter()
                     isverify = verify_transaction_signature(genesis_tx['ID'], genesis_tx['Signature'], Ch_node['PublicKey_sign_sink'])
-                    end_time_verify = (time.time() - time_start)*1000 # se la obtiene en milisegundos
+                    end_time_verify = (time.perf_counter() - time_start)*1000 # se la obtiene en milisegundos
                     # times_verify_all_ch.append(end_time_verify)  # Guardar el tiempo de verificación para este CH
 
                     # CH recibe y verifica génesis
@@ -374,9 +374,9 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                     ack_received_SN = True
                     # Verificar la Tx con la clave pública del Sink
                     # calcular el tiempo de verificación tx por parte del CH
-                    time_start = time.time()
+                    time_start = time.perf_counter()
                     isverify = verify_transaction_signature(genesis_tx['ID'], genesis_tx['Signature'], node1['PublicKey_sign_sink'])
-                    end_time_verify = time.time() - time_start
+                    end_time_verify = time.perf_counter()- time_start
 
                     # CH recibe y verifica génesis
                     t_proc_sn_recv_gen = estimate_proc_time_s(do_sign=True, do_tips=True)
@@ -618,9 +618,9 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
 
         # Crear la nueva transacción de respuesta y propagarla al Sink
         # Response_auth_to_sink
-        time_start_responseCH = time.time() # Incia tiempo de medición de la creación de la nueva Tx de response
+        time_start_responseCH = time.perf_counter() # Incia tiempo de medición de la creación de la nueva Tx de response
         auth_response_tx1 = create_auth_response_tx(ch_node1)
-        end_time_responseCH = time.time() - time_start_responseCH
+        end_time_responseCH = time.perf_counter() - time_start_responseCH
         # times_response_all_ch.append(end_time_responseCH)  # Guardar el tiempo de respuesta para este CH
 
         # Crear una copia profunda de la transacción para evitar referencias compartidas
@@ -645,7 +645,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
         retries_ch = retries_sn = 0
 
         while retries_ch < max_retries and not ack_received_chtosink:
-            start_response_tx_ch = time.time()
+            start_response_tx_ch = time.perf_counter()
             # Se puede medir el tiempo de propagación de la Tx dentro del cluster
             # Aqui toca agregar el delay de propagación basasdo en la formula de distancia/velocidad
             # delay = random_sync_delay()  # Generar un tiempo de retraso aleatorio
@@ -734,9 +734,9 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
 
                 # Verificar la Tx con la clave pública del Sink
                 # calcular el tiempo de verificación tx por parte del CH
-                time_start = time.time()
+                time_start = time.perf_counter()
                 isverify = verify_transaction_signature(auth_response_tx1['ID'], auth_response_tx1['Signature'], key_public_sign)
-                end_time_verify = time.time() - time_start
+                end_time_verify = time.perf_counter() - time_start
 
                 # guardar la energía antes de actualizar, recibir el ACK del sink
                 initial_energy_ch_rx = ch_node1["ResidualEnergy"]
@@ -808,7 +808,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
             if node2['ClusterHead'] == ch_node1['NodeID'] and node2['IsSynced'] and node2['NodeID'] != ch_node1['NodeID']:  # Excluir el propio CH
 
                 while retries_sn < max_retries and not ack_received_chtosn:
-                    start_response_tx_ch = time.time()
+                    start_response_tx_ch = time.perf_counter()
 
                     # Aqui toca agregar el delay de propagación basasdo en la formula de distancia/velocidad
                     # calcular la distancia entre los nodos
@@ -877,9 +877,9 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
 
                         # Verificar la Tx con la clave pública del Sink
                         # calcular el tiempo de verificación tx por parte del CH
-                        time_start1 = time.time()
+                        time_start1 = time.perf_counter()
                         isverify2 = verify_transaction_signature(auth_response_tx1['ID'], auth_response_tx1['Signature'], key_public_sign)
-                        end_time_verify1 = time.time() - time_start1
+                        end_time_verify1 = time.perf_counter() - time_start1
 
                         # SN recibe y verifica la tx del ch
                         t_proc_ch_resp_auth = estimate_proc_time_s(do_verify=True, do_tips=True)
@@ -1043,10 +1043,10 @@ def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retrie
             authenticated_ack = False
 
             # Response_auth_to_CH
-            time_start_responseSN = time.time() # Incia tiempo de medición de la creación de la nueva Tx de response
+            time_start_responseSN = time.perf_counter() # Incia tiempo de medición de la creación de la nueva Tx de response
             # Crear transacción de autenticación para el CH
             node_auth_tx = create_auth_response_tx(node4)
-            end_time_responseSN = time.time() - time_start_responseSN
+            end_time_responseSN = time.perf_counter() - time_start_responseSN
 
             # Agregar la tx como tips en el nodo, se agrega aqui despues de todo el proceso
             node4['Tips'].append(node_auth_tx['ID'])    # corregido
@@ -1119,9 +1119,9 @@ def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retrie
 
                         # Verificar la Tx con la clave pública del Sink
                         # calcular el tiempo de verificación tx por parte del CH
-                        time_start1 = time.time()
+                        time_start1 = time.perf_counter()
                         isverify2 = verify_transaction_signature(node_auth_tx['ID'], node_auth_tx['Signature'], key_public_sign)
-                        end_time_verify1 = time.time() - time_start1
+                        end_time_verify1 = time.perf_counter() - time_start1
 
                         # guardar la energía antes de actualizar
                         initial_energy_ch_rx = node_ch["ResidualEnergy"]

@@ -203,7 +203,7 @@ from path_loss import propagation_time, compute_path_loss, propagation_time1
 # }
 
 
-def transmit_data(db_path, sender_id, receiver_id, plaintext, E_schedule, source='SN', dest='CH'):
+def transmit_data_anterior(db_path, sender_id, receiver_id, plaintext, E_schedule, source='SN', dest='CH'):
     # """Simula la transmisión de datos cifrados entre nodos usando claves compartidas almacenadas en la base de datos."""
     # conn = sqlite3.connect(db_path)
     # cursor = conn.cursor()
@@ -528,3 +528,141 @@ def simulate_ack_response(sender_node, receiver_node, E_schedule, ack_size_bits=
         "receiver_node": receiver_node,
         "sender_node": sender_node
     }
+
+
+def transmit_data(RUN_ID, db_path, sender_node, receiver_node, plaintext, E_schedule,
+                  source='SN', dest='CH', bitrate=9200):
+    """
+    Envío de DATA/AGG entre (SN->CH) y (CH->Sink) con:
+    - cifrado ASCON (enc/dec) para medir t_proc,
+    - PER por enlace con per_from_link + Bernoulli,
+    - energía vía update_energy_node_tdma (incluye t_verif_s),
+    - logging canónico con log_event (TX y RX),
+    - ACK simulado al final del hop.
+    """
+    # 0) Tipo de paquete por hop
+    if source == 'SN' and dest == 'CH':
+        msg_type = type_packet = 'data'
+        role_tx, role_rx = 'SN', 'CH'
+    elif source == 'CH' and dest == 'Sink':
+        msg_type = type_packet = 'agg'
+        role_tx, role_rx = 'CH', 'Sink'
+    else:
+        msg_type = type_packet = 'data'
+        role_tx, role_rx = source, dest
+
+    # 1) DB path (en /data/)
+    current_dir = os.getcwd()
+    carpeta_destino = os.path.join(current_dir, 'data')
+    os.makedirs(carpeta_destino, exist_ok=True)
+    ruta_bbdd = os.path.join(carpeta_destino, db_path)
+
+    # 2) Obtener clave compartida
+    conn = sqlite3.connect(ruta_bbdd)
+    cursor = conn.cursor()
+    sender_id = int(sender_node["NodeID"])
+    receiver_id = int(receiver_node["NodeID"])
+    cursor.execute("SELECT shared_key, id FROM shared_keys WHERE node_id = ? AND peer_id = ?", (sender_id, receiver_id))
+    row = cursor.fetchone()
+    conn.close()
+
+    if not row:
+        print(f"🚨 No hay clave compartida entre {sender_id} y {receiver_id}")
+        return
+
+    shared_key, shared_key_id = row[0], row[1]
+
+    # 3) Cifrado/Descifrado (para t_proc)
+    t0 = time.perf_counter()
+    encrypted_msg = encrypt_message(shared_key, plaintext)     # ASCON-128
+    t1 = time.perf_counter()
+    t_enc_s = t1 - t0
+
+    # Nota: aquí solo medimos descifrado local para stats (RX real descifra después)
+    t2 = time.perf_counter()
+    _ = decrypt_message(shared_key, encrypted_msg)
+    t3 = time.perf_counter()
+    t_dec_s = t3 - t2
+
+    # 4) Geometría + tiempos físicos
+    start_pos = np.array(sender_node["Position"])
+    end_pos   = np.array(receiver_node["Position"])
+    distance  = float(np.linalg.norm(start_pos - end_pos))
+    t_prop_s  = float(propagation_time1(start_pos, end_pos, depth=None, region="standard"))
+    bits_sent = int(len(encrypted_msg) * 8)
+    t_tx_s    = bits_sent / float(bitrate)
+
+    # 5) PER del enlace y Bernoulli
+    per_link, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20.0, distance_m=distance, L=bits_sent, bitrate=bitrate)
+    success  = propagate_with_probability(per=per_link, override_per=PER_VARIABLE)
+    p_lost   = (not success)
+    bits_rcv = bits_sent if success else 0
+
+    # 6) Timeout y energía TX (incluye t_proc del emisor = cifrado)
+    #    Usamos tu calculate_timeout con proc_time_s=t_enc_s para que el modelo de tiempo sea coherente
+    lat_prop_ms, lat_tx_ms, lat_proc_ms, timeout_s = calculate_timeout(start_pos, end_pos, bitrate=bitrate,
+                                                                       packet_size=bits_sent, proc_time_s=t_enc_s)
+    # E en TX (emisor)
+    e0_tx = float(sender_node["ResidualEnergy"])
+    sender_node = update_energy_node_tdma(sender_node, end_pos, E_schedule, timeout_s,
+                                          type_packet, role=role_tx, action="tx", verbose=False,
+                                          t_verif_s=t_enc_s)
+    E_tx = e0_tx - float(sender_node["ResidualEnergy"])
+
+    # 7) Log TX (emisor)
+    log_event(
+        run_id=RUN_ID, phase="data", module="ascon", msg_type=f"DATA:{msg_type}:TX",
+        sender_id=sender_id, receiver_id=receiver_id, cluster_id=sender_node.get("ClusterHead"),
+        start_pos=start_pos, end_pos=end_pos,
+        bits_sent=bits_sent, bits_received=bits_rcv,
+        success=success, packet_lost=p_lost,
+        energy_event_type='tx', energy_j=E_tx,
+        residual_sender=sender_node["ResidualEnergy"], residual_receiver=0 if dest == 'Sink' else receiver_node["ResidualEnergy"],
+        bitrate=bitrate, freq_khz=20,
+        lat_prop_ms=t_prop_s*1000.0, lat_tx_ms=t_tx_s*1000.0, lat_proc_ms=t_enc_s*1000.0,
+        # lat_prop_ms=lat_prop_ms, lat_tx_ms=lat_tx_ms, lat_proc_ms=t_enc_s*1000.0,
+        snr_db=snr_db, per=per_link, lat_dag_ms=0.0
+    )
+
+    # 8) Si el paquete llega: energía RX (receptor) + descifrado
+    if success:
+        # Tiempo de proceso en RX (descifrado)
+        t_proc_rx_s = t_dec_s
+
+        # Modelo tiempo para RX (proc = t_proc_rx_s)
+        _, _, _, timeout_rx_s = calculate_timeout(start_pos, end_pos, bitrate=bitrate,
+                                                  packet_size=bits_sent, proc_time_s=t_proc_rx_s)
+        if not(dest == 'Sink'):
+            # E en RX (receptor)
+            e0_rx = float(receiver_node["ResidualEnergy"])
+            receiver_node = update_energy_node_tdma(receiver_node, start_pos, E_schedule, timeout_rx_s,
+                                                    type_packet, role=role_rx, action="rx", verbose=False,
+                                                    t_verif_s=t_proc_rx_s)
+            E_rx = e0_rx - float(receiver_node["ResidualEnergy"])
+        else:
+            E_rx = 0
+    else:
+        # si se pierde, RX no consume por decodificación del paquete (mantén solo listen en update_energy_standby_others externo si quieres)
+        E_rx = 0.0
+        t_proc_rx_s = 0.0
+
+
+    # 9) Log RX (receptor)
+    log_event(
+        run_id=RUN_ID, phase="data", module="ascon", msg_type=f"DATA:{msg_type}:RX",
+        sender_id=sender_id, receiver_id=receiver_id, cluster_id=receiver_node.get("ClusterHead"),
+        start_pos=start_pos, end_pos=end_pos,
+        bits_sent=bits_sent, bits_received=bits_rcv,
+        success=success, packet_lost=p_lost,
+        energy_event_type='rx', energy_j=E_rx,
+        residual_sender=sender_node["ResidualEnergy"], residual_receiver=0 if dest == 'Sink' else receiver_node["ResidualEnergy"],
+        bitrate=bitrate, freq_khz=20,
+        lat_prop_ms=t_prop_s*1000.0, lat_tx_ms=t_tx_s*1000.0, lat_proc_ms=t_proc_rx_s*1000.0,
+        snr_db=snr_db, per=per_link, lat_dag_ms=0.0
+    )
+
+    # 10) ACK hop (usa tu simulador; ya hace logging con log_transmission_event, pero mantenemos consistencia)
+    ack = simulate_ack_response(sender_node, receiver_node, E_schedule, ack_size_bits=48, bitrate=bitrate,
+                                sink=(dest=='Sink'))
+    
+    return

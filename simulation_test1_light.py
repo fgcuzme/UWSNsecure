@@ -508,7 +508,8 @@ from transmission_summary_uan import summarize_per_node, summarize_global
 print("-")
 print ('INICIO PROCESO DE TRANSMISIÓN DE DATOS CIFRADOS CON ASCON...')
 
-from transmit_data_test import create_shared_keys_table, generate_shared_keys, transmit_data
+# from transmit_data_test import create_shared_keys_table, generate_shared_keys, transmit_data
+from transmit_data_light_uan import create_shared_keys_table, generate_shared_keys, transmit_data
 
 # Se crea la tabla en la BBDD donde se van a crear las claves compartidas
 create_shared_keys_table("bbdd_keys_shared_sign_cipher.db")
@@ -601,7 +602,7 @@ while completed_transmissions < total_transmissions and attempts < max_attempts:
 
     # Transmisión simulada
     data_str = f"{np.random.uniform(0, 30):.2f}°C"
-    transmit_data("bbdd_keys_shared_sign_cipher.db", sender, receiver, str(data_str), E_schedule, source='SN', dest='CH')
+    transmit_data(RUN_ID, "bbdd_keys_shared_sign_cipher.db", sender, receiver, str(data_str), E_schedule, source='SN', dest='CH')
 
     print("CH_id : ", ch_id)
     # Almacenar en buffer del CH
@@ -620,7 +621,7 @@ while completed_transmissions < total_transmissions and attempts < max_attempts:
         # time.sleep(t_prop_sink)
 
         datos_agregados = "; ".join(buffer_CH[ch_id - 1])
-        transmit_data("bbdd_keys_shared_sign_cipher.db", ch_node, node_sink, datos_agregados, E_schedule, source='CH', dest='Sink')
+        transmit_data(RUN_ID, "bbdd_keys_shared_sign_cipher.db", ch_node, node_sink, datos_agregados, E_schedule, source='CH', dest='Sink')
 
         buffer_CH[ch_id - 1] = []  # Vaciar buffer
         ultimo_envio_CH[ch_id - 1] = time.time()
