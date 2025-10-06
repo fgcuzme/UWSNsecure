@@ -355,7 +355,7 @@ print("INCIO PROCESO DE AUTENTICACIÓN BASADO EN TX")
 from propagacionTx_light import propagate_tx_to_ch, authenticate_nodes_to_ch, propagate_tx_to_sink_and_cluster
 from tangle2_light import create_gen_block, delete_tangle
 import time
-from save_csv import save_stats_tx, save_stats_energy_proTx_csv, save_stats_to_csv, save_stats_to_csv1, save_stats_to_csv2
+# from save_csv import save_stats_tx, save_stats_energy_proTx_csv, save_stats_to_csv, save_stats_to_csv1, save_stats_to_csv2
 
 # Llamada a la función
 
@@ -363,13 +363,13 @@ delete_tangle(node_sink, node_uw, CH)
 
 # Captura de estadisticas
 # Inicializar estadísticas
-stats_tx = {
-    "times_createTxgen": [],
-    "times_verifyTx_toCH": [],
-    "times_TxresponseCH": [],
-    "times_propagation_txgen": [],
-    "times_propagation_response_tx": [],
-}
+# stats_tx = {
+#     "times_createTxgen": [],
+#     "times_verifyTx_toCH": [],
+#     "times_TxresponseCH": [],
+#     "times_propagation_txgen": [],
+#     "times_propagation_response_tx": [],
+# }
 
 # Crear la Tx genesis
 print("-")
@@ -414,14 +414,15 @@ for i in range(rondas):
     # stats_proTx = {
     #     "stats_proTx": {},  # Para guardar estadísticas por cada CH y nodo
     # }
-    stats_events = []
+    # stats_events = []
     # propagación de la tx genesis hacia los ch y nodos de cada cluster
     # en caso de recibir y verificar la tx genesis y verificarla la propaga hacia los nodos de su cluster
     # el ch prepara la tx de autenticación que la remite de vuelta al sink,el ch no se autentica mientras el sink
     #  no valide la tx de respuesta
     # Este proceso solo se lleva a cabo siempre y cuando los ch esten sincronizados.t
     # Sink -> CH
-    recived, end_time_verify, times_propagation_tx = propagate_tx_to_ch(RUN_ID, node_sink, CH, node_uw, txgenesis, E_schedule, i)
+    # recived, end_time_verify = propagate_tx_to_ch(RUN_ID, node_sink, CH, node_uw, txgenesis, E_schedule, i)
+    propagate_tx_to_ch(RUN_ID, node_sink, CH, node_uw, txgenesis, E_schedule, i)
     # stats_proTx["stats_proTx"].update(stats_proTx1)
     # print("Energia consumida hasta ahora : ", stats_proTx)
     # time.sleep(10)
@@ -429,7 +430,8 @@ for i in range(rondas):
     # Crear la tx de respuesta de los CH y transmitirlas al sink y los nodos del cluster
     # CH -> Sink
     # CH -> SN
-    end_time_responseCH, end_time_propagationTxCh = propagate_tx_to_sink_and_cluster(RUN_ID, node_sink, CH, node_uw, E_schedule, i)
+    # end_time_responseCH, end_time_propagationTxCh = propagate_tx_to_sink_and_cluster(RUN_ID, node_sink, CH, node_uw, E_schedule, i)
+    propagate_tx_to_sink_and_cluster(RUN_ID, node_sink, CH, node_uw, E_schedule, i)
     # stats_proTx["stats_proTx"].update(stats_proTx2)
     # print("Energia consumida hasta ahora : ", stats_proTx)
     # time.sleep(10)
@@ -478,33 +480,30 @@ for i in range(rondas):
     # save_stats_to_csv2(stats_events, "estadisticas_TxAuth.csv")
 
     # Convertir las listas a cadenas para almacenarlas
-    time_verify_str = ','.join(map(str, end_time_verify))
-    time_response_str = ','.join(map(str, end_time_responseCH))
+    # time_verify_str = ','.join(map(str, end_time_verify))
+    # time_response_str = ','.join(map(str, end_time_responseCH))
 
-    print('Tiempo de verificación de Tx genesis por CH or SN : ', end_time_verify)
-    print('Tiempo de creación de Tx response por CH or SN: ', end_time_responseCH)
+    # print('Tiempo de verificación de Tx genesis por CH or SN : ', end_time_verify)
+    # print('Tiempo de creación de Tx response por CH or SN: ', end_time_responseCH)
 
-    stats_tx["times_createTxgen"].append(time_createTX)
-    stats_tx["times_propagation_txgen"].append(times_propagation_tx)
-    stats_tx["times_verifyTx_toCH"].append(end_time_verify)
-    stats_tx["times_TxresponseCH"].append(end_time_responseCH)
-    stats_tx["times_propagation_response_tx"].append(end_time_propagationTxCh)
+    # stats_tx["times_createTxgen"].append(time_createTX)
+    # stats_tx["times_propagation_txgen"].append(times_propagation_tx)
+    # stats_tx["times_verifyTx_toCH"].append(end_time_verify)
+    # stats_tx["times_TxresponseCH"].append(end_time_responseCH)
+    # stats_tx["times_propagation_response_tx"].append(end_time_propagationTxCh)
 
-save_stats_tx('stats_tx.csv', stats_tx)
-print('Las estadisticas se almacenaron...')
+# save_stats_tx('stats_tx.csv', stats_tx)
+# print('Las estadisticas se almacenaron...')
 
 print("FIN PROCESO DE AUTENTICACIÓN BASADO EN TX")
-
 # ####
 
 # print('Nodo Sink : ', node_sink)
 
-from energia_dinamica import calcular_energia_paquete
-# from test_throp import propagation_time, propagation_time1
-from path_loss import propagation_time, propagation_time1
-from transmission_summary import summarize_per_node, summarize_global
 
 #%%
+from transmission_summary_uan import summarize_per_node, summarize_global
+
 ## INICIO PROCESO DE TRANSMISIÓN DE DATOS CIFRADOS CON ASCON
 print("-")
 print ('INICIO PROCESO DE TRANSMISIÓN DE DATOS CIFRADOS CON ASCON...')

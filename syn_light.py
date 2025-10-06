@@ -1,20 +1,19 @@
 import time
 import numpy as np
-# from test_throp import propagation_time, compute_path_loss, propagation_time1
-from path_loss import propagation_time, compute_path_loss, propagation_time1
-from energia_dinamica import calcular_energia_paquete, energy_listen, energy_standby, calculate_timeout, update_energy_node_tdma, update_energy_standby_others, estimate_proc_time_s
+from path_loss import compute_path_loss, propagation_time1
+from energia_dinamica import calcular_energia_paquete, energy_listen, energy_standby, calculate_timeout, update_energy_node_tdma, update_energy_standby_others, update_energy_failed_rx, estimate_proc_time_s
 from transmission_logger_uan import log_event
 from per_from_link_uan import per_from_link, propagate_with_probability
 
 PER_VARIABLE = None
 
 # Función para crear un paquete SYN desde el Sink
-def create_syn_packet(sink_id, timestamp):
+def create_syn_packet(sink_id):
     packet = {
         "PacketID": np.random.randint(0, 65535),  # ID del paquete
         "PacketType": 0x01,  # Tipo de paquete SYN
         "SourceID": sink_id,  # ID del Sink
-        "Timestamp": timestamp,  # Marca de tiempo actual
+        "Timestamp": time.time(),  # Marca de tiempo actual
         "Hops": 0  # Inicialmente 0 saltos
     }
     return packet
@@ -35,12 +34,13 @@ def register_node_to_ch(ch_id, node_id, is_synced, is_authenticated, node_uw):
 # Función para propagar el paquete SYN y actualizar la energía de los nodos
 def propagate_syn_to_CH_tdma(RUN_ID, sink, CH_ids, node_uw, max_retries=3, timeout=2, E_schedule=5e-9):
     
-    timestamp = time.time()  # Marca de tiempo actual en segundos
+    # timestamp = time.time()  # Marca de tiempo actual en segundos
     timeout_sinktoch = timeout
-    # Genera el paquete el Sink de sincronización
-    syn_packet = create_syn_packet(sink["NodeID"], timestamp)
 
-    # Parámetros de energía
+    # Genera el paquete el Sink de sincronización
+    syn_packet = create_syn_packet(sink["NodeID"])
+
+    # Numero de intentos de envio
     max_retries_sensor = max_retries
 
     type_packet = "sync"
@@ -48,7 +48,6 @@ def propagate_syn_to_CH_tdma(RUN_ID, sink, CH_ids, node_uw, max_retries=3, timeo
     # Intentar sincronizar cada CH
     for ch in CH_ids:
         retries_sinktoch = 0
-        t_proc_ch_syn = 0
         ack_received_CH = False
         ack_received_Sink = False
 
@@ -116,7 +115,6 @@ def propagate_syn_to_CH_tdma(RUN_ID, sink, CH_ids, node_uw, max_retries=3, timeo
                     snr_db=snr_db, per=per_sink_ch,
                     lat_dag_ms=0.0
                     )
-
                 
                 retries_ChtoSink = 0
 
@@ -183,6 +181,8 @@ def propagate_syn_to_CH_tdma(RUN_ID, sink, CH_ids, node_uw, max_retries=3, timeo
                 print("No se entrego el paquete de syn al CH...reintentando...")
                 success_syn = False
                 retries_sinktoch += 1
+                # Actualiza la energía del nodo en caso de no recibir el pkt, pero esta escuchando en su slot
+                node_uw[ch] = update_energy_failed_rx(node_uw[ch], sink["Position"], timeout_sinktoch, role="CH", verbose=False)
 
         # if not node_uw[ch]["IsSynced"] and retries == max_retries:
         #     print(f"Fallo la sincronización con el Cluster Head {ch + 1} después de {retries} intentos.")
@@ -199,16 +199,12 @@ def synchronize_nodes_tdma(RUN_ID, CH_id, syn_packet, node_uw, max_retries_senso
     cluster_nodes = [node for node in node_uw if node["ClusterHead"] == (CH_id + 1) and node["NodeID"] != (CH_id + 1)]
     # ack_received_node = False
 
-    # Diccionario para capturar estadísticas de cada nodo
-    node_stats = {}
-
     # Si ACK es recibido, propagar la sincronización a los nodos del clúster
     for node in cluster_nodes:
         retries_ChtoSn = 0
         ack_retries = 0
         ack_received_node = False
         ack_received_CH = False
-        start_time_node = time.time()
         energy_consumed_ch_tx = energy_consumed_ch_rx = 0
         energy_consumed_sn_tx = energy_consumed_sn_rx = 0
         initial_energy_ch_tx = initial_energy_ch_rx = 0
@@ -341,10 +337,14 @@ def synchronize_nodes_tdma(RUN_ID, CH_id, syn_packet, node_uw, max_retries_senso
                     else:
                         print(f"Nodo {node['NodeID']} falló en sincronizarse, intento {retries_ChtoSn+1}")
                         ack_retries += 1
+                        # Actualiza la energía del nodo en caso de no recibir el pkt, pero esta escuchando en su slot
+                        node_uw[CH_id] = update_energy_failed_rx(node_uw[CH_id], node["Position"], timeout_chtosn, role="CH", verbose=False)
 
             else:
                 print(f"Nodo {node['NodeID']} falló en sincronizarse, intento {retries_ChtoSn+1}")
                 retries_ChtoSn += 1
+                # Actualiza la energía del nodo en caso de no recibir el pkt, pero esta escuchando en su slot
+                node = update_energy_failed_rx(node, node_uw[CH_id]["Position"], timeout_sinktoch, role="SN", verbose=False)
                 # time.sleep(timeout_node)  # Retransmitir con timeout     
 
         # sync_end_time_node = time.time() - start_time_node
@@ -353,6 +353,10 @@ def synchronize_nodes_tdma(RUN_ID, CH_id, syn_packet, node_uw, max_retries_senso
             print(f"Nodo {node['NodeID']} no pudo sincronizarse después de {retries_ChtoSn} intentos.")
 
     return # node_stats  # ACK del CH fue recibido correctamente
+
+
+
+
 
 
 
@@ -428,7 +432,7 @@ def update_energy_node_cdma(node, target_pos, packet_size_bits, alpha, P_r, freq
 # Función para propagar el paquete SYN y actualizar la energía de los nodos bajo CDMA
 def propagate_syn_to_CH_cdma(sink, CH_ids, node_uw, max_retries=3, timeout=2, freq=20, processing_energy_cdma=5e-9, packet_size_bits=100,alpha=1e-6, Ptr=1e-3, E_listen=1e-9, E_standby=1e-12):
     timestamp = time.time()  # Marca de tiempo actual en segundos
-    syn_packet = create_syn_packet(sink["NodeID"], timestamp)
+    syn_packet = create_syn_packet(sink["NodeID"])
 
     # # Parámetros de energía enviados, para ser enviados a los nodos del cluster
     max_retries_sensor = max_retries

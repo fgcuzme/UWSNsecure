@@ -1,5 +1,10 @@
 import numpy as np
-from temperature_models import get_temperature # type: ignore
+from temperature_models_uan import get_temperature # type: ignore
+
+# --- en energia_dinamica.py o path_loss.py (helper físico) ---
+# from path_loss import compute_path_loss
+# from noise_uan_aariza import compute_uan_noise
+# from curva_anclada_distancias_menores import p_tx_approx_W
 
 # Constantes para tipos de dispersión
 SPHERICAL = 2
@@ -160,7 +165,6 @@ def compute_range_real(frequency_khz: float, loss_linear: float, spread_coef: fl
         return None  # no se puede alcanzar con esa pérdida
 
 
-
 #def random_speed_of_sound(depth = random.uniform(0, 1000)): # Se cambia por la linea siguiente
 def random_speed_of_sound(depth, region="standard", salinity=None):
     """Calcula la velocidad del sonido usando la fórmula de Mackenzie (1981)."""
@@ -242,35 +246,34 @@ def propagation_time1(start_position, end_position, depth=None, region="standard
 
     return distance_m / speed
 
+# # Ejemplo de uso:
 
-# Ejemplo de uso:
+# frequency_khz = 20 
+# start_position = (1000, 1000, 0)  # Coordenadas (x, y, z) del transmisor
+# end_position = (1000, 1000, 1000.71)  # Coordenadas (x, y, z) del receptor
+# distance_m = np.linalg.norm(np.array(end_position) - np.array(start_position)) # Distancia en metros
+# print("Distancia calculada : ", distance_m)
 
-frequency_khz = 20 
-start_position = (1000, 1000, 0)  # Coordenadas (x, y, z) del transmisor
-end_position = (1000, 1000, 1000.71)  # Coordenadas (x, y, z) del receptor
-distance_m = np.linalg.norm(np.array(end_position) - np.array(start_position)) # Distancia en metros
-print("Distancia calculada : ", distance_m)
+# depth = np.abs((start_position[2] - end_position[2]) / 2 + end_position[2])
+# velocidad, temp, sal, prof = random_speed_of_sound(depth)
+# print(f"Velocidad del sonido: {velocidad:.2f} m/s a {temp:.2f}°C, {sal:.2f} ppt, {prof:.2f} m")
 
-depth = np.abs((start_position[2] - end_position[2]) / 2 + end_position[2])
-velocidad, temp, sal, prof = random_speed_of_sound(depth)
-print(f"Velocidad del sonido: {velocidad:.2f} m/s a {temp:.2f}°C, {sal:.2f} ppt, {prof:.2f} m")
+# tiempo = propagation_time(distance_m, start_position, end_position)
+# print(f"El tiempo de propagación es {tiempo:.2f} segundos")
 
-tiempo = propagation_time(distance_m, start_position, end_position)
-print(f"El tiempo de propagación es {tiempo:.2f} segundos")
+# tiempo1 = propagation_time1(start_position, end_position, depth=None, region="standard")
+# print(f"El tiempo de propagación calculo nuevo {tiempo1:.2f} segundos")
 
-tiempo1 = propagation_time1(start_position, end_position, depth=None, region="standard")
-print(f"El tiempo de propagación calculo nuevo {tiempo1:.2f} segundos")
-
-print(f"Pérdida esférica: {spreading_loss(distance_m, SPHERICAL)} dB")
-print(f"Pérdida cilíndrica: {spreading_loss(distance_m, CYLINDRICAL)} dB")
-print(f"Pérdida mixta: {spreading_loss(distance_m, MIXED)} dB")
+# print(f"Pérdida esférica: {spreading_loss(distance_m, SPHERICAL)} dB")
+# print(f"Pérdida cilíndrica: {spreading_loss(distance_m, CYLINDRICAL)} dB")
+# print(f"Pérdida mixta: {spreading_loss(distance_m, MIXED)} dB")
 
 
-print(f"Perdida total path_loss (spherical) : ", compute_path_loss(frequency_khz, distance_m, SPHERICAL))
-print(f"Perdida total path_loss (cylindrical) : ", compute_path_loss(frequency_khz, distance_m, CYLINDRICAL))
-print(f"Perdida total path_loss (mixta) : ", compute_path_loss(frequency_khz, distance_m, MIXED))
+# print(f"Perdida total path_loss (spherical) : ", compute_path_loss(frequency_khz, distance_m, SPHERICAL))
+# print(f"Perdida total path_loss (cylindrical) : ", compute_path_loss(frequency_khz, distance_m, CYLINDRICAL))
+# print(f"Perdida total path_loss (mixta) : ", compute_path_loss(frequency_khz, distance_m, MIXED))
 
-# Ejemplo de cálculo del rango máximo
-loss_linear = 1e-2  # Factor de pérdida permitido
-print(f"Distancia máxima alcanzable: {compute_range(frequency_khz, loss_linear)} metros")
-print(f"Distancia máxima alcanzable real: {compute_range_real(frequency_khz, loss_linear, spread_coef = 1.5)} metros")
+# # Ejemplo de cálculo del rango máximo
+# loss_linear = 1e-2  # Factor de pérdida permitido
+# print(f"Distancia máxima alcanzable: {compute_range(frequency_khz, loss_linear)} metros")
+# print(f"Distancia máxima alcanzable real: {compute_range_real(frequency_khz, loss_linear, spread_coef = 1.5)} metros")

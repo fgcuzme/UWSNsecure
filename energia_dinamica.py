@@ -282,7 +282,30 @@ def update_energy_node_tdma(node, target_pos, E_schedule, timeout, type_packet, 
     return node
 
 
+def update_energy_failed_rx(node, target_pos, timeout, role="SN", verbose=False):
+    """
+    Actualiza la energía de un nodo que intentó recibir un paquete pero no lo recibió (fallo por PER).
+    Se considera energía de escucha activa (guard + timeout), sin procesamiento.
+    Parámetros:
+    - node: diccionario del nodo
+    - target_pos: posición del transmisor
+    - timeout: duración del evento en segundos
+    - role: "SN", "CH", o "Sink"
+    """
+    guard_time = propagation_time1(node["Position"], target_pos, depth=None, region="standard")
+    if role in ["CH", "Sink"]:
+        E_guard = energy_listen(guard_time)
+        E_timeout = energy_listen(timeout)
+    else:
+        E_guard = energy_standby(guard_time)
+        E_timeout = energy_listen(timeout)
 
+    E_total = E_guard + E_timeout
+    node["ResidualEnergy"] = max(node["ResidualEnergy"] - E_total, 0)
+    if verbose:
+        print(f"[{role}-FAILED_RX] Guard:{E_guard:.6f} Timeout:{E_timeout:.6f} → Total:{E_total:.6f} J | Residual:{node['ResidualEnergy']:.6f} J")
+
+    return node
 
 # distancias_m = [1, 10, 100, 300, 500, 700, 1000, 1500, 2000, 3000]
 

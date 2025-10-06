@@ -1,11 +1,9 @@
 import sqlite3
 import random
-from metrics import (log_latency, log_throughput, log_energy, log_packet_result, 
-                     get_packet_loss_percentage, summarize_metrics, export_metrics_to_json, export_metrics_to_csv)
 from transmission_logger import log_transmission_event
 from energia_dinamica import calcular_energia_paquete, energy_listen, energy_standby, calculate_timeout, update_energy_node_tdma, update_energy_standby_others
-from transmission_summary import summarize_per_node, summarize_global
 from per_from_link_uan import per_from_link
+from transmission_logger_uan import log_event
 
 # Crea la tabla para almacenar las claves compartidas en la BBDD del nodo
 def create_shared_keys_table(db_path):
