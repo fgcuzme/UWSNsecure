@@ -563,7 +563,7 @@ def create_auth_response_tx(node_ch1):
     payload = f'{node_ch1["NodeID"]};{node_ch1["Id_pair_keys_sign"]};{node_ch1["Id_pair_keys_shared"]}'
 
     # Crear una nueva transacción de autenticación aprobando los tips
-    new_tx = create_transaction(node_ch1['NodeID'], payload, '1', approved_tips1, node_ch1['PrivateKey_sign'])
+    new_tx = create_transaction(node_ch1['NodeID'], payload, 'AUTH:RESP', approved_tips1, node_ch1['PrivateKey_sign'])
 
     # Agrega la nueva transacción y agregarla a los tips del CH
     node_ch1['Transactions'].append(new_tx)
