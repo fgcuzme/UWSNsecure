@@ -8,9 +8,9 @@ from curva_anclada_distancias_menores import p_tx_approx_W, bandwidth_bpsk_rrc
 def per_from_link(f_khz, distance_m, L, bitrate=9200, bw_hz=12420, spreading=1.5, EbN0_req_dB=7.0):
     p_tx = p_tx_approx_W(distance_m, f_khz, bitrate)
     # print(p_tx)
-    # SL_db = 170.8 + 10 * math.log10(p_tx)
+    SL_db = 170.8 + 10 * math.log10(p_tx)
     # SL_db = 170.8 + 10 * math.log10(2.5)
-    SL_db = 100
+    # SL_db = 100
     #print("SL_db :", SL_db)
     
     tl_db, tl_lin = compute_path_loss(f_khz, distance_m, spread_coef=spreading)

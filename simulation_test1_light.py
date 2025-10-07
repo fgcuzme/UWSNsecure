@@ -533,7 +533,7 @@ print("ultimo_envio_CH", ultimo_envio_CH)
 
 # Parámetros realistas
 MAX_BUFFER = 5               # número máximo de datos antes de enviar al Sink
-AGGREGATION_TIMEOUT = 30     # segundos máximo antes de forzar envío
+AGGREGATION_TIMEOUT = 120     # segundos máximo antes de forzar envío
 
 # attempts = 0
 # while completed_transmissions < total_transmissions and attempts < max_attempts:

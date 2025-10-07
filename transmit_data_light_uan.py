@@ -661,8 +661,8 @@ def transmit_data(RUN_ID, db_path, sender_node, receiver_node, plaintext, E_sche
         snr_db=snr_db, per=per_link, lat_dag_ms=0.0
     )
 
-    # 10) ACK hop (usa tu simulador; ya hace logging con log_transmission_event, pero mantenemos consistencia)
-    ack = simulate_ack_response(sender_node, receiver_node, E_schedule, ack_size_bits=48, bitrate=bitrate,
-                                sink=(dest=='Sink'))
+    # # 10) ACK hop (usa tu simulador; ya hace logging con log_transmission_event, pero mantenemos consistencia)
+    # ack = simulate_ack_response(sender_node, receiver_node, E_schedule, ack_size_bits=48, bitrate=bitrate,
+    #                             sink=(dest=='Sink'))
     
     return
