@@ -3,82 +3,161 @@ from cryptography.hazmat.primitives import hashes, serialization
 import time
 import random
 import ascon
+import json, hashlib, os
+import numpy as np
+
+# Añade helpers de normalización
+def _to_builtin(x):
+    """Convierte recursivamente tipos NumPy/bytes a tipos JSON-canónicos."""
+    if isinstance(x, (np.integer,)):   return int(x)
+    if isinstance(x, (np.floating,)):  return float(x)
+    if isinstance(x, (bytes, bytearray)):  return x.hex()  # representación canónica
+    if isinstance(x, (list, tuple, np.ndarray)):
+        return [_to_builtin(v) for v in x]
+    if isinstance(x, dict):
+        return {str(k): _to_builtin(v) for k, v in x.items()}
+    return x
+
+def _canonical_bytes_for_sig(tx_dict: dict) -> bytes:
+    """
+    Serialización canónica de los campos cubiertos por la firma.
+    Importante: NO incluye la propia 'Signature'.
+    """
+    view = {
+        "ID":           tx_dict["ID"],                 # bindea el ID actual
+        "ApprovedTx":   tx_dict.get("ApprovedTx", []),
+        "Payload":      tx_dict.get("Payload", ""),
+        "Source":       tx_dict.get("Source"),
+        "Type":         tx_dict.get("Type", "1"),
+        # TS = Timestamp (tu campo existente)
+        "TS":           tx_dict.get("Timestamp", 0.0),
+        "TTL":          tx_dict.get("TTL", 120.0),
+        "Nonce":        tx_dict.get("Nonce", "")
+    }
+    view_norm = _to_builtin(view)
+    return json.dumps(view_norm, sort_keys=True, separators=(",", ":")).encode("utf-8")
+
+# # Se cambia por la función siguiente
+# # Función para verificar la firma de una transacción
+# def verify_transaction_signature(transaction_data, signature, public_key_bytes):
+#     """
+#     ed25519
+#     Verifica la firma de una transacción usando la clave pública.
+
+#     transaction_data: Datos de la transacción (string o numérico).
+#     signature: Firma digital de la transacción (byte array).
+#     public_key_bytes: Clave pública en formato RAW, DER o PEM (byte array).
+
+#     Retorna:
+#     True si la firma es válida, False si no lo es.
+#     """
+#     # Convertir el transaction_id a bytes
+#     if isinstance(transaction_data, int):  # Si es un número, convertir a string
+#         transaction_bytes = str(transaction_data).encode('utf-8')
+#     else:
+#         # Si ya es un string, convertirlo a bytes
+#         transaction_bytes = transaction_data.encode('utf-8')
 
 
-# Función para verificar la firma de una transacción
+#     # verificar si la clave privada ya es un objeto Ed25519PublicKey
+#     if isinstance(public_key_bytes, ed25519.Ed25519PublicKey):
+#         actual_pulic_key = public_key_bytes
+#     else:
+#         # Cargar la clave pública desde los bytes
+#         actual_pulic_key = ed25519.Ed25519PublicKey.from_public_bytes(public_key_bytes)
+
+#     # Verificar la firma
+
+#     try:
+#         actual_pulic_key.verify(signature, transaction_bytes)
+#         return True  # La firma es válida
+#     except:
+#         return False  # La verificación falló
+
 def verify_transaction_signature(transaction_data, signature, public_key_bytes):
     """
-    ed25519
-    Verifica la firma de una transacción usando la clave pública.
-
-    transaction_data: Datos de la transacción (string o numérico).
-    signature: Firma digital de la transacción (byte array).
-    public_key_bytes: Clave pública en formato RAW, DER o PEM (byte array).
-
-    Retorna:
-    True si la firma es válida, False si no lo es.
+    Verifica firma Ed25519.
+    - Si 'transaction_data' es un dict de TX, verifica sobre la serialización canónica (sin 'Signature').
+    - Si es str/bytes/int, verifica sobre su representación en bytes.
     """
-    # Convertir el transaction_id a bytes
-    if isinstance(transaction_data, int):  # Si es un número, convertir a string
-        transaction_bytes = str(transaction_data).encode('utf-8')
+    # 1) bytes a verificar
+    if isinstance(transaction_data, dict):
+        data_bytes = _canonical_bytes_for_sig(transaction_data)
+    elif isinstance(transaction_data, (bytes, bytearray)):
+        data_bytes = bytes(transaction_data)
+    elif isinstance(transaction_data, int):
+        data_bytes = str(transaction_data).encode("utf-8")
     else:
-        # Si ya es un string, convertirlo a bytes
-        transaction_bytes = transaction_data.encode('utf-8')
+        data_bytes = str(transaction_data).encode("utf-8")
 
-
-    # verificar si la clave privada ya es un objeto Ed25519PublicKey
+    # 2) clave pública
     if isinstance(public_key_bytes, ed25519.Ed25519PublicKey):
-        actual_pulic_key = public_key_bytes
+        actual_public_key = public_key_bytes
     else:
-        # Cargar la clave pública desde los bytes
-        actual_pulic_key = ed25519.Ed25519PublicKey.from_public_bytes(public_key_bytes)
+        actual_public_key = ed25519.Ed25519PublicKey.from_public_bytes(public_key_bytes)
 
-    # Verificar la firma
-
+    # 3) verificación
     try:
-        actual_pulic_key.verify(signature, transaction_bytes)
-        return True  # La firma es válida
-    except:
-        return False  # La verificación falló
+        actual_public_key.verify(signature, data_bytes)
+        return True
+    except Exception:
+        return False
 
 
+## Se cambio por la función siguiente
+# # Función para firmar una transacción con la clave privada
+# def sign_transaction(transaction_id, private_key_bytes):
+#     """
+#     Firma una transacción usando la clave privada en formato DER.
 
-# Función para firmar una transacción con la clave privada
-def sign_transaction(transaction_id, private_key_bytes):
+#     transaction_id: ID único de la transacción (string).
+#     private_key_bytes: Clave privada en formato RAW (byte array).
+
+#     Retorna:
+#     Firma digital generada para la transacción (byte array).
+#     """
+
+#     # Convertir el transaction_id a bytes
+#     if isinstance(transaction_id, int):  # Si es un número, convertir a string
+#         transaction_bytes = str(transaction_id).encode('utf-8')
+#     else:
+#         # Si ya es un string, convertirlo a bytes
+#         transaction_bytes = transaction_id.encode('utf-8')
+
+#     # verificar si la clave privada ya es un objeto Ed25519PrivateKey
+#     if isinstance(private_key_bytes, ed25519.Ed25519PrivateKey):
+#         actual_private_key = private_key_bytes
+#     else:
+#         # Cargar la clave privada desde los bytes
+#         actual_private_key = ed25519.Ed25519PrivateKey.from_private_bytes(private_key_bytes)
+
+#     # print('Clave privada usada : ', actual_private_key)
+
+#     # private_key_byte_ed25519 = private_key.private_bytes_raw()
+#     # print('Clave privada combertida a raw : ', private_key_byte_ed25519.hex())
+
+#     # Firmar la transacción usando ed25519
+#     signature = actual_private_key.sign(transaction_bytes)
+
+#     return signature
+
+# Validamos toda la tx en vez de solo el ID
+def sign_transaction(data_bytes, private_key_bytes):
     """
-    Firma una transacción usando la clave privada en formato DER.
-
-    transaction_id: ID único de la transacción (string).
-    private_key_bytes: Clave privada en formato RAW (byte array).
-
-    Retorna:
-    Firma digital generada para la transacción (byte array).
+    Firma Ed25519 sobre bytes (data_bytes).
+    Acepta private_key como objeto Ed25519PrivateKey o bytes RAW.
     """
+    if isinstance(data_bytes, (str, int)):
+        data_bytes = str(data_bytes).encode("utf-8")
+    elif not isinstance(data_bytes, (bytes, bytearray)):
+        data_bytes = json.dumps(data_bytes, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
-    # Convertir el transaction_id a bytes
-    if isinstance(transaction_id, int):  # Si es un número, convertir a string
-        transaction_bytes = str(transaction_id).encode('utf-8')
-    else:
-        # Si ya es un string, convertirlo a bytes
-        transaction_bytes = transaction_id.encode('utf-8')
-
-    # verificar si la clave privada ya es un objeto Ed25519PrivateKey
     if isinstance(private_key_bytes, ed25519.Ed25519PrivateKey):
         actual_private_key = private_key_bytes
     else:
-        # Cargar la clave privada desde los bytes
         actual_private_key = ed25519.Ed25519PrivateKey.from_private_bytes(private_key_bytes)
 
-    # print('Clave privada usada : ', actual_private_key)
-
-    # private_key_byte_ed25519 = private_key.private_bytes_raw()
-    # print('Clave privada combertida a raw : ', private_key_byte_ed25519.hex())
-
-    # Firmar la transacción usando ed25519
-    signature = actual_private_key.sign(transaction_bytes)
-
-    return signature
-
+    return actual_private_key.sign(data_bytes)
 
 # # PRUEBAS
 # from bbdd2_sqlite3 import load_keys_sign_withou_cipher
@@ -181,25 +260,35 @@ def create_transaction(node_id, payload, transaction_type, approvedtips, private
     Retorna:
     Una estructura de la transacción generada.
     """
+    # 1) ID único como ya haces
     # Crear un ID único para la transacción
     transaction_id = generate_unique_id_asconhash(node_id)
 
-    print('Tx que se aprueban : ', approvedtips)
+    # print('Tx que se aprueban : ', approvedtips)
 
+    # 2) Construir TX SIN firma aún
     # Crear la transacción con sus campos
-    transaction = {
-        "ID": transaction_id,                # ID único de la transacción -> 32 bytes
-        "Timestamp": time.time(),            # Marca de tiempo en segundos -> 2 bytes
-        "Source": node_id,                   # Nodo que genera la transacción -> 2 bytes -> si son menos de 255 nodos puede ser un byte
-        # "Type": transaction_type,            # Tipo de transacción: 'Data', 'Sync', etc. -> 1 bytes
-        "Payload": payload,                  # Datos a transmitir -> 32-64 bytes
-        "ApprovedTx": approvedtips,        # Lista de transacciones aprobadas por esta transacción -> 64 bytes
-        # "Weight": 1.0,                       # Peso inicial de la transacción -> Eliminar
-        # "TipSelectionCount": 0,              # Contador de veces seleccionada como tip -> Eliminar
-        "Signature": sign_transaction(transaction_id, private_key)  # Firma con clave privada -> 32 bytes
+    tx = {
+        "ID": transaction_id,                       # ID único de la transacción -> 32 bytes
+        "Timestamp": float(time.time()),            # Marca de tiempo en segundos -> 2 bytes
+        "Source": int(node_id),                     # Nodo que genera la transacción -> 2 bytes -> si son menos de 255 nodos puede ser un byte
+        "Type": str(transaction_type),              # Tipo de transacción: 'Data', 'Sync', etc. -> 1 bytes
+        "Payload": str(payload),                    # Datos a transmitir -> 32-64 bytes
+        "ApprovedTx": [str(t) for t in approvedtips],        # Lista de transacciones aprobadas por esta transacción -> 64 bytes
+        # "Weight": 1.0,                            # Peso inicial de la transacción -> Eliminar
+        # "TipSelectionCount": 0,                   # Contador de veces seleccionada como tip -> Eliminar
+        "TTL": float(120.0),
+        "Nonce": ascon.hash((str(node_id) + str(time.time())).encode(), "Ascon-Hash", 32).hex()[:16],
     }
 
-    return transaction
+    # 3) Firmar la vista canónica
+    to_sign = _canonical_bytes_for_sig(tx)
+    signature = sign_transaction(to_sign, private_key)  # Firma con clave privada -> 32 bytes
+    
+    # 4) Adjuntar firma y devolver
+    tx["Signature"] = signature
+
+    return tx
 
 # TAMAÑO TX -> 32 + 2 + 2 + 64 + 64 + 32 = 196 bytes = 1568 bits
 # TAMAÑO TX -> 32 + 2 + 2 + 64 + 64 + 20 = 184 bytes = 1472 bits
@@ -242,13 +331,12 @@ def create_gen_block(sink_id, private_key):
     # No se aprueba ninguna transacción, ya que es el primer bloque
     approved_tips = []
 
-    print('Antes de entrar a la función crear Tx... ')
+    # print('Antes de entrar a la función crear Tx... ')
 
     # Crear la transacción génesis
-    genesis_block = create_transaction(sink_id, 'AUTH-REQUEST = 1 -> Génesis de la red', '1', approved_tips, private_key)
+    genesis_block = create_transaction(sink_id, 'AUTH-REQUEST = 1 -> Génesis de la red', 'AUTH:GEN', approved_tips, private_key)
 
     # Agrega la Tx a la lista
-
 
     # Mostrar mensaje
     # print(f'Bloque génesis creado con ID: {genesis_block["ID"]}')

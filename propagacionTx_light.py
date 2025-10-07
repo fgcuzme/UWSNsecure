@@ -151,7 +151,7 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
                     # Verificar la Tx con la clave pública del Sink
                     # calcular el tiempo de verificación tx por parte del CH
                     time_start = time.perf_counter()
-                    isverify = verify_transaction_signature(genesis_tx['ID'], genesis_tx['Signature'], Ch_node['PublicKey_sign_sink'])
+                    isverify = verify_transaction_signature(genesis_tx, genesis_tx['Signature'], Ch_node['PublicKey_sign_sink'])
                     end_time_verify = (time.perf_counter() - time_start)*1000 # se la obtiene en milisegundos
                     # times_verify_all_ch.append(end_time_verify)  # Guardar el tiempo de verificación para este CH
 
@@ -183,7 +183,7 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
                             bitrate=9200, freq_khz=20,
                             lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=t_proc_ch_recv_gen,
                             snr_db=snr_db, per=per_sink_ch_auth,
-                            lat_dag_ms=0.0
+                            lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
                         )
 
                     # Sink to CH
@@ -230,7 +230,7 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
                                     bitrate=9200, freq_khz=20,
                                     lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=lat_proc,
                                     snr_db=snr_db, per=per_ch_sink_auth_ack,
-                                    lat_dag_ms=0.0
+                                    lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
                                 )
 
                             if success_auth_ack:
@@ -361,7 +361,7 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                         bitrate=9200, freq_khz=20,
                         lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=lat_proc,
                         snr_db=snr_db, per=per_ch_to_sn,
-                        lat_dag_ms=0.0
+                        lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
                     )
 
                 # Se actualiza la energia de los demas nodos
@@ -375,7 +375,7 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                     # Verificar la Tx con la clave pública del Sink
                     # calcular el tiempo de verificación tx por parte del CH
                     time_start = time.perf_counter()
-                    isverify = verify_transaction_signature(genesis_tx['ID'], genesis_tx['Signature'], node1['PublicKey_sign_sink'])
+                    isverify = verify_transaction_signature(genesis_tx, genesis_tx['Signature'], node1['PublicKey_sign_sink'])
                     end_time_verify = time.perf_counter()- time_start
 
                     # CH recibe y verifica génesis
@@ -403,7 +403,7 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                         bitrate=9200, freq_khz=20,
                         lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=t_proc_sn_recv_gen,
                         snr_db=snr_db, per=per_ch_to_sn,
-                        lat_dag_ms=0.0
+                        lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
                     )
 
                     # CH to SN
@@ -450,7 +450,7 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                                     bitrate=9200, freq_khz=20,
                                     lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=lat_proc,
                                     snr_db=snr_db, per=per_sn_gen_ack,
-                                    lat_dag_ms=0.0
+                                    lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
                                     )
                             # Se actualiza la energia de los demas nodos
                             active_ids = [node1["NodeID"], ch_node1["NodeID"]]
@@ -483,7 +483,7 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                                         bitrate=9200, freq_khz=20,
                                         lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=lat_proc,
                                         snr_db=snr_db, per=per_sn_gen_ack,
-                                        lat_dag_ms=0.0
+                                        lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
                                         )
                                 # SN to CH
                                 # break  # Salir del bucle de reintentos si la verificación es exitosa
@@ -695,7 +695,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                 bitrate=9200, freq_khz=20,
                 lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=t_proc_ch_resp_auth,
                 snr_db=snr_db, per=per_resp_auth_ch_sink,
-                lat_dag_ms=0.0
+                lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
                 )
 
             ## Energia de los demas nodos
@@ -735,7 +735,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                 # Verificar la Tx con la clave pública del Sink
                 # calcular el tiempo de verificación tx por parte del CH
                 time_start = time.perf_counter()
-                isverify = verify_transaction_signature(auth_response_tx1['ID'], auth_response_tx1['Signature'], key_public_sign)
+                isverify = verify_transaction_signature(auth_response_tx1, auth_response_tx1['Signature'], key_public_sign)
                 end_time_verify = time.perf_counter() - time_start
 
                 # guardar la energía antes de actualizar, recibir el ACK del sink
@@ -760,7 +760,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                     bitrate=9200, freq_khz=20,
                     lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=lat_proc,
                     snr_db=snr_db, per=per_resp_auth_ch_sink,
-                    lat_dag_ms=0.0
+                    lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
                     )
 
                 # # CH to Sink
@@ -854,7 +854,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                         bitrate=9200, freq_khz=20,
                         lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=lat_proc,
                         snr_db=snr_db, per=per_resp_auth_ch_sn,
-                        lat_dag_ms=0.0
+                        lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
                         )
 
                     ## Energia de los demas nodos
@@ -878,7 +878,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                         # Verificar la Tx con la clave pública del Sink
                         # calcular el tiempo de verificación tx por parte del CH
                         time_start1 = time.perf_counter()
-                        isverify2 = verify_transaction_signature(auth_response_tx1['ID'], auth_response_tx1['Signature'], key_public_sign)
+                        isverify2 = verify_transaction_signature(auth_response_tx1, auth_response_tx1['Signature'], key_public_sign)
                         end_time_verify1 = time.perf_counter() - time_start1
 
                         # SN recibe y verifica la tx del ch
@@ -906,7 +906,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                             bitrate=9200, freq_khz=20,
                             lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=t_proc_ch_resp_auth,
                             snr_db=snr_db, per=per_resp_auth_ch_sn,
-                            lat_dag_ms=0.0
+                            lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
                             )
 
                         # # CH to SN
@@ -950,7 +950,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                                     bitrate=9200, freq_khz=20,
                                     lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=lat_proc,
                                     snr_db=snr_db, per=per_sn_resp_ack,
-                                    lat_dag_ms=0.0
+                                    lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
                                     )
 
                                 if success_resp_ack:
@@ -976,7 +976,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                                         bitrate=9200, freq_khz=20,
                                         lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=lat_proc,
                                         snr_db=snr_db, per=per_sn_resp_ack,
-                                        lat_dag_ms=0.0
+                                        lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
                                         )
                                 else:
                                     # En caso de que el sn no reciba el ack de confirmación
@@ -1099,7 +1099,7 @@ def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retrie
                     bitrate=9200, freq_khz=20,
                     lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=t_proc_sn_resp_auth,
                     snr_db=snr_db, per=per_sn_resp_ch,
-                    lat_dag_ms=0.0
+                    lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
                     )
 
                 ## Energia de los demas nodos
@@ -1120,7 +1120,7 @@ def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retrie
                         # Verificar la Tx con la clave pública del Sink
                         # calcular el tiempo de verificación tx por parte del CH
                         time_start1 = time.perf_counter()
-                        isverify2 = verify_transaction_signature(node_auth_tx['ID'], node_auth_tx['Signature'], key_public_sign)
+                        isverify2 = verify_transaction_signature(node_auth_tx, node_auth_tx['Signature'], key_public_sign)
                         end_time_verify1 = time.perf_counter() - time_start1
 
                         # guardar la energía antes de actualizar
@@ -1145,7 +1145,7 @@ def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retrie
                             bitrate=9200, freq_khz=20,
                             lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=lat_proc,
                             snr_db=snr_db, per=per_sn_resp_ch,
-                            lat_dag_ms=0.0
+                            lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
                             )
 
                         # CH to SN
@@ -1208,7 +1208,7 @@ def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retrie
                                     bitrate=9200, freq_khz=20,
                                     lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=lat_proc,
                                     snr_db=snr_db, per=per_sn_resp_ch,
-                                    lat_dag_ms=0.0
+                                    lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
                                     )
 
                                 ## Energia de los demas nodos
@@ -1240,7 +1240,7 @@ def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retrie
                                         bitrate=9200, freq_khz=20,
                                         lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=lat_proc,
                                         snr_db=snr_db, per=per_sn_resp_ch,
-                                        lat_dag_ms=0.0
+                                        lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
                                         )
                                 else:
                                     ## en caso del que nodo SN no reciba el ack del CH

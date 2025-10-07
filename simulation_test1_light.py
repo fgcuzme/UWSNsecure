@@ -402,12 +402,12 @@ for i in range(rondas):
     print("-")
     print ('PROPAGACIÓN DE LA TX GENESIS A LOS CH...')
 
-    txgenesis.setdefault("TS", time.time())
-    txgenesis.setdefault("TTL", 120.0)
-    txgenesis.setdefault("Nonce", hashlib.sha256(str(node_sink["NodeID"]).encode()+os.urandom(4)).hexdigest()[:16])
-    txgenesis.setdefault("Nonce1", ascon.hash((str(node_sink["NodeID"]) + str(time.time())).encode(), "Ascon-Hash", 32).hex()[:16])
-    node_sink["Tips"].append(txgenesis["ID"])
-    node_sink["Tips"] = node_sink["Tips"][-128:]  # LRU simple
+    # txgenesis.setdefault("TS", time.time())
+    # txgenesis.setdefault("TTL", 120.0)
+    # txgenesis.setdefault("Nonce", hashlib.sha256(str(node_sink["NodeID"]).encode()+os.urandom(4)).hexdigest()[:16])
+    # txgenesis.setdefault("Nonce1", ascon.hash((str(node_sink["NodeID"]) + str(time.time())).encode(), "Ascon-Hash", 32).hex()[:16])
+    # node_sink["Tips"].append(txgenesis["ID"])
+    # node_sink["Tips"] = node_sink["Tips"][-128:]  # LRU simple
 
     # # Capturar estadisticas
     # # Diccionario para capturar estadísticas individuales
@@ -518,7 +518,7 @@ create_shared_keys_table("bbdd_keys_shared_sign_cipher.db")
 generate_shared_keys("bbdd_keys_shared_sign_cipher.db", node_uw, CH, node_sink)
 
 # Número total de transmisiones que queremos completar
-total_transmissions = 30
+total_transmissions = 20
 completed_transmissions = 0  # Contador de transmisiones realizadas
 max_attempts = 100  # Para evitar un bucle infinito si no hay nodos elegibles
 attempts = 0
