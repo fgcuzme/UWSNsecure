@@ -353,7 +353,7 @@ print("-")
 print("INCIO PROCESO DE AUTENTICACIÓN BASADO EN TX")
 
 from propagacionTx_light import propagate_tx_to_ch, authenticate_nodes_to_ch, propagate_tx_to_sink_and_cluster
-from tangle2_light import create_gen_block, delete_tangle
+from tangle2_light import create_gen_block, delete_tangle, ingest_tx
 import time
 # from save_csv import save_stats_tx, save_stats_energy_proTx_csv, save_stats_to_csv, save_stats_to_csv1, save_stats_to_csv2
 
@@ -386,15 +386,19 @@ for i in range(rondas):
 
     node_sink["PrivateKey_sign"]
 
-    import hashlib
-    import ascon
-
     timestart = time.time() # inicio de la creación de tx genesis
     txgenesis = create_gen_block(node_sink["NodeID"], node_sink["PrivateKey_sign"])
     time_createTX = time.time() - timestart
 
-    node_sink["Tips"].append(txgenesis["ID"])   # Agrega la Tx genesis a la lista de tips
-    node_sink['Transactions'].append(txgenesis) # Agrega la Tx genesis a la lsita de Transactions
+    # Se comenta 08/10/2025
+    # node_sink["Tips"].append(txgenesis["ID"])   # Agrega la Tx genesis a la lista de tips
+    # node_sink['Transactions'].append(txgenesis) # Agrega la Tx genesis a la lsita de Transactions
+    # Nuevas lineas
+    # Ingerir en el propio sink (autor de la génesis) y dejarla como tip
+    ingest_tx(node_sink, txgenesis, add_as_tip=True)
+
+    # (opcional) LRU simple para no crecer sin límite
+    node_sink["Tips"] = node_sink["Tips"][-128:]
 
     print('Tiempo de creación de Tx genesis Sink: ', time_createTX)
     print('Bloque genesis', txgenesis)
@@ -573,6 +577,8 @@ AGGREGATION_TIMEOUT = 120     # segundos máximo antes de forzar envío
 
 # print(f"✅ Simulación completa: {completed_transmissions}/{total_transmissions} transmisiones realizadas.")
 
+## cambiar a tiempo de transmisiones
+##M Mirar el articulo con el que se vaya a comparar
 
 while completed_transmissions < total_transmissions and attempts < max_attempts:
     attempts += 1

@@ -5,6 +5,22 @@ import random
 import ascon
 import json, hashlib, os
 import numpy as np
+from collections import deque
+
+_TTL_tx = float(120.0)          # rango 120-300s -> 2–5 × (t_propagación_max + colas)
+_TTL_windows = float(300.0)     # rango 300-420s -> TTL + margen
+
+# Normalizadores y estado DAG en el nodo (drop-in)
+def _ensure_dag_state(node):
+    node.setdefault("Tips", [])
+    node.setdefault("ApprovedTransactions", [])
+    node.setdefault("Transactions", [])
+    node.setdefault("_tx_index", {})           # id -> tx
+    node.setdefault("_nonce_window", deque())  # (nonce, ts_insert)
+    node.setdefault("_nonce_set", set())
+    node.setdefault("_nonce_ttl_s", _TTL_windows)
+    node.setdefault("_max_nonce_cache", 4096)
+
 
 # Añade helpers de normalización
 def _to_builtin(x):
@@ -31,7 +47,7 @@ def _canonical_bytes_for_sig(tx_dict: dict) -> bytes:
         "Type":         tx_dict.get("Type", "1"),
         # TS = Timestamp (tu campo existente)
         "TS":           tx_dict.get("Timestamp", 0.0),
-        "TTL":          tx_dict.get("TTL", 120.0),
+        "TTL":          tx_dict.get("TTL", _TTL_tx),
         "Nonce":        tx_dict.get("Nonce", "")
     }
     view_norm = _to_builtin(view)
@@ -277,12 +293,13 @@ def create_transaction(node_id, payload, transaction_type, approvedtips, private
         "ApprovedTx": [str(t) for t in approvedtips],        # Lista de transacciones aprobadas por esta transacción -> 64 bytes
         # "Weight": 1.0,                            # Peso inicial de la transacción -> Eliminar
         # "TipSelectionCount": 0,                   # Contador de veces seleccionada como tip -> Eliminar
-        "TTL": float(120.0),
+        "TTL": _TTL_tx,
         "Nonce": ascon.hash((str(node_id) + str(time.time())).encode(), "Ascon-Hash", 32).hex()[:16],
     }
 
     # 3) Firmar la vista canónica
     to_sign = _canonical_bytes_for_sig(tx)
+
     signature = sign_transaction(to_sign, private_key)  # Firma con clave privada -> 32 bytes
     
     # 4) Adjuntar firma y devolver
@@ -343,6 +360,52 @@ def create_gen_block(sink_id, private_key):
 
     return genesis_block
 
+# ## Se comenta esta función por una nueva
+# ##
+# def create_auth_response_tx(node_ch1):
+#     """
+#     Crea una nueva transacción de respuesta de autenticación para el Sink.
+#     """
+#     # Seleccionar dos tips a aprobar (si están disponibles)
+#     tips_tx = node_ch1['Tips']
+#     approved_tips1 = select_tips(tips_tx, 2)
+
+#     # print('approved_tips Toma dos tips para generar la Tx de respuesta :', approved_tips1, ' -> ID : ', node_ch1['NodeID'])
+
+#     # Crear el payload para la transacción de autenticación
+#     payload = f'{node_ch1["NodeID"]};{node_ch1["Id_pair_keys_sign"]};{node_ch1["Id_pair_keys_shared"]}'
+
+#     # Crear una nueva transacción de autenticación aprobando los tips
+#     new_tx = create_transaction(node_ch1['NodeID'], payload, 'AUTH:RESP', approved_tips1, node_ch1['PrivateKey_sign'])
+
+#     # Agrega la nueva transacción y agregarla a los tips del CH
+#     node_ch1['Transactions'].append(new_tx)
+#     # node_ch1['Tips'].append(new_tx['ID'])
+
+#     return new_tx
+
+def create_auth_response_tx(node_ch1):
+    _ensure_dag_state(node_ch1)
+    approved_tips1 = select_valid_tips(node_ch1, num_tips=2, check_nonce=True, check_fresh=True)
+
+    payload = f'{int(node_ch1["NodeID"])};{int(node_ch1["Id_pair_keys_sign"])};{int(node_ch1["Id_pair_keys_shared"])}'
+    new_tx = create_transaction(int(node_ch1['NodeID']), payload, 'AUTH:RESP', approved_tips1, node_ch1['PrivateKey_sign'])
+
+    # mover tips aprobados a ApprovedTransactions
+    node_ch1["Tips"] = _to_id_list(node_ch1["Tips"])
+    node_ch1.setdefault("ApprovedTransactions", [])
+    node_ch1["ApprovedTransactions"] = _to_id_list(node_ch1["ApprovedTransactions"])
+    for tip in approved_tips1:
+        if tip in node_ch1["Tips"]:
+            node_ch1["Tips"].remove(tip)
+        if tip not in node_ch1["ApprovedTransactions"]:
+            node_ch1["ApprovedTransactions"].append(tip)
+
+    node_ch1["Transactions"].append(new_tx)
+    node_ch1["Tips"].append(new_tx["ID"])
+    node_ch1["_tx_index"][new_tx["ID"]] = new_tx
+    return new_tx
+
 
 # BORRAR TANGLE EN PYTHON
 def delete_tangle(nodo_sink, node_uw, CH):
@@ -375,3 +438,160 @@ def delete_tangle(nodo_sink, node_uw, CH):
 
 
 # %%
+
+import random, copy
+import numpy as np
+
+def _to_id_list(tips):
+    """
+    Normaliza una lista de tips que pueden venir como:
+    - strings (ID),
+    - ints/np.uint16,
+    - dicts con campo 'ID'.
+    Elimina duplicados preservando orden.
+    """
+    ids = []
+    for t in (tips or []):
+        if isinstance(t, dict) and "ID" in t:
+            ids.append(str(t["ID"]))
+        elif isinstance(t, (np.integer, int)):
+            ids.append(str(int(t)))
+        else:
+            ids.append(str(t))
+    seen = set()
+    out = []
+    for x in ids:
+        if x not in seen:
+            out.append(x); seen.add(x)
+    return out
+
+def _rebuild_tx_index(node):
+    _ensure_dag_state(node)
+    node["_tx_index"].clear()
+    for tx in node["Transactions"]:
+        txid = str(tx.get("ID"))
+        if txid: node["_tx_index"][txid] = tx
+
+def select_tips(tips, num_tips):
+    """
+    Selecciona num_tips IDs únicos al azar desde 'tips' (robusto a dict/np types).
+    """
+    ids = _to_id_list(tips)
+    if len(ids) >= num_tips:
+        return random.sample(ids, num_tips)
+    return ids[:]  # todos los disponibles
+
+def update_transactions(node, received_transaction):
+    """
+    Mueve los tips aprobados (presentes en node['Tips']) a node['ApprovedTransactions'].
+    No modifica la TX recibida. Robusto a tipos numpy/dict en Tips.
+    """
+    # Asegurar campos del nodo
+    node.setdefault("Tips", [])
+    node.setdefault("ApprovedTransactions", [])
+    node.setdefault("Transactions", [])
+
+    # Normalizar listas internas a IDs (strings)
+    node["Tips"] = _to_id_list(node["Tips"])
+    node["ApprovedTransactions"] = _to_id_list(node["ApprovedTransactions"])
+
+    # Copia de la TX recibida (si quisieras almacenarla después)
+    transaction_copy = copy.deepcopy(received_transaction)
+    transaction_id = str(transaction_copy.get("ID", ""))
+
+    approved_tips2 = _to_id_list(received_transaction.get("ApprovedTx", []))
+
+    # Mover tips aprobados
+    for tip in approved_tips2:
+        if tip in node["Tips"]:
+            node["Tips"].remove(tip)
+            if tip not in node["ApprovedTransactions"]:
+                node["ApprovedTransactions"].append(tip)
+
+    # (Opcional) si quieres guardar la TX recibida evitando duplicados:
+    # if transaction_id and transaction_id not in [tx.get("ID") for tx in node["Transactions"]]:
+    #     node["Transactions"].append(transaction_copy)
+
+
+def delete_transaction(node, transaction_id):
+    """
+    Elimina una transacción del nodo por ID. Devuelve True si la encontró.
+    Robusto a IDs no-string.
+    """
+    txid = str(transaction_id)
+    txs = node.get("Transactions", [])
+    for i, tx in enumerate(list(txs)):
+        if str(tx.get("ID")) == txid:
+            del txs[i]
+            print(f"Transacción {txid} eliminada del nodo {node.get('NodeID')}.")
+            return True
+    print(f"Transacción {txid} no encontrada en el nodo {node.get('NodeID')}.")
+    return False
+
+
+def find_node_index(register_nodes, target_node_id):
+    """
+    Búsqueda lineal por 'NodeID'. Devuelve índice o -1.
+    Normaliza tipos a str para comparación robusta.
+    """
+    target = str(target_node_id)
+    for idx, nd in enumerate(register_nodes or []):
+        if str(nd.get("NodeID")) == target:
+            return idx
+    return -1
+
+
+## Selección de tips válidos (TS/TTL y Nonce) antes de aprobar
+def _purge_expired_nonces(node, now=None):
+    _ensure_dag_state(node)
+    if now is None: now = time.time()
+    window, s, ttl = node["_nonce_window"], node["_nonce_set"], node["_nonce_ttl_s"]
+    while window and (now - window[0][1] > ttl):
+        nonce, _ = window.popleft(); s.discard(nonce)
+    while len(window) > node["_max_nonce_cache"]:
+        nonce, _ = window.popleft(); s.discard(nonce)
+
+def _nonce_seen(node, nonce, now=None):
+    _ensure_dag_state(node)
+    if now is None: now = time.time()
+    _purge_expired_nonces(node, now)
+    s = node["_nonce_set"]
+    if nonce in s: return True
+    s.add(nonce); node["_nonce_window"].append((nonce, now))
+    return False
+
+def _is_fresh_tx(tx, now=None):
+    if now is None: now = time.time()
+    ts, ttl = float(tx.get("Timestamp", 0.0)), float(tx.get("TTL", 0.0))
+    return ttl > 0 and (now >= ts) and (now <= ts + ttl)
+
+def select_valid_tips(node, num_tips=2, check_nonce=True, check_fresh=True):
+    _ensure_dag_state(node)
+    if not node["_tx_index"]: _rebuild_tx_index(node)
+    valid = []
+    for tid in _to_id_list(node["Tips"]):
+        tx = node["_tx_index"].get(tid)
+        if not tx: continue
+        if check_fresh and not _is_fresh_tx(tx): continue
+        if check_nonce:
+            nonce = str(tx.get("Nonce", ""))
+            # namespace TIPSEL para no colisionar con RX
+            if not nonce or _nonce_seen(node, f"TIPSEL:{nonce}"):
+                continue
+        valid.append(tid)
+    if len(valid) <= num_tips: return valid[:]
+    return random.sample(valid, num_tips)
+
+
+# tangle2_light.py
+# Este helper deja la TX materializada en el nodo y actualiza _tx_index. Así select_valid_tips(...) funciona.
+def ingest_tx(node, tx: dict, add_as_tip: bool = True):
+    _ensure_dag_state(node)
+    txid = str(tx["ID"])
+    # de-dup en Transactions
+    if txid not in node.get("_tx_index", {}):
+        node["Transactions"].append(tx)
+        node["_tx_index"][txid] = tx
+    # meter como tip (si no está caduca) para que luego pueda ser aprobada
+    if add_as_tip and txid not in node["Tips"]:
+        node["Tips"].append(txid)

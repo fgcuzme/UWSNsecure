@@ -1,4 +1,5 @@
-from tangle2_light import create_gen_block, create_transaction, sign_transaction, verify_transaction_signature
+# from tangle2_light import verify_transaction_signature, create_auth_response_tx
+from tangle2_light import verify_transaction_signature, create_auth_response_tx, update_transactions, delete_transaction, ingest_tx
 from bbdd2_sqlite3 import load_keys_shared_withou_cipher, load_keys_sign_withou_cipher
 from path_loss import propagation_time1
 import numpy as np
@@ -49,19 +50,6 @@ def proc_time_ms(fixed_ms: float = 20.0) -> float:
 # # #     True si la propagación es exitosa (según el valor aleatorio y la tasa de éxito), False en caso contrario.
 # # #     """
 # # #     return random.random() > success_rate
-
-# --- [ADD] helpers para mantener consistencia del DAG local ---
-def tips_add(node, tx_id):
-    if tx_id not in node.get("Tips", []):
-        node["Tips"].append(tx_id)
-
-def tips_remove(node, tx_id):
-    if tx_id in node.get("Tips", []):
-        node["Tips"].remove(tx_id)
-
-def approved_add(node, tx_id):
-    if tx_id not in node.get("ApprovedTransactions", []):
-        node["ApprovedTransactions"].append(tx_id)
 
 ## Sugenrencia de update_transactios
 # def update_transactions(node, received_transaction):
@@ -152,7 +140,7 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
                     # calcular el tiempo de verificación tx por parte del CH
                     time_start = time.perf_counter()
                     isverify = verify_transaction_signature(genesis_tx, genesis_tx['Signature'], Ch_node['PublicKey_sign_sink'])
-                    end_time_verify = (time.perf_counter() - time_start)*1000 # se la obtiene en milisegundos
+                    end_time_verify_ms = (time.perf_counter() - time_start)*1000 # se la obtiene en milisegundos
                     # times_verify_all_ch.append(end_time_verify)  # Guardar el tiempo de verificación para este CH
 
                     # CH recibe y verifica génesis
@@ -191,7 +179,10 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
                     if isverify:
                         auth_isverify = True
                         print(f"CH {Ch_node['NodeID']} recibió y verificó la Tx génesis.")
-                        Ch_node['Tips'].append(genesis_tx['ID'])    # Se guarda la Tx genesis en el CH
+                        
+                        # Ch_node['Tips'].append(genesis_tx['ID'])    # Se guarda la Tx genesis en el CH; se comemta 08/10/2025
+                        # agrega nueva linea 08/10/2025
+                        ingest_tx(Ch_node, genesis_tx, add_as_tip=True)
 
                         ack_received_CHtoSink = False  # aún no confirmado
 
@@ -376,7 +367,7 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                     # calcular el tiempo de verificación tx por parte del CH
                     time_start = time.perf_counter()
                     isverify = verify_transaction_signature(genesis_tx, genesis_tx['Signature'], node1['PublicKey_sign_sink'])
-                    end_time_verify = time.perf_counter()- time_start
+                    end_time_verify_ms = (time.perf_counter()- time_start)*1000
 
                     # CH recibe y verifica génesis
                     t_proc_sn_recv_gen = estimate_proc_time_s(do_sign=True, do_tips=True)
@@ -417,7 +408,11 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                             print(f"Nodo {node1['NodeID']} en cluster {ch_node1['NodeID']} recibió y verificó la Tx génesis.")
 
                             #id_genesis_tx1 = copy.deepcopy(genesis_tx)
-                            node1['Tips'].append(genesis_tx['ID'])   # El nodo agrega la Tx genesis propagada por el CH
+
+                            # node1['Tips'].append(genesis_tx['ID'])   # El nodo agrega la Tx genesis propagada por el CH; se comenta esta liena 08/10/2025
+
+                            # Se agrega esta linea 08/10/2025
+                            ingest_tx(node1, genesis_tx, add_as_tip=True)
 
                             # calular el per
                             per_sn_gen_ack, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=48, bitrate=9200)
@@ -517,21 +512,21 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
 # pro = propagate_tx_to_ch(nodo_sink, nodo_sink["NeighborCHs"], node_uw, txgenesis, max_retries=3, timeout=2)
 
 # print(pro)
-
-def select_tips(tips, num_tips):
-    """
-    Selecciona un número determinado de tips al azar.
-    Args:
-        tips (list): Lista de tips disponibles.
-        num_tips (int): Número de tips que se desea seleccionar.
-    Returns:
-        list: Lista con los tips seleccionados.
-    """
-    if len(tips) >= num_tips:
-        selected_tips = random.sample(tips, num_tips)  # Selecciona tips al azar sin repetición
-    else:
-        selected_tips = tips  # Si hay menos tips, selecciona todos los disponibles
-    return selected_tips
+# #### comentamos 08/10/2025
+# def select_tips(tips, num_tips):
+#     """
+#     Selecciona un número determinado de tips al azar.
+#     Args:
+#         tips (list): Lista de tips disponibles.
+#         num_tips (int): Número de tips que se desea seleccionar.
+#     Returns:
+#         list: Lista con los tips seleccionados.
+#     """
+#     if len(tips) >= num_tips:
+#         selected_tips = random.sample(tips, num_tips)  # Selecciona tips al azar sin repetición
+#     else:
+#         selected_tips = tips  # Si hay menos tips, selecciona todos los disponibles
+#     return selected_tips
 
 
 def find_tip_index(tips, tip_id):
@@ -547,29 +542,6 @@ def find_tip_index(tips, tip_id):
         if tip["ID"] == tip_id:
             return index  # Retorna el índice tan pronto como lo encuentra
     return -1  # Si no encuentra el tip, retorna -1
-
-
-def create_auth_response_tx(node_ch1):
-    """
-    Crea una nueva transacción de respuesta de autenticación para el Sink.
-    """
-    # Seleccionar dos tips a aprobar (si están disponibles)
-    tips_tx = node_ch1['Tips']
-    approved_tips1 = select_tips(tips_tx, 2)
-
-    # print('approved_tips Toma dos tips para generar la Tx de respuesta :', approved_tips1, ' -> ID : ', node_ch1['NodeID'])
-
-    # Crear el payload para la transacción de autenticación
-    payload = f'{node_ch1["NodeID"]};{node_ch1["Id_pair_keys_sign"]};{node_ch1["Id_pair_keys_shared"]}'
-
-    # Crear una nueva transacción de autenticación aprobando los tips
-    new_tx = create_transaction(node_ch1['NodeID'], payload, 'AUTH:RESP', approved_tips1, node_ch1['PrivateKey_sign'])
-
-    # Agrega la nueva transacción y agregarla a los tips del CH
-    node_ch1['Transactions'].append(new_tx)
-    # node_ch1['Tips'].append(new_tx['ID'])
-
-    return new_tx
 
 
 from bbdd2_sqlite3 import load_keys_shared_withou_cipher, load_keys_sign_withou_cipher
@@ -736,7 +708,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                 # calcular el tiempo de verificación tx por parte del CH
                 time_start = time.perf_counter()
                 isverify = verify_transaction_signature(auth_response_tx1, auth_response_tx1['Signature'], key_public_sign)
-                end_time_verify = time.perf_counter() - time_start
+                end_time_verify_ms = (time.perf_counter() - time_start)*1000
 
                 # guardar la energía antes de actualizar, recibir el ACK del sink
                 initial_energy_ch_rx = ch_node1["ResidualEnergy"]
@@ -768,7 +740,10 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                 # de la firma se envio en el payload
                 if isverify:
                     print(f"El Sink recibió y verificó la Tx de Response_auth_to_sink de CH {ch_node1['NodeID']}")
-                    sink1['Tips'].append(auth_response_tx1['ID'])
+                    
+                    # Se comenta esta linea, para agregar una nueva 08/10/2025
+                    # sink1['Tips'].append(auth_response_tx1['ID'])
+                    ingest_tx(sink1, auth_response_tx_sink, add_as_tip=True)
 
                     # Cuando hace la verificación de la Tx el sink puede indicar que el CH esta autenticado, en su registro
                     # Le restamos uno al Id_nodeCH porque accede por lista en ese orden.
@@ -879,7 +854,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                         # calcular el tiempo de verificación tx por parte del CH
                         time_start1 = time.perf_counter()
                         isverify2 = verify_transaction_signature(auth_response_tx1, auth_response_tx1['Signature'], key_public_sign)
-                        end_time_verify1 = time.perf_counter() - time_start1
+                        end_time_verify1_ms = (time.perf_counter() - time_start1)*1000
 
                         # SN recibe y verifica la tx del ch
                         t_proc_ch_resp_auth = estimate_proc_time_s(do_verify=True, do_tips=True)
@@ -913,8 +888,10 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                         if isverify2:
                             print(f"Nodo {node2['NodeID']} recibió y verifico la Tx Response_auth_to_sink de CH {ch_node1['NodeID']}")
 
-                            # Se actualiza el ID del tip en el nodo
-                            node2['Tips'].append(auth_response_tx1['ID']) # corregido
+                            # Se actualiza el ID del tip en el nodo, se comenta esta linea 08/10/2025
+                            # node2['Tips'].append(auth_response_tx1['ID']) # corregido
+                            # Por esta nueva 08/10/2025
+                            ingest_tx(node2, auth_response_tx1, add_as_tip=True)
 
                             # break
                             while retries_SNtoCH < max_retries and not ack_received_sntoch:
@@ -1121,7 +1098,7 @@ def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retrie
                         # calcular el tiempo de verificación tx por parte del CH
                         time_start1 = time.perf_counter()
                         isverify2 = verify_transaction_signature(node_auth_tx, node_auth_tx['Signature'], key_public_sign)
-                        end_time_verify1 = time.perf_counter() - time_start1
+                        end_time_verify1_ms = (time.perf_counter() - time_start1)*1000
 
                         # guardar la energía antes de actualizar
                         initial_energy_ch_rx = node_ch["ResidualEnergy"]
@@ -1268,101 +1245,101 @@ def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retrie
 
 # Nueva función de update_transactions
 import copy
+## comentamos 08/10/2025
+# def update_transactions(node, received_transaction):
+#     """
+#     Actualiza la lista de transacciones del nodo, moviendo Tips a ApprovedTransactions.
+#     Además, trabaja con una copia de la transacción recibida para evitar modificar la original.
+#     node: Diccionario del nodo.
+#     received_transaction: Transacción recibida que contiene detalles de aprobaciones.
+#     """
+#     # print('Nodo que se va a actualizar : ', node["NodeID"])
 
-def update_transactions(node, received_transaction):
-    """
-    Actualiza la lista de transacciones del nodo, moviendo Tips a ApprovedTransactions.
-    Además, trabaja con una copia de la transacción recibida para evitar modificar la original.
-    node: Diccionario del nodo.
-    received_transaction: Transacción recibida que contiene detalles de aprobaciones.
-    """
-    # print('Nodo que se va a actualizar : ', node["NodeID"])
+#     # Hacer una copia profunda de la transacción recibida para evitar modificar la original
+#     transaction_copy = copy.deepcopy(received_transaction)
 
-    # Hacer una copia profunda de la transacción recibida para evitar modificar la original
-    transaction_copy = copy.deepcopy(received_transaction)
+#     # Extraer ID de la transacción recibida y las aprobaciones
+#     transaction_id = transaction_copy.get("ID")
+#     # approved_tips2 = transaction_copy.get("ApprovedTx", [])
+#     # approved_tips2 = transaction_copy.get("ApprovedTx")
+#     # approved_tips2 = transaction_copy.setdefault("ApprovedTx", [])
+#     # approved_tips2 = received_transaction["ApprovedTx"]
+#     approved_tips2 = list(received_transaction.get("ApprovedTx", []))
 
-    # Extraer ID de la transacción recibida y las aprobaciones
-    transaction_id = transaction_copy.get("ID")
-    # approved_tips2 = transaction_copy.get("ApprovedTx", [])
-    # approved_tips2 = transaction_copy.get("ApprovedTx")
-    # approved_tips2 = transaction_copy.setdefault("ApprovedTx", [])
-    # approved_tips2 = received_transaction["ApprovedTx"]
-    approved_tips2 = list(received_transaction.get("ApprovedTx", []))
+#     print('Tips que se deben aprobar 1: ', transaction_copy)
+#     print('Tips que se deben aprobar 2: ', approved_tips2)
 
-    print('Tips que se deben aprobar 1: ', transaction_copy)
-    print('Tips que se deben aprobar 2: ', approved_tips2)
+#     # Copiar Tips del nodo para iterar sin alterar la lista directamente
+#     tips_to_check = list(node["Tips"])
 
-    # Copiar Tips del nodo para iterar sin alterar la lista directamente
-    tips_to_check = list(node["Tips"])
+#     # Verificar las transacciones aprobadas y moverlas
+#     for tip in approved_tips2:
+#         if tip in tips_to_check:
+#             # Mover de Tips a ApprovedTransactions
+#             node["Tips"].remove(tip)  # Eliminar el tip de la lista de Tips del nodo
+#             if tip not in node["ApprovedTransactions"]:  # Prevenir duplicados
+#                 node["ApprovedTransactions"].append(tip)
 
-    # Verificar las transacciones aprobadas y moverlas
-    for tip in approved_tips2:
-        if tip in tips_to_check:
-            # Mover de Tips a ApprovedTransactions
-            node["Tips"].remove(tip)  # Eliminar el tip de la lista de Tips del nodo
-            if tip not in node["ApprovedTransactions"]:  # Prevenir duplicados
-                node["ApprovedTransactions"].append(tip)
+#     # # Agregar la copia de la transacción recibida al campo "Transactions" del nodo
+#     # if transaction_id not in [tx["ID"] for tx in node["Transactions"]]:
+#     #     node["Transactions"].append(transaction_copy)
 
-    # # Agregar la copia de la transacción recibida al campo "Transactions" del nodo
-    # if transaction_id not in [tx["ID"] for tx in node["Transactions"]]:
-    #     node["Transactions"].append(transaction_copy)
-
-    # La transacción original permanece intacta
-    # print('Nodo actualizado en ApprovedTransactions:', node["ApprovedTransactions"])
-    # print('Tips restantes:', node["Tips"])
-
-
-
-# Funcion para eliminar la tx
-def delete_transaction(node, transaction_id):
-    """
-    Elimina una transacción del nodo dado su ID.
-
-    Args:
-        node (dict): Nodo del que se desea eliminar la transacción.
-        transaction_id (str): ID de la transacción a eliminar.
-
-    Returns:
-        bool: True si la transacción fue eliminada, False si no se encontró.
-    """
-    transactions = node.get("Transactions", [])
-
-    for tx in transactions:
-        if tx["ID"] == transaction_id:
-            transactions.remove(tx)
-            print(f"Transacción con ID {transaction_id} eliminada del nodo {node['NodeID']}.")
-            return True
-
-    print(f"Transacción con ID {transaction_id} no encontrada en el nodo {node['NodeID']}.")
-    return False
+#     # La transacción original permanece intacta
+#     # print('Nodo actualizado en ApprovedTransactions:', node["ApprovedTransactions"])
+#     # print('Tips restantes:', node["Tips"])
 
 
-# Función para busqueda lineal en el diccionario, no puede ser muy eficiente si incrementa el numero de nodos
-def find_node_index(register_nodes, target_node_id):
-    """
-    Busca en la lista 'register_nodes' el nodo cuyo 'NodeID' coincide con 'target_node_id'
-    y devuelve su índice. Si no se encuentra el nodo, retorna -1.
+# # comentamos 08/10/2025
+# # Funcion para eliminar la tx
+# def delete_transaction(node, transaction_id):
+#     """
+#     Elimina una transacción del nodo dado su ID.
 
-    Parámetros:
-      - register_nodes: lista de diccionarios, cada uno representando un nodo.
-      - target_node_id: identificador del nodo a buscar (se compara en forma de cadena).
+#     Args:
+#         node (dict): Nodo del que se desea eliminar la transacción.
+#         transaction_id (str): ID de la transacción a eliminar.
 
-    Retorna:
-      - Índice (int) del nodo en la lista, o -1 si no se encontró.
-    """
-    # Convertir el target_node_id a cadena para evitar problemas de tipado
-    target_node_id = str(target_node_id)
+#     Returns:
+#         bool: True si la transacción fue eliminada, False si no se encontró.
+#     """
+#     transactions = node.get("Transactions", [])
 
-    # print('Register nodes: ', register_nodes)
-    # print('Target node id : ', target_node_id)
+#     for tx in transactions:
+#         if tx["ID"] == transaction_id:
+#             transactions.remove(tx)
+#             print(f"Transacción con ID {transaction_id} eliminada del nodo {node['NodeID']}.")
+#             return True
 
-    # Realiza una búsqueda lineal en la lista
-    for index, node in enumerate(register_nodes):
-        # print('Indice : ', index, ' node : ', node)
-        # time.sleep(5)
-        if str(node.get("NodeID")) == target_node_id:
-            return index  # Se retorna el índice tan pronto se encuentra la coincidencia
-    return -1  # Retorna -1 si no se encontró ningún nodo con el ID especificado
+#     print(f"Transacción con ID {transaction_id} no encontrada en el nodo {node['NodeID']}.")
+#     return False
+
+# # # comentamos 08/10/2025
+# # Función para busqueda lineal en el diccionario, no puede ser muy eficiente si incrementa el numero de nodos
+# def find_node_index(register_nodes, target_node_id):
+#     """
+#     Busca en la lista 'register_nodes' el nodo cuyo 'NodeID' coincide con 'target_node_id'
+#     y devuelve su índice. Si no se encuentra el nodo, retorna -1.
+
+#     Parámetros:
+#       - register_nodes: lista de diccionarios, cada uno representando un nodo.
+#       - target_node_id: identificador del nodo a buscar (se compara en forma de cadena).
+
+#     Retorna:
+#       - Índice (int) del nodo en la lista, o -1 si no se encontró.
+#     """
+#     # Convertir el target_node_id a cadena para evitar problemas de tipado
+#     target_node_id = str(target_node_id)
+
+#     # print('Register nodes: ', register_nodes)
+#     # print('Target node id : ', target_node_id)
+
+#     # Realiza una búsqueda lineal en la lista
+#     for index, node in enumerate(register_nodes):
+#         # print('Indice : ', index, ' node : ', node)
+#         # time.sleep(5)
+#         if str(node.get("NodeID")) == target_node_id:
+#             return index  # Se retorna el índice tan pronto se encuentra la coincidencia
+#     return -1  # Retorna -1 si no se encontró ningún nodo con el ID especificado
 
 
 # Función para busquedas más rapidas, conviertiendo los indices y el nodoId en un diccionario para busquedas
@@ -1375,26 +1352,3 @@ def create_diccionary_nodes(register_nodes):
       - Un diccionario {NodeID: índice}
     """
     return {node["NodeID"]: index for index, node in enumerate(register_nodes)}
-
-
-
-# Registrar eventos
-def registrar_evento_tabla(tabla, id_evento, tipo, origen, destino, rol_origen, rol_destino,
-                           energia_tx=None, energia_rx=None, t_prop=None, t_verif=None, t_auth=None,
-                           t_resp=None, clusterID=None, RoundID=None):
-    tabla.append({
-        "ID_evento": id_evento,
-        "Tipo": tipo,
-        "Origen": origen,
-        "Destino": destino,
-        "Rol_Origen": rol_origen,
-        "Rol_Destino": rol_destino,
-        "Energia_Tx": energia_tx,
-        "Energia_Rx": energia_rx,
-        "T_Propagaciin": t_prop,
-        "T_Verificaciin": t_verif,
-        "T_Auth": t_auth,
-        "T_Respuesta": t_resp,
-        "ClusterID": clusterID,  # o node_dest si es CH
-        "RoundID": RoundID  # si haces múltiples rondas
-    })
