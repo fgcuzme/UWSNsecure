@@ -521,19 +521,19 @@ create_shared_keys_table("bbdd_keys_shared_sign_cipher.db")
 # 📌 Generar claves compartidas después de la autenticación
 generate_shared_keys("bbdd_keys_shared_sign_cipher.db", node_uw, CH, node_sink)
 
-# Número total de transmisiones que queremos completar
-total_transmissions = 20
-completed_transmissions = 0  # Contador de transmisiones realizadas
-max_attempts = 100  # Para evitar un bucle infinito si no hay nodos elegibles
-attempts = 0
+# # Número total de transmisiones que queremos completar
+# total_transmissions = 20
+# completed_transmissions = 0  # Contador de transmisiones realizadas
+# max_attempts = 100  # Para evitar un bucle infinito si no hay nodos elegibles
+# attempts = 0
 
-# Buffers para cada CH y tiempos de último envío
-buffer_CH = {ch_id: [] for ch_id in CH}
-ultimo_envio_CH = {ch_id: time.time() for ch_id in CH}
+# # Buffers para cada CH y tiempos de último envío
+# buffer_CH = {ch_id: [] for ch_id in CH}
+# ultimo_envio_CH = {ch_id: time.time() for ch_id in CH}
 
-print("CHs : ", CH)
-print("buffer_CH : ", buffer_CH)
-print("ultimo_envio_CH", ultimo_envio_CH)
+# print("CHs : ", CH)
+# print("buffer_CH : ", buffer_CH)
+# print("ultimo_envio_CH", ultimo_envio_CH)
 
 # Parámetros realistas
 MAX_BUFFER = 5               # número máximo de datos antes de enviar al Sink
@@ -580,60 +580,289 @@ AGGREGATION_TIMEOUT = 120     # segundos máximo antes de forzar envío
 ## cambiar a tiempo de transmisiones
 ##M Mirar el articulo con el que se vaya a comparar
 
-while completed_transmissions < total_transmissions and attempts < max_attempts:
-    attempts += 1
-    sender_index = np.random.randint(0, len(node_uw))
-    sender = node_uw[sender_index]
-    ch_id = sender["ClusterHead"]
+# # # while completed_transmissions < total_transmissions and attempts < max_attempts:
+# # #     attempts += 1
+# # #     sender_index = np.random.randint(0, len(node_uw))
+# # #     sender = node_uw[sender_index]
+# # #     ch_id = sender["ClusterHead"]
 
-    if ch_id is None or ch_id == sender["NodeID"]:
-        print("Detiene en caso de no tener CH asignado o es el mismo nodo...")
+# # #     if ch_id is None or ch_id == sender["NodeID"]:
+# # #         print("Detiene en caso de no tener CH asignado o es el mismo nodo...")
+# # #         continue
+
+# # #     receiver = node_uw[ch_id - 1]  # CH
+# # #     # distancia = np.linalg.norm(sender["Position"] - receiver["Position"])
+# # #     # t_prop = propagation_time(distancia,sender["Position"],receiver["Position"])
+
+# # #     # # Simular propagación
+# # #     # time.sleep(t_prop)
+
+# # #     # # Registrar energía
+# # #     # energia_tx = calcular_energia_paquete("data", es_tx=True)
+# # #     # energia_rx = calcular_energia_paquete("data", es_tx=False)
+
+# # #     # print("energia_tx : ", energia_tx," energia_rx : ", energia_rx)
+
+# # #     # print(sender)
+# # #     # print(receiver)
+
+# # #     # Transmisión simulada
+# # #     data_str = f"{np.random.uniform(0, 30):.2f}°C"
+# # #     transmit_data(RUN_ID, "bbdd_keys_shared_sign_cipher.db", sender, receiver, str(data_str), E_schedule, source='SN', dest='CH')
+
+# # #     print("CH_id : ", ch_id)
+# # #     # Almacenar en buffer del CH
+# # #     # transmit_data("bbdd_keys_shared_sign_cipher.db", sender, receiver, str(data_str), E_schedule, role="CH", process='des')
+# # #     buffer_CH[ch_id - 1].append(data_str)
+# # #     completed_transmissions += 1
+
+# # #     # Verificar si CH debe transmitir al Sink
+# # #     tiempo_desde_ultimo_envio = time.time() - ultimo_envio_CH[ch_id - 1]
+
+# # #     if len(buffer_CH[ch_id - 1]) >= MAX_BUFFER or tiempo_desde_ultimo_envio >= AGGREGATION_TIMEOUT:
+# # #         print("Envia el CH al Sink...")
+# # #         ch_node = node_uw[ch_id - 1]
+# # #         # distancia_sink = np.linalg.norm(ch_node["Position"] - node_sink["Position"])
+# # #         # t_prop_sink = propagation_time(distancia_sink,ch_node["Position"], node_sink["Position"])
+# # #         # time.sleep(t_prop_sink)
+
+# # #         datos_agregados = "; ".join(buffer_CH[ch_id - 1])
+# # #         transmit_data(RUN_ID, "bbdd_keys_shared_sign_cipher.db", ch_node, node_sink, datos_agregados, E_schedule, source='CH', dest='Sink')
+
+# # #         buffer_CH[ch_id - 1] = []  # Vaciar buffer
+# # #         ultimo_envio_CH[ch_id - 1] = time.time()
+
+# # # summarize_per_node()
+# # # summarize_global()
+
+
+# # Nuevo modelo de envio y rececpci+on de datos basado en tiempo
+# # =========================
+# # Simulación por TIEMPO (evento discreto) con filtros de Sync+Auth
+# # =========================
+
+# def _is_tx_allowed(node) -> bool:
+#     # Solo transmiten nodos sincronizados y autenticados
+#     return bool(node.get("IsSynced")) and bool(node.get("Authenticated"))
+
+# # Parámetros de tiempo (simulados)
+# SIM_DURATION_S = 60            # duración total de la simulación (p.ej., 10 min)
+# MEAN_INTERVAL_SN_S = 30         # media del intervalo (exponencial) entre envíos por SN
+# JITTER_BOOTSTRAP_S = 5          # pequeño desfase inicial aleatorio
+
+# # Buffers por CH (clave: NodeID del CH) y reloj simulado
+# buffer_CH = {ch_id: [] for ch_id in CH}
+# ultimo_envio_CH = {ch_id: 0.0 for ch_id in CH}   # tiempo simulado, no wall-clock
+# sim_now = 0.0
+# sim_end = SIM_DURATION_S
+
+
+# print("buffer_CH", buffer_CH)
+# print("ultimo_envio_CH", ultimo_envio_CH)
+
+# # SN candidatos (tienen CH asignado y no son su propio CH)
+# sn_indices = [
+#     i for i, n in enumerate(node_uw)
+#     if n.get("ClusterHead") not in (None, n["NodeID"])
+# ]
+
+# # Agenda de próximos envíos por SN (tiempo simulado)
+# next_send_time = {}
+# for i in sn_indices:
+#     next_send_time[i] = sim_now + np.random.uniform(0, JITTER_BOOTSTRAP_S) + np.random.exponential(MEAN_INTERVAL_SN_S)
+
+# print("next_send_time : ", next_send_time)
+
+# MAX_EVENTS = 100000
+# events_processed = 0
+
+# while sim_now < sim_end and events_processed < MAX_EVENTS and len(next_send_time) > 0:
+#     # 1) Elegir el próximo evento (SN con menor 'next_send_time')
+#     i_next = min(next_send_time, key=lambda k: next_send_time[k])
+#     t_event = next_send_time[i_next]
+
+#     if t_event > sim_end:
+#         break
+
+#     sim_now = t_event
+
+#     sender = node_uw[i_next]
+#     ch_id = int(sender["ClusterHead"])
+#     print("ch_id", ch_id)
+#     ch_node = node_uw[ch_id - 1]   # acceso por índice en node_uw
+#     # print("ch_node", ch_node)
+
+#     # 2) Verificar permisos de transmisión (SN y su CH)
+#     sn_ok = _is_tx_allowed(sender)
+#     ch_ok = _is_tx_allowed(ch_node)
+
+#     # Si el SN no está listo (sync+auth) o su CH no está listo para recibir, solo reprogramamos ese SN
+#     if not (sn_ok and ch_ok):
+#         next_send_time[i_next] = sim_now + np.random.exponential(MEAN_INTERVAL_SN_S)
+#         events_processed += 1
+#         continue
+
+#     # 3) Ejecutar envío SN -> CH
+#     data_str = f"{np.random.uniform(0, 30):.2f}°C"
+#     print("El SN envia datos al CH...")
+#     transmit_data(
+#         RUN_ID, "bbdd_keys_shared_sign_cipher.db",
+#         sender, ch_node, str(data_str),
+#         E_schedule, source='SN', dest='CH'
+#     )
+
+#     # 4) Agregar al buffer del CH (clave: NodeID del CH)
+#     buffer_CH[ch_id-1].append(data_str)
+
+#     # 5) ¿El CH debe enviar al Sink por tamaño o timeout? CH debe estar sync+auth
+#     if _is_tx_allowed(ch_node) and (
+#         len(buffer_CH[ch_id-1]) >= MAX_BUFFER or (sim_now - ultimo_envio_CH[ch_id-1]) >= AGGREGATION_TIMEOUT
+#     ):
+#         print("El CH envia datos al Sink...")
+#         datos_agregados = "; ".join(buffer_CH[ch_id-1])
+#         transmit_data(
+#             RUN_ID, "bbdd_keys_shared_sign_cipher.db",
+#             ch_node, node_sink, datos_agregados,
+#             E_schedule, source='CH', dest='Sink'
+#         )
+#         buffer_CH[ch_id-1] = []
+#         ultimo_envio_CH[ch_id-1] = sim_now
+
+#     # 6) Reagendar el próximo envío de ese SN
+#     next_send_time[i_next] = sim_now + np.random.exponential(MEAN_INTERVAL_SN_S)
+#     events_processed += 1
+
+# # Revisar
+# # # Flush final: solo CH sync+auth envían lo que quede en buffer
+# # for ch_id in CH:
+# #     if buffer_CH[ch_id]:
+# #         ch_node = node_uw[ch_id - 1]
+# #         if _is_tx_allowed(ch_node):
+# #             datos_agregados = "; ".join(buffer_CH[ch_id])
+# #             print("El CH envia datos al Sink en caso de quedar pendientes...")
+# #             transmit_data(
+# #                 RUN_ID, "bbdd_keys_shared_sign_cipher.db",
+# #                 ch_node, node_sink, datos_agregados,
+# #                 E_schedule, source='CH', dest='Sink'
+# #             )
+# #         buffer_CH[ch_id] = []
+# #         ultimo_envio_CH[ch_id] = sim_now
+
+# # Resúmenes
+# summarize_per_node()
+# summarize_global()
+
+#%%
+## Otra forma de ejecutar la simulaión 
+# =========================
+# Parámetros de la simulación
+# =========================
+SEND_INTERVAL_S = 100           # intervalo fijo entre envíos SN -> CH
+SIM_DURATION_S   = 3600         # ej: simulo 1h y proyecto a 24h
+PROJECT_TO_24H   = True
+PROJECTION_REF_S = 24*3600
+PROJECTION_FACTOR = (PROJECTION_REF_S / SIM_DURATION_S) if PROJECT_TO_24H else 1.0
+
+JITTER_BOOTSTRAP_S = 5          # desfase inicial aleatorio pequeño
+MAX_BUFFER = 5
+AGGREGATION_TIMEOUT = 600       # todo en segundos de tiempo simulado
+
+def _is_tx_allowed(node) -> bool:
+    return bool(node.get("IsSynced")) and bool(node.get("Authenticated"))
+
+# Buffers por CH (clave: NodeID del CH) y reloj simulado
+buffer_CH = {ch_id: [] for ch_id in CH}
+ultimo_envio_CH = {ch_id: 0.0 for ch_id in CH}  # tiempo SIMULADO
+sim_now = 0.0
+sim_end = SIM_DURATION_S
+
+# SN elegibles (tienen CH asignado distinto a sí mismos)
+sn_indices = [
+    i for i, n in enumerate(node_uw)
+    if n.get("ClusterHead") not in (None, n["NodeID"])
+]
+
+# Agenda de próximos envíos (intervalo FIJO de 100s)
+next_send_time = {}
+for i in sn_indices:
+    next_send_time[i] = sim_now + np.random.uniform(0, JITTER_BOOTSTRAP_S)
+
+print("next_send_time : ", next_send_time)
+# time.sleep(10)
+
+MAX_EVENTS = 1_000_000
+events_processed = 0
+
+while sim_now < sim_end and events_processed < MAX_EVENTS and len(next_send_time) > 0:
+    # 1) próximo evento
+    i_next = min(next_send_time, key=lambda k: next_send_time[k])
+    t_event = next_send_time[i_next]
+    if t_event > sim_end:
+        break
+    sim_now = t_event
+
+    sender = node_uw[i_next]
+    ch_id = int(sender["ClusterHead"])
+    ch_node = node_uw[ch_id - 1]
+
+    # 2) filtro: solo SN y su CH si están sync + auth
+    if not (_is_tx_allowed(sender) and _is_tx_allowed(ch_node)):
+        # reprogramar este SN al siguiente intervalo
+        next_send_time[i_next] = sim_now + SEND_INTERVAL_S
+        events_processed += 1
         continue
 
-    receiver = node_uw[ch_id - 1]  # CH
-    # distancia = np.linalg.norm(sender["Position"] - receiver["Position"])
-    # t_prop = propagation_time(distancia,sender["Position"],receiver["Position"])
-
-    # # Simular propagación
-    # time.sleep(t_prop)
-
-    # # Registrar energía
-    # energia_tx = calcular_energia_paquete("data", es_tx=True)
-    # energia_rx = calcular_energia_paquete("data", es_tx=False)
-
-    # print("energia_tx : ", energia_tx," energia_rx : ", energia_rx)
-
-    # print(sender)
-    # print(receiver)
-
-    # Transmisión simulada
+    # 3) envío SN -> CH
+    print("El SN envia datos al CH...")
     data_str = f"{np.random.uniform(0, 30):.2f}°C"
-    transmit_data(RUN_ID, "bbdd_keys_shared_sign_cipher.db", sender, receiver, str(data_str), E_schedule, source='SN', dest='CH')
+    transmit_data(
+        RUN_ID, "bbdd_keys_shared_sign_cipher.db", node_uw,
+        sender, ch_node, str(data_str),
+        E_schedule, source='SN', dest='CH'
+    )
+    buffer_CH[ch_id-1].append(data_str)
 
-    print("CH_id : ", ch_id)
-    # Almacenar en buffer del CH
-    # transmit_data("bbdd_keys_shared_sign_cipher.db", sender, receiver, str(data_str), E_schedule, role="CH", process='des')
-    buffer_CH[ch_id - 1].append(data_str)
-    completed_transmissions += 1
+    # 4) ¿CH -> Sink? solo si CH sync+auth y toca por buffer/timeout
+    if _is_tx_allowed(ch_node) and (
+        len(buffer_CH[ch_id-1]) >= MAX_BUFFER or (sim_now - ultimo_envio_CH[ch_id-1]) >= AGGREGATION_TIMEOUT
+    ):
+        print("El CH envia datos al Sink...")
+        datos_agregados = "; ".join(buffer_CH[ch_id-1])
+        transmit_data(
+            RUN_ID, "bbdd_keys_shared_sign_cipher.db", node_uw,
+            ch_node, node_sink, datos_agregados,
+            E_schedule, source='CH', dest='Sink'
+        )
+        buffer_CH[ch_id-1] = []
+        ultimo_envio_CH[ch_id-1] = sim_now
 
-    # Verificar si CH debe transmitir al Sink
-    tiempo_desde_ultimo_envio = time.time() - ultimo_envio_CH[ch_id - 1]
+    # 5) reagendar el mismo SN al próximo intervalo fijo
+    next_send_time[i_next] = sim_now + SEND_INTERVAL_S
+    events_processed += 1
 
-    if len(buffer_CH[ch_id - 1]) >= MAX_BUFFER or tiempo_desde_ultimo_envio >= AGGREGATION_TIMEOUT:
-        print("Envia el CH al Sink...")
-        ch_node = node_uw[ch_id - 1]
-        # distancia_sink = np.linalg.norm(ch_node["Position"] - node_sink["Position"])
-        # t_prop_sink = propagation_time(distancia_sink,ch_node["Position"], node_sink["Position"])
-        # time.sleep(t_prop_sink)
+# # 6) flush final (lo que quede en buffers), solo CH sync+auth
+# for ch_id in CH:
+#     if buffer_CH[ch_id]:
+#         ch_node = node_uw[ch_id - 1]
+#         if _is_tx_allowed(ch_node):
+#             datos_agregados = "; ".join(buffer_CH[ch_id])
+#             transmit_data(
+#                 RUN_ID, "bbdd_keys_shared_sign_cipher.db", node_uw,
+#                 ch_node, node_sink, datos_agregados,
+#                 E_schedule, source='CH', dest='Sink'
+#             )
+#         buffer_CH[ch_id] = []
+#         ultimo_envio_CH[ch_id] = sim_now
 
-        datos_agregados = "; ".join(buffer_CH[ch_id - 1])
-        transmit_data(RUN_ID, "bbdd_keys_shared_sign_cipher.db", ch_node, node_sink, datos_agregados, E_schedule, source='CH', dest='Sink')
-
-        buffer_CH[ch_id - 1] = []  # Vaciar buffer
-        ultimo_envio_CH[ch_id - 1] = time.time()
-
+# Resumen y PROYECCIÓN
 summarize_per_node()
 summarize_global()
+
+print(f"\n--- Proyección a 24h ---")
+print(f"Ventana simulada: {SIM_DURATION_S/3600:.2f} h; factor F = {PROJECTION_FACTOR:.2f}")
+print("Multiplica: energía total, nº de paquetes y bits por F. Latencias por paquete NO se escalan.")
+
+#%%
 
 print("-")
 print ('FIN PROCESO DE TRANSMISIÓN DE DATOS CIFRADOS CON ASCON...')

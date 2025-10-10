@@ -1,7 +1,7 @@
 import sqlite3
 import random
 from transmission_logger import log_transmission_event
-from energia_dinamica import calcular_energia_paquete, energy_listen, energy_standby, calculate_timeout, update_energy_node_tdma, estimate_proc_time_s, update_energy_standby_others
+from energia_dinamica import calcular_energia_paquete, energy_listen, energy_standby, calculate_timeout, update_energy_node_tdma, estimate_proc_time_s, update_energy_standby_others, update_energy_failed_rx
 from per_from_link_uan import per_from_link, propagate_with_probability
 from transmission_logger_uan import log_event
 
@@ -530,7 +530,7 @@ def simulate_ack_response(sender_node, receiver_node, E_schedule, ack_size_bits=
     }
 
 
-def transmit_data(RUN_ID, db_path, sender_node, receiver_node, plaintext, E_schedule,
+def transmit_data(RUN_ID, db_path, nodes, sender_node, receiver_node, plaintext, E_schedule,
                   source='SN', dest='CH', bitrate=9200):
     """
     Envío de DATA/AGG entre (SN->CH) y (CH->Sink) con:
@@ -578,11 +578,15 @@ def transmit_data(RUN_ID, db_path, sender_node, receiver_node, plaintext, E_sche
     t1 = time.perf_counter()
     t_enc_s = t1 - t0
 
+    print("Mensaje encriptado : ", encrypted_msg.hex(), " time : ", t_enc_s, "tamaño : ", len(encrypted_msg))
+
     # Nota: aquí solo medimos descifrado local para stats (RX real descifra después)
     t2 = time.perf_counter()
-    _ = decrypt_message(shared_key, encrypted_msg)
+    desencrypted_msg = decrypt_message(shared_key, encrypted_msg)
     t3 = time.perf_counter()
     t_dec_s = t3 - t2
+
+    print("Mensaje desencriptado : ", desencrypted_msg, " time : ", t_dec_s, len(desencrypted_msg))
 
     # 4) Geometría + tiempos físicos
     start_pos = np.array(sender_node["Position"])
@@ -621,8 +625,12 @@ def transmit_data(RUN_ID, db_path, sender_node, receiver_node, plaintext, E_sche
         bitrate=bitrate, freq_khz=20,
         lat_prop_ms=t_prop_s*1000.0, lat_tx_ms=t_tx_s*1000.0, lat_proc_ms=t_enc_s*1000.0,
         # lat_prop_ms=lat_prop_ms, lat_tx_ms=lat_tx_ms, lat_proc_ms=t_enc_s*1000.0,
-        snr_db=snr_db, per=per_link, lat_dag_ms=0.0
+        snr_db=snr_db, per=per_link, lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
     )
+
+    # Se actualiza la energia de los demas nodos
+    active_ids = [sender_id, receiver_id]
+    nodes = update_energy_standby_others(nodes, active_ids, timeout_s, verbose=True)
 
     # 8) Si el paquete llega: energía RX (receptor) + descifrado
     if success:
@@ -641,25 +649,40 @@ def transmit_data(RUN_ID, db_path, sender_node, receiver_node, plaintext, E_sche
             E_rx = e0_rx - float(receiver_node["ResidualEnergy"])
         else:
             E_rx = 0
+
+        # 9) Log RX (receptor) Solo consume energia en caso de recibir el paquete
+        log_event(
+            run_id=RUN_ID, phase="data", module="ascon", msg_type=f"DATA:{msg_type}:RX",
+            sender_id=sender_id, receiver_id=receiver_id, cluster_id=receiver_node.get("ClusterHead") if not(dest == 'Sink') else sender_node.get("ClusterHead"),
+            start_pos=start_pos, end_pos=end_pos,
+            bits_sent=bits_sent, bits_received=bits_rcv,
+            success=success, packet_lost=p_lost,
+            energy_event_type='rx', energy_j=E_rx,
+            residual_sender=sender_node["ResidualEnergy"], residual_receiver=0 if dest == 'Sink' else receiver_node["ResidualEnergy"],
+            bitrate=bitrate, freq_khz=20,
+            lat_prop_ms=t_prop_s*1000.0, lat_tx_ms=t_tx_s*1000.0, lat_proc_ms=t_proc_rx_s*1000.0,
+            snr_db=snr_db, per=per_link, lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
+        )
     else:
         # si se pierde, RX no consume por decodificación del paquete (mantén solo listen en update_energy_standby_others externo si quieres)
+        receiver_node = update_energy_failed_rx(receiver_node, start_pos, timeout_s, role=role_rx, verbose=True)
         E_rx = 0.0
         t_proc_rx_s = 0.0
 
 
-    # 9) Log RX (receptor)
-    log_event(
-        run_id=RUN_ID, phase="data", module="ascon", msg_type=f"DATA:{msg_type}:RX",
-        sender_id=sender_id, receiver_id=receiver_id, cluster_id=receiver_node.get("ClusterHead"),
-        start_pos=start_pos, end_pos=end_pos,
-        bits_sent=bits_sent, bits_received=bits_rcv,
-        success=success, packet_lost=p_lost,
-        energy_event_type='rx', energy_j=E_rx,
-        residual_sender=sender_node["ResidualEnergy"], residual_receiver=0 if dest == 'Sink' else receiver_node["ResidualEnergy"],
-        bitrate=bitrate, freq_khz=20,
-        lat_prop_ms=t_prop_s*1000.0, lat_tx_ms=t_tx_s*1000.0, lat_proc_ms=t_proc_rx_s*1000.0,
-        snr_db=snr_db, per=per_link, lat_dag_ms=0.0
-    )
+    # # 9) Log RX (receptor)
+    # log_event(
+    #     run_id=RUN_ID, phase="data", module="ascon", msg_type=f"DATA:{msg_type}:RX",
+    #     sender_id=sender_id, receiver_id=receiver_id, cluster_id=receiver_node.get("ClusterHead"),
+    #     start_pos=start_pos, end_pos=end_pos,
+    #     bits_sent=bits_sent, bits_received=bits_rcv,
+    #     success=success, packet_lost=p_lost,
+    #     energy_event_type='rx', energy_j=E_rx,
+    #     residual_sender=sender_node["ResidualEnergy"], residual_receiver=0 if dest == 'Sink' else receiver_node["ResidualEnergy"],
+    #     bitrate=bitrate, freq_khz=20,
+    #     lat_prop_ms=t_prop_s*1000.0, lat_tx_ms=t_tx_s*1000.0, lat_proc_ms=t_proc_rx_s*1000.0,
+    #     snr_db=snr_db, per=per_link, lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
+    # )
 
     # # 10) ACK hop (usa tu simulador; ya hace logging con log_transmission_event, pero mantenemos consistencia)
     # ack = simulate_ack_response(sender_node, receiver_node, E_schedule, ack_size_bits=48, bitrate=bitrate,
