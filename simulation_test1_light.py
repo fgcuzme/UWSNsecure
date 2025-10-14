@@ -387,7 +387,7 @@ for i in range(rondas):
     node_sink["PrivateKey_sign"]
 
     timestart = time.time() # inicio de la creación de tx genesis
-    txgenesis = create_gen_block(node_sink["NodeID"], node_sink["PrivateKey_sign"])
+    txgenesis = create_gen_block(RUN_ID, node_sink["NodeID"], node_sink["PrivateKey_sign"])
     time_createTX = time.time() - timestart
 
     # Se comenta 08/10/2025
