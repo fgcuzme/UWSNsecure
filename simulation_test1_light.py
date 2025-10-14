@@ -395,7 +395,7 @@ for i in range(rondas):
     # node_sink['Transactions'].append(txgenesis) # Agrega la Tx genesis a la lsita de Transactions
     # Nuevas lineas
     # Ingerir en el propio sink (autor de la génesis) y dejarla como tip
-    ingest_tx(node_sink, txgenesis, add_as_tip=True)
+    ingest_tx(RUN_ID, node_sink, txgenesis, add_as_tip=True)
 
     # (opcional) LRU simple para no crecer sin límite
     node_sink["Tips"] = node_sink["Tips"][-128:]
@@ -498,6 +498,10 @@ for i in range(rondas):
 
 # save_stats_tx('stats_tx.csv', stats_tx)
 # print('Las estadisticas se almacenaron...')
+
+# al FINAL de la simulación
+from tangle_logger_light import flush_all
+flush_all()
 
 print("FIN PROCESO DE AUTENTICACIÓN BASADO EN TX")
 # ####

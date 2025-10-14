@@ -1,5 +1,5 @@
 # from tangle2_light import verify_transaction_signature, create_auth_response_tx
-from tangle2_light import verify_transaction_signature, create_auth_response_tx, update_transactions, delete_transaction, ingest_tx
+from tangle2_light import verify_transaction_signature, create_auth_response_tx, update_transactions, delete_transaction, ingest_tx, validate_rx_tx_and_log
 from bbdd2_sqlite3 import load_keys_shared_withou_cipher, load_keys_sign_withou_cipher
 from path_loss import propagation_time1
 import numpy as np
@@ -190,7 +190,9 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
                         
                         # Ch_node['Tips'].append(genesis_tx['ID'])    # Se guarda la Tx genesis en el CH; se comemta 08/10/2025
                         # agrega nueva linea 08/10/2025
-                        ingest_tx(Ch_node, genesis_tx, add_as_tip=True)
+                        ingest_tx(RUN_ID, Ch_node, genesis_tx, add_as_tip=True)
+                        # rx_ok te dice si supera antireplay; ya estás verificando firma aparte.
+                        rx_ok = validate_rx_tx_and_log(RUN_ID, Ch_node, genesis_tx, phase="auth", module="tangle")
 
                         ack_received_CHtoSink = False  # aún no confirmado
 
@@ -428,7 +430,10 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                             # node1['Tips'].append(genesis_tx['ID'])   # El nodo agrega la Tx genesis propagada por el CH; se comenta esta liena 08/10/2025
 
                             # Se agrega esta linea 08/10/2025
-                            ingest_tx(node1, genesis_tx, add_as_tip=True)
+                            ingest_tx(RUN_ID, node1, genesis_tx, add_as_tip=True)
+                            # rx_ok te dice si supera antireplay; ya estás verificando firma aparte.
+                            rx_ok = validate_rx_tx_and_log(RUN_ID, node1, genesis_tx, phase="auth", module="tangle")
+
 
                             # calular el per
                             per_sn_gen_ack, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=48, bitrate=9200)
@@ -769,7 +774,10 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                     # sink1['Tips'].append(auth_response_tx1['ID'])
                     ## Se comento toda esta parte 14/10/2025
                     # ingest_tx(sink1, auth_response_tx_sink, add_as_tip=True)
-                    ingest_tx(sink1, auth_response_tx1, add_as_tip=True)
+                    ingest_tx(RUN_ID, sink1, auth_response_tx1, add_as_tip=True)
+                    # rx_ok te dice si supera antireplay; ya estás verificando firma aparte.
+                    rx_ok = validate_rx_tx_and_log(RUN_ID, sink1, auth_response_tx1, phase="auth", module="tangle")
+                    
 
                     # Cuando hace la verificación de la Tx el sink puede indicar que el CH esta autenticado, en su registro
                     # Le restamos uno al Id_nodeCH porque accede por lista en ese orden.
@@ -927,7 +935,10 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                             # Se actualiza el ID del tip en el nodo, se comenta esta linea 08/10/2025
                             # node2['Tips'].append(auth_response_tx1['ID']) # corregido
                             # Por esta nueva 08/10/2025
-                            ingest_tx(node2, auth_response_tx1, add_as_tip=True)
+                            ingest_tx(RUN_ID, node2, auth_response_tx1, add_as_tip=True)
+                            # rx_ok te dice si supera antireplay; ya estás verificando firma aparte.
+                            rx_ok = validate_rx_tx_and_log(RUN_ID, node2, auth_response_tx1, phase="auth", module="tangle")
+                    
 
                             # break
                             while retries_SNtoCH < max_retries and not ack_received_sntoch:
@@ -1185,7 +1196,10 @@ def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retrie
                             update_transactions(node4, node_auth_tx)    # corregido
 
                             # Por esta nueva 0814/10/2025
-                            ingest_tx(node_ch, node_auth_tx, add_as_tip=True)
+                            ingest_tx(RUN_ID, node_ch, node_auth_tx, add_as_tip=True)
+                            # rx_ok te dice si supera antireplay; ya estás verificando firma aparte.
+                            rx_ok = validate_rx_tx_and_log(RUN_ID, node_ch, node_auth_tx, phase="auth", module="tangle")
+                    
 
                             index_node = diccionary_nodes.get(node4['NodeID'], -1)
                             if index_node != -1:

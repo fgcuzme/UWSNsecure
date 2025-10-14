@@ -7,6 +7,8 @@ import json, hashlib, os
 import numpy as np
 from collections import deque
 from tangle_logger_light import log_tangle_event, MsTimer
+# import msgpack
+
 
 _TTL_tx = float(120.0)          # rango 120-300s -> 2–5 × (t_propagación_max + colas)
 _TTL_windows = float(300.0)     # rango 300-420s -> TTL + margen
@@ -53,6 +55,7 @@ def _canonical_bytes_for_sig(tx_dict: dict) -> bytes:
     }
     view_norm = _to_builtin(view)
     return json.dumps(view_norm, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    # return msgpack.packb(view_norm, use_bin_type=True)
 
 # # Se cambia por la función siguiente
 # # Función para verificar la firma de una transacción
@@ -294,7 +297,7 @@ def create_transaction(RUN_ID, node_id, payload, transaction_type, approvedtips,
         "Source": int(node_id),                     # Nodo que genera la transacción -> 2 bytes -> si son menos de 255 nodos puede ser un byte
         "Type": str(transaction_type),              # Tipo de transacción: 'Data', 'Sync', etc. -> 1 bytes
         "Payload": str(payload),                    # Datos a transmitir -> 32-64 bytes
-        "ApprovedTx": [str(t) for t in approvedtips],        # Lista de transacciones aprobadas por esta transacción -> 64 bytes
+        "ApprovedTx": [str(t) for t in approvedtips],  # Lista de transacciones aprobadas por esta transacción -> 64 bytes
         # "Weight": 1.0,                            # Peso inicial de la transacción -> Eliminar
         # "TipSelectionCount": 0,                   # Contador de veces seleccionada como tip -> Eliminar
         "TTL": _TTL_tx,
@@ -403,45 +406,24 @@ def create_gen_block(RUN_ID, sink_id, private_key):
 def create_auth_response_tx(RUN_ID, node_ch1):
     _ensure_dag_state(node_ch1)
 
-    # al seleccionar tips
-    tips_before = len(node_ch1["Tips"])
-    with MsTimer() as t_sel:
-        approved_tips1 = select_valid_tips(node_ch1, num_tips=2, check_nonce=True, check_fresh=True)
-
-    log_tangle_event(
-        run_id=RUN_ID, phase="auth", module="tangle", op="tips_select",
-        node_id=node_ch1["NodeID"],
-        tips_before=tips_before, tips_after=tips_before, approved_count=len(approved_tips1),
-        t_tips_sel=t_sel.ms
-    )
-    # al seleccionar tips
+    approved_tips1 = select_valid_tips(RUN_ID,node_ch1, num_tips=2, check_nonce=True, check_fresh=True)
 
     payload = f'{int(node_ch1["NodeID"])};{int(node_ch1["Id_pair_keys_sign"])};{int(node_ch1["Id_pair_keys_shared"])}'
     new_tx = create_transaction(RUN_ID, int(node_ch1['NodeID']), payload, 'AUTH:RESP', approved_tips1, node_ch1['PrivateKey_sign'])
 
-    # al almacenar tip / indexar tx
-    with MsTimer() as t_store:
-        # mover tips aprobados a ApprovedTransactions
-        node_ch1["Tips"] = _to_id_list(node_ch1["Tips"])
-        node_ch1.setdefault("ApprovedTransactions", [])
-        node_ch1["ApprovedTransactions"] = _to_id_list(node_ch1["ApprovedTransactions"])
-        for tip in approved_tips1:
-            if tip in node_ch1["Tips"]:
-                node_ch1["Tips"].remove(tip)
-            if tip not in node_ch1["ApprovedTransactions"]:
-                node_ch1["ApprovedTransactions"].append(tip)
+    # mover tips aprobados a ApprovedTransactions
+    node_ch1["Tips"] = _to_id_list(node_ch1["Tips"])
+    node_ch1.setdefault("ApprovedTransactions", [])
+    node_ch1["ApprovedTransactions"] = _to_id_list(node_ch1["ApprovedTransactions"])
+    for tip in approved_tips1:
+        if tip in node_ch1["Tips"]:
+            node_ch1["Tips"].remove(tip)
+        if tip not in node_ch1["ApprovedTransactions"]:
+            node_ch1["ApprovedTransactions"].append(tip)
 
-        node_ch1["Transactions"].append(new_tx)
-        node_ch1["Tips"].append(new_tx["ID"])
-        node_ch1["_tx_index"][new_tx["ID"]] = new_tx
-    
-    log_tangle_event(
-        run_id=RUN_ID, phase="auth", module="tangle", op="tips_store",
-        node_id=node_ch1["NodeID"], tx_id=new_tx["ID"], tx_type=new_tx.get("Type"),
-        tips_before=tips_before, tips_after=len(node_ch1["Tips"]), approved_count=len(new_tx.get("ApprovedTx", [])),
-        t_tips_store=t_store.ms, t_idx_upd=t_store.ms
-    )
-    # al almacenar tip / indexar tx
+    node_ch1["Transactions"].append(new_tx)
+    node_ch1["Tips"].append(new_tx["ID"])
+    node_ch1["_tx_index"][new_tx["ID"]] = new_tx
 
     return new_tx
 
@@ -604,33 +586,87 @@ def _is_fresh_tx(tx, now=None):
     ts, ttl = float(tx.get("Timestamp", 0.0)), float(tx.get("TTL", 0.0))
     return ttl > 0 and (now >= ts) and (now <= ts + ttl)
 
-def select_valid_tips(node, num_tips=2, check_nonce=True, check_fresh=True):
+def select_valid_tips(RUN_ID, node, num_tips=2, check_nonce=True, check_fresh=True):
     _ensure_dag_state(node)
     if not node["_tx_index"]: _rebuild_tx_index(node)
-    valid = []
-    for tid in _to_id_list(node["Tips"]):
-        tx = node["_tx_index"].get(tid)
-        if not tx: continue
-        if check_fresh and not _is_fresh_tx(tx): continue
-        if check_nonce:
-            nonce = str(tx.get("Nonce", ""))
-            # namespace TIPSEL para no colisionar con RX
-            if not nonce or _nonce_seen(node, f"TIPSEL:{nonce}"):
-                continue
-        valid.append(tid)
+
+    tips_before = len(node["Tips"])
+    with MsTimer() as t_sel:
+        valid = []
+
+        for tid in _to_id_list(node["Tips"]):
+            tx = node["_tx_index"].get(tid)
+            if not tx: continue
+            if check_fresh and not _is_fresh_tx(tx): continue
+            if check_nonce:
+                nonce = str(tx.get("Nonce", ""))
+                # namespace TIPSEL para no colisionar con RX
+                if not nonce or _nonce_seen(node, f"TIPSEL:{nonce}"):
+                    continue
+            valid.append(tid)
+    
+    # logging (una sola fila por selección; guardamos agregados básicos)
+    if RUN_ID is not None:
+        log_tangle_event(
+            run_id=RUN_ID, phase="auth", module="tangle", op="tips_select",
+            node_id=node.get("NodeID"),
+            tips_before=tips_before, tips_after=tips_before, approved_count=len(valid),
+            t_tips_sel=t_sel.ms
+        )
+
     if len(valid) <= num_tips: return valid[:]
     return random.sample(valid, num_tips)
 
 
 # tangle2_light.py
 # Este helper deja la TX materializada en el nodo y actualiza _tx_index. Así select_valid_tips(...) funciona.
-def ingest_tx(node, tx: dict, add_as_tip: bool = True):
+def ingest_tx(RUN_ID,node, tx: dict, add_as_tip: bool = True):
     _ensure_dag_state(node)
     txid = str(tx["ID"])
-    # de-dup en Transactions
-    if txid not in node.get("_tx_index", {}):
-        node["Transactions"].append(tx)
-        node["_tx_index"][txid] = tx
-    # meter como tip (si no está caduca) para que luego pueda ser aprobada
-    if add_as_tip and txid not in node["Tips"]:
-        node["Tips"].append(txid)
+    tips_before = len(node["Tips"])
+
+    with MsTimer() as t_store:
+        # de-dup en Transactions
+        if txid not in node.get("_tx_index", {}):
+            node["Transactions"].append(tx)
+            node["_tx_index"][txid] = tx
+        # meter como tip (si no está caduca) para que luego pueda ser aprobada
+        if add_as_tip and txid not in node["Tips"]:
+            node["Tips"].append(txid)
+
+    log_tangle_event(
+        run_id=RUN_ID, phase="auth", module="tangle", op="tips_store",
+        node_id=node.get("NodeID"), tx_id=txid, tx_type=tx.get("Type"),
+        tips_before=tips_before, tips_after=len(node["Tips"]),
+        approved_count=len(tx.get("ApprovedTx", [])),
+        t_tips_store=t_store.ms, t_idx_upd=t_store.ms
+    )
+
+
+# === RX: validar y loggear Nonce/TS/Replay ===
+def validate_rx_tx_and_log(RUN_ID, node, tx, phase="auth", module="tangle"):
+    _ensure_dag_state(node)
+    now = time.time()
+
+    with MsTimer() as t_nonce:
+        nonce = str(tx.get("Nonce", ""))
+        # Namespacing para RX (no colisiona con TIPSEL)
+        if not nonce:
+            nonce_ok = False
+        else:
+            nonce_ok = not _nonce_seen(node, f"RX:{nonce}", now=now)
+
+    with MsTimer() as t_ts:
+        ts_ok = _is_fresh_tx(tx, now=now)
+
+    with MsTimer() as t_replay:
+        replay_ok = (nonce_ok and ts_ok)
+
+    log_tangle_event(
+        run_id=RUN_ID, phase=phase, module=module, op="rx_checks",
+        node_id=node.get("NodeID"), tx_id=tx.get("ID"), tx_type=tx.get("Type"),
+        t_nonce_chk=t_nonce.ms, t_ts_chk=t_ts.ms, t_replay_chk=t_replay.ms,
+        nonce_ok=nonce_ok, ts_ok=ts_ok, replay_ok=replay_ok,
+        tx_bytes=len(str(tx).encode("utf-8"))
+    )
+    return replay_ok
