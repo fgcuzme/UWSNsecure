@@ -19,14 +19,22 @@ _MEAN = {
     "keygen_ed25519_s":  0.00255359,   # Ed25519 keygen
     "ecdh_x25519_s":     0.00052116,   # X25519 ECDH shared
     # Si mediste HKDF en esta misma campaña, reemplaza:
-    "hkdf_s":            0.00022278    # <- de tu tabla anterior (ajusta si tienes el nuevo)
+    "hkdf_s":            0.00022278,    # <- de tu tabla anterior (ajusta si tienes el nuevo)
+
+    # Cambiar
+    "encrypt_s":         0.00031245,    # tiempo medio de cifrado en segundos
+    "descrypt_s":        0.00029812     # tiempo medio de descifrado en segundos
 }
+
 _MEDIAN = {
     "sign_s":            0.00045049,
     "verify_s":          0.00063753,
     "keygen_ed25519_s":  0.00264311,
     "ecdh_x25519_s":     0.00049949,
-    "hkdf_s":            0.00021732
+    "hkdf_s":            0.00021732,
+    # cambiar
+    "encrypt_s":         0.00030567, 
+    "descrypt_s":        0.00029044
 }
 
 OPS_TIME = (_MEDIAN if PROC_BASE == "median" else _MEAN).copy()
@@ -52,6 +60,8 @@ def estimate_proc_time_s(*, bits:int=0, do_enc=False, do_dec=False, do_hash=Fals
     if do_hkdf:   t += o.get("hkdf_s",   OPS_TIME["hkdf_s"])
     # si modelas DAG/tips como coste lógico (no cripto pura):
     if do_tips:   t += o.get("tips_s", 0.003)
+    if do_enc:   t += o.get("encrypt_s",   OPS_TIME["encrypt_s"])
+    if do_dec:   t += o.get("descrypt_s",   OPS_TIME["descrypt_s"])
     # si más adelante se añade ASCON medido, puedes sumar aquí enc/dec/hash
     return t
 ####
@@ -99,7 +109,7 @@ def consumo_tx_por_distancia_suavizado(distance_m: float) -> float:
     elif distance_m <= 6000:
         return p_tx_approx_W3000(distance_m)
     else:
-        print("Distance not considered")
+        raise ValueError(f"Distancia fuera de rango: {distance_m} m")
 ##
 
 def calcular_energia_paquete(tipo_paquete, distance_m, es_tx=True):
@@ -122,11 +132,11 @@ def calcular_energia_paquete(tipo_paquete, distance_m, es_tx=True):
 
     # Tamaños típicos
     tamanos = {
-        "sync": 6 * 8,      # 6 Bytes
-        "tx": 200 * 8,      # 200 Bytes
-        "data": 71 * 8,     # 71 Bytes
-        "agg": 520 * 8,     # 520 Bytes
-        "ack": 6 * 8        # 6 Bytes
+        "sync": 7 * 8,      # 7 Bytes
+        "tx": 185 * 8,      # 185 Bytes
+        "data": 48 * 8,     # 48 Bytes
+        "agg": 201 * 8,     # 201 Bytes
+        "ack": 7 * 8        # 7 Bytes
     }
 
     if tipo_paquete not in tamanos:
@@ -158,6 +168,8 @@ def obtener_tipo_paquete(mensaje):
         return "data"
     elif "AGGREGATED" in mensaje or "agg" in mensaje.lower():
         return "agg"
+    elif "ACK" in mensaje or "ack" in mensaje.lower():
+        return "ack"
     else:
         return "none"  # Por defecto sin definición
 
@@ -170,7 +182,7 @@ def obtener_tipo_paquete(mensaje):
 # Margen 20 - 30% del tiempo estimado
 ## “Se aplica un margen del 30% sobre la suma de propagación, transmisión y procesamiento, para cubrir variabilidad ambiental, jitter de hardware y efectos Doppler en entornos submarinos.”
 
-def calculate_timeout(sink_pos, ch_pos, bitrate=9200, packet_size=48, proc_time_s=None):
+def calculate_timeout(sink_pos, ch_pos, bitrate=9200, packet_size=72, proc_time_s=None):
     # # Calcular distancia máxima al CH más lejano
     dist = np.linalg.norm(sink_pos - ch_pos)    # se debe comentar 10/09/2025
     # t_prop = dist / 1500  # Velocidad del sonido ≈ 1500 m/s

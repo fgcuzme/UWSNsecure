@@ -60,7 +60,7 @@ freq = 20  # Ajusta la frecuencia según el entorno de la red subacuática
 
 # Configuración del modelo de energía basado en el artículo de Yang
 # L = 2000  # Tamaño del paquete de datos (bits)
-size_packet_control = 48  # Tamaño del paquete de control (bits)
+size_packet_control = 72  # Tamaño del paquete de control (bits)
 EDA = 5 * 10**-9  # Energía para la agregación de datos (Joules/bit)
 E_schedule = 5 * 10**-9  # Energía de programación (Joules/bit) # Joules/bit = 5 nJ/bit
 # P_r = 1 * 10**-3  # Potencia de recepción (Joules/bit)
@@ -818,12 +818,14 @@ while sim_now < sim_end and events_processed < MAX_EVENTS and len(next_send_time
 
     # 3) envío SN -> CH
     print("El SN envia datos al CH...")
-    data_str = f"{np.random.uniform(0, 30):.2f}°C"
-    transmit_data(
+    data_str = f"{np.random.uniform(0, 30):.3f}"
+    encrypted_msg = transmit_data(
         RUN_ID, "bbdd_keys_shared_sign_cipher.db", node_uw,
         sender, ch_node, str(data_str),
         E_schedule, source='SN', dest='CH'
     )
+    # encrypted_str = encrypted_msg.hex()
+    # buffer_CH[ch_id-1].append(encrypted_str)
     buffer_CH[ch_id-1].append(data_str)
 
     # 4) ¿CH -> Sink? solo si CH sync+auth y toca por buffer/timeout

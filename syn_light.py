@@ -74,13 +74,13 @@ def propagate_syn_to_CH_tdma(RUN_ID, sink, CH_ids, node_uw, max_retries=3, timeo
             
             # time.sleep(delay)  # Simular el tiempo de sincronización
             # Calcular el timeout de espera, se calcula el tiempo de procesamiento empirico 0.01 - 0.05 s
-            lat_prop, lat_tx, lat_proc, timeout_sinktoch = calculate_timeout(start_position, end_position, bitrate=9200, packet_size=48)
+            lat_prop, lat_tx, lat_proc, timeout_sinktoch = calculate_timeout(start_position, end_position, bitrate=9200, packet_size=72)
             
             # calular el per
-            per_sink_ch, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=48, bitrate=9200)
+            per_sink_ch, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=72, bitrate=9200)
             success_syn = propagate_with_probability(per=per_sink_ch, override_per=PER_VARIABLE)
             p_lost_syn = not success_syn
-            bits_received_syn = 48 if success_syn else 0
+            bits_received_syn = 72 if success_syn else 0
 
             # DEscuenta energía de los demas nodos
             # Los nodos consumen cuando no estan transmitiendo.
@@ -106,14 +106,14 @@ def propagate_syn_to_CH_tdma(RUN_ID, sink, CH_ids, node_uw, max_retries=3, timeo
                     run_id=RUN_ID, phase="sync", module="syn_light", msg_type="SYN:TDMA",
                     sender_id=sink["NodeID"], receiver_id=node_uw[ch]["NodeID"], cluster_id=node_uw[ch]["ClusterHead"],
                     start_pos=start_position, end_pos=end_position,
-                    bits_sent=48, bits_received=bits_received_syn,
+                    bits_sent=72, bits_received=bits_received_syn,
                     success=success_syn, packet_lost=p_lost_syn, 
                     energy_event_type='rx', energy_j=energy_consumed_ch_rx,
                     residual_sender=None, residual_receiver=node_uw[ch]["ResidualEnergy"],
                     bitrate=9200, freq_khz=20,
                     lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=lat_proc,
                     snr_db=snr_db, per=per_sink_ch,
-                    lat_dag_ms=0.0
+                    lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
                     )
                 
                 retries_ChtoSink = 0
@@ -123,10 +123,10 @@ def propagate_syn_to_CH_tdma(RUN_ID, sink, CH_ids, node_uw, max_retries=3, timeo
                     initial_energy_tx = node_uw[ch]["ResidualEnergy"]
 
                     # calular el per
-                    per_ack_ch_sink, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=48, bitrate=9200)                
+                    per_ack_ch_sink, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=72, bitrate=9200)                
                     success_ack = propagate_with_probability(per=per_ack_ch_sink, override_per=PER_VARIABLE)
                     p_lost_ack = not success_ack
-                    bits_received_ack = 48 if success_ack else 0
+                    bits_received_ack = 72 if success_ack else 0
                     
                     # Actualiza energía de la tx de la confirmación (ACK)
                     node_uw[ch] = update_energy_node_tdma(node_uw[ch], sink["Position"], E_schedule, timeout_sinktoch, type_packet, role='CH', action='tx', verbose=True)
@@ -140,14 +140,14 @@ def propagate_syn_to_CH_tdma(RUN_ID, sink, CH_ids, node_uw, max_retries=3, timeo
                             run_id=RUN_ID, phase="sync", module="syn_light", msg_type="SYN:TDMA:ACK",
                             sender_id=node_uw[ch]["NodeID"], receiver_id=sink["NodeID"], cluster_id=node_uw[ch]["ClusterHead"],
                             start_pos=start_position, end_pos=end_position,
-                            bits_sent=48, bits_received=bits_received_ack,
+                            bits_sent=72, bits_received=bits_received_ack,
                             success=success_ack, packet_lost=p_lost_ack, 
                             energy_event_type='tx', energy_j=energy_consumed_ch_tx,
                             residual_sender=node_uw[ch]["ResidualEnergy"], residual_receiver=None,
                             bitrate=9200, freq_khz=20,
                             lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=lat_proc,
                             snr_db=snr_db, per=per_ack_ch_sink,
-                            lat_dag_ms=0.0
+                            lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
                         )
                     
                     # Los nodos consumen cuando no estan transmitiendo.
@@ -225,14 +225,14 @@ def synchronize_nodes_tdma(RUN_ID, CH_id, syn_packet, node_uw, max_retries_senso
             # time.sleep(delay)  # Simular el tiempo de sincronización
 
             # PER desde CH al nodo
-            per_ch_sn, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=48, bitrate=9200)
+            per_ch_sn, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=72, bitrate=9200)
             # succesks_rx = np.random.rand() > 0.3
             success_tx = propagate_with_probability(per=per_ch_sn, override_per=PER_VARIABLE)
             p_lost_tx = not success_tx
-            bits_received = 48 if success_tx else 0
+            bits_received = 72 if success_tx else 0
 
             # Calcular el timeout de espera
-            lat_prop, lat_tx, lat_proc, timeout_chtosn = calculate_timeout(node_uw[CH_id]["Position"], node["Position"], bitrate=9200, packet_size=48)
+            lat_prop, lat_tx, lat_proc, timeout_chtosn = calculate_timeout(node_uw[CH_id]["Position"], node["Position"], bitrate=9200, packet_size=72)
 
             # CH transmite el paquete de sincronización
             initial_energy_ch_tx = node_uw[CH_id]["ResidualEnergy"] 
@@ -243,14 +243,14 @@ def synchronize_nodes_tdma(RUN_ID, CH_id, syn_packet, node_uw, max_retries_senso
                 run_id=RUN_ID, phase="sync", module="syn_light", msg_type="SYN:TDMA",
                 sender_id=node_uw[CH_id]["NodeID"], receiver_id=node["NodeID"], cluster_id=node["ClusterHead"],
                 start_pos=start_position, end_pos=end_position,
-                bits_sent=48, bits_received=bits_received,
+                bits_sent=72, bits_received=bits_received,
                 success=success_tx, packet_lost=p_lost_tx, 
                 energy_event_type='tx', energy_j=energy_consumed_ch_tx,
                 residual_sender=node_uw[CH_id]["ResidualEnergy"], residual_receiver=node["ResidualEnergy"],
                 bitrate=9200, freq_khz=20,
                 lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=lat_proc,
                 snr_db=snr_db, per=per_ch_sn,
-                lat_dag_ms=0.0
+                lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
                 )
             
             # Los nodos consumen cuando no estan transmitiendo.
@@ -269,22 +269,22 @@ def synchronize_nodes_tdma(RUN_ID, CH_id, syn_packet, node_uw, max_retries_senso
                     run_id=RUN_ID, phase="sync", module="syn_light", msg_type="SYN:TDMA",
                     sender_id=node_uw[CH_id]["NodeID"], receiver_id=node["NodeID"], cluster_id=node["ClusterHead"],
                     start_pos=start_position, end_pos=end_position,
-                    bits_sent=48, bits_received=bits_received,
+                    bits_sent=72, bits_received=bits_received,
                     success=success_tx, packet_lost=p_lost_tx, 
                     energy_event_type='rx', energy_j=energy_consumed_sn_rx,
                     residual_sender=node_uw[CH_id]["ResidualEnergy"], residual_receiver=node["ResidualEnergy"],
                     bitrate=9200, freq_khz=20,
                     lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=lat_proc,
                     snr_db=snr_db, per=per_ch_sn,
-                    lat_dag_ms=0.0
+                    lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
                 )
 
                 while ack_retries < max_retries_sensor and not ack_received_node:
                     # Nodo responde con ACK (también puede fallar)
-                    per_sn_ch, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=48, bitrate=9200)
+                    per_sn_ch, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=72, bitrate=9200)
                     success_ack = propagate_with_probability(per=per_sn_ch, override_per=PER_VARIABLE)
                     p_lost_ack = not success_ack
-                    bits_sent_ack = 48
+                    bits_sent_ack = 72
 
                     initial_energy_sn_tx = node["ResidualEnergy"]
                     node = update_energy_node_tdma(node, node_uw[CH_id]["Position"], E_schedule, timeout_chtosn, type_packet, role='SN', action='tx', verbose=True)
@@ -301,7 +301,7 @@ def synchronize_nodes_tdma(RUN_ID, CH_id, syn_packet, node_uw, max_retries_senso
                         bitrate=9200, freq_khz=20,
                         lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=lat_proc,
                         snr_db=snr_db, per=per_sn_ch,
-                        lat_dag_ms=0.0
+                        lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
                     )
 
                     # Los nodos consumen cuando no estan transmitiendo.
@@ -329,7 +329,7 @@ def synchronize_nodes_tdma(RUN_ID, CH_id, syn_packet, node_uw, max_retries_senso
                             bitrate=9200, freq_khz=20,
                             lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=lat_proc,
                             snr_db=snr_db, per=per_sn_ch,
-                            lat_dag_ms=0.0
+                            lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
                         )
                         
                         # Registrar el nodo como sincronizado en el CH
@@ -431,7 +431,7 @@ def update_energy_node_cdma(node, target_pos, packet_size_bits, alpha, P_r, freq
 
 # Función para propagar el paquete SYN y actualizar la energía de los nodos bajo CDMA
 def propagate_syn_to_CH_cdma(sink, CH_ids, node_uw, max_retries=3, timeout=2, freq=20, processing_energy_cdma=5e-9, packet_size_bits=100,alpha=1e-6, Ptr=1e-3, E_listen=1e-9, E_standby=1e-12):
-    timestamp = time.time()  # Marca de tiempo actual en segundos
+    timestamp = time.perf_counter()  # Marca de tiempo actual en segundos
     syn_packet = create_syn_packet(sink["NodeID"])
 
     # # Parámetros de energía enviados, para ser enviados a los nodos del cluster
@@ -455,7 +455,7 @@ def propagate_syn_to_CH_cdma(sink, CH_ids, node_uw, max_retries=3, timeout=2, fr
         retries = 0
         ack_received_CH = False
         # Estadistica
-        start_time = time.time()  # Tiempo de inicio de la sincronización
+        start_time = time.perf_counter()  # Tiempo de inicio de la sincronización
         energy_consumed_ch = 0  # Para capturar la energía consumida por el CH
 
         while retries < max_retries and not ack_received_CH:

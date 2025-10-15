@@ -382,87 +382,11 @@ def transmit_data_anterior(db_path, sender_id, receiver_id, plaintext, E_schedul
         print(f"🚨 Error: No se encontró clave compartida entre {sender} y {receiver}")
 
 
-# # 📌 Ejemplo de simulación de transmisión:
-# transmit_data("bbdd_keys_shared_sign_cipher.db", 16, 402, "Temperatura: 15.2°C")
-
-# # Cargar los nodos del archivo pickle
-# import pickle
-
-# # Cargas nodos y sink
-# # Para cargar la estructura de nodos guardada
-# with open('save_struct/nodos_guardados.pkl', 'rb') as file:
-#     node_uw = pickle.load(file)
-
-# # Para cargar la estructura de nodos guardada
-# with open('save_struct/sink_guardado.pkl', 'rb') as file:
-#     node_sink = pickle.load(file)
-
-
-# # Identificar Cluster Heads (CH)
-# CH = [nodo["NodeID"] for nodo in node_uw if "ClusterHead" in nodo and nodo["ClusterHead"] == nodo["NodeID"]]
-
-# print("Cluster Head : ", CH)
-
-# # Se crea la tabla
-# create_shared_keys_table("bbdd_keys_shared_sign_cipher.db")
-
-# print("🚀 Iniciando simulación de red submarina con ID de claves aleatorias...")
-
-# # 📌 Generar claves compartidas después de la autenticación
-# generate_shared_keys("bbdd_keys_shared_sign_cipher.db", node_uw, CH, node_sink)
-
-# # 📌 Simulación de transmisión de información entre nodos y CHs
-# # for i in range(0, 20):  # Simular 10 envíos
-# #     ch_id = node_uw[i]["ClusterHead"]
-# #     node_cluster = node_uw[ch_id - 1]
-# #     # transmit_data("bbdd_keys_shared_sign_cipher.db", node_uw[i]["NodeID"], ch_id, f"Temperatura: {np.random.uniform(5, 30):.2f}°C")
-# #     transmit_data("bbdd_keys_shared_sign_cipher.db", node_uw[i], node_cluster, f"Temperatura: {np.random.uniform(5, 30):.2f}°C")
-
-# import numpy as np
-
-# # Número total de transmisiones que queremos completar
-# total_transmissions = 20
-# completed_transmissions = 0  # Contador de transmisiones realizadas
-# max_attempts = 100  # Para evitar un bucle infinito si no hay nodos elegibles
-# attempts = 0
-
-# attempts = 0
-# while completed_transmissions < total_transmissions and attempts < max_attempts:
-#     attempts += 1  # Contador de intentos para evitar bucles infinitos
-    
-#     # Seleccionamos un nodo aleatorio
-#     sender_index = np.random.randint(0, len(node_uw))  # Selección aleatoria de nodo
-#     sender = node_uw[sender_index]
-
-#     # Obtener el ID del Cluster Head (CH)
-#     ch_id = sender.get("ClusterHead")
-
-#     # Validar que el nodo tiene un Cluster Head asignado
-#     if ch_id is None or ch_id == sender["NodeID"]:
-#         continue  # Saltar si el nodo no tiene CH o si es su propio CH
-
-#     # Obtener el nodo Cluster Head
-#     receiver = node_uw[ch_id - 1]
-
-#     # Transmitir datos
-#     transmit_data("bbdd_keys_shared_sign_cipher.db", sender, receiver, f"Temperatura: {np.random.uniform(5, 30):.2f}°C")
-
-#     completed_transmissions += 1  # Incrementar transmisiones realizadas
-
-# # 📌 Simulación de CH enviando datos al Sink
-# for ch in CH:
-#     node_cluster = node_uw[ch - 1]
-#     transmit_data("bbdd_keys_shared_sign_cipher.db", node_cluster, node_sink, "Datos agregados del cluster")
-
-# print(f"✅ Simulación completa: {completed_transmissions}/{total_transmissions} transmisiones realizadas.")
-
-
-
 import numpy as np
 import random
 import time
 
-def simulate_ack_response(sender_node, receiver_node, E_schedule, ack_size_bits=48, bitrate=9200, sink=False):
+def simulate_ack_response(sender_node, receiver_node, E_schedule, ack_size_bits=72, bitrate=9200, sink=False):
     # 1. Calcular distancia
     distance = np.linalg.norm(np.array(sender_node["Position"]) - np.array(receiver_node["Position"]))  # se debe comentar 10/09/2025
 
@@ -594,6 +518,7 @@ def transmit_data(RUN_ID, db_path, nodes, sender_node, receiver_node, plaintext,
     distance  = float(np.linalg.norm(start_pos - end_pos))
     t_prop_s  = float(propagation_time1(start_pos, end_pos, depth=None, region="standard"))
     bits_sent = int(len(encrypted_msg) * 8)
+    print("bits_sent :", bits_sent)
     t_tx_s    = bits_sent / float(bitrate)
 
     # 5) PER del enlace y Bernoulli
@@ -685,7 +610,84 @@ def transmit_data(RUN_ID, db_path, nodes, sender_node, receiver_node, plaintext,
     # )
 
     # # 10) ACK hop (usa tu simulador; ya hace logging con log_transmission_event, pero mantenemos consistencia)
-    # ack = simulate_ack_response(sender_node, receiver_node, E_schedule, ack_size_bits=48, bitrate=bitrate,
+    # ack = simulate_ack_response(sender_node, receiver_node, E_schedule, ack_size_bits=72, bitrate=bitrate,
     #                             sink=(dest=='Sink'))
     
-    return
+    return encrypted_msg
+
+
+# ######################
+# # 📌 Ejemplo de simulación de transmisión:
+# transmit_data("bbdd_keys_shared_sign_cipher.db", 16, 402, "Temperatura: 15.2°C")
+
+# # Cargar los nodos del archivo pickle
+# import pickle
+
+# # Cargas nodos y sink
+# # Para cargar la estructura de nodos guardada
+# with open('save_struct/nodos_guardados.pkl', 'rb') as file:
+#     node_uw = pickle.load(file)
+
+# # Para cargar la estructura de nodos guardada
+# with open('save_struct/sink_guardado.pkl', 'rb') as file:
+#     node_sink = pickle.load(file)
+
+
+# # Identificar Cluster Heads (CH)
+# CH = [nodo["NodeID"] for nodo in node_uw if "ClusterHead" in nodo and nodo["ClusterHead"] == nodo["NodeID"]]
+
+# print("Cluster Head : ", CH)
+
+# # Se crea la tabla
+# create_shared_keys_table("bbdd_keys_shared_sign_cipher.db")
+
+# print("🚀 Iniciando simulación de red submarina con ID de claves aleatorias...")
+
+# # 📌 Generar claves compartidas después de la autenticación
+# generate_shared_keys("bbdd_keys_shared_sign_cipher.db", node_uw, CH, node_sink)
+
+# # 📌 Simulación de transmisión de información entre nodos y CHs
+# # for i in range(0, 20):  # Simular 10 envíos
+# #     ch_id = node_uw[i]["ClusterHead"]
+# #     node_cluster = node_uw[ch_id - 1]
+# #     # transmit_data("bbdd_keys_shared_sign_cipher.db", node_uw[i]["NodeID"], ch_id, f"Temperatura: {np.random.uniform(5, 30):.2f}°C")
+# #     transmit_data("bbdd_keys_shared_sign_cipher.db", node_uw[i], node_cluster, f"Temperatura: {np.random.uniform(5, 30):.2f}°C")
+
+# import numpy as np
+
+# # Número total de transmisiones que queremos completar
+# total_transmissions = 20
+# completed_transmissions = 0  # Contador de transmisiones realizadas
+# max_attempts = 100  # Para evitar un bucle infinito si no hay nodos elegibles
+# attempts = 0
+
+# attempts = 0
+# while completed_transmissions < total_transmissions and attempts < max_attempts:
+#     attempts += 1  # Contador de intentos para evitar bucles infinitos
+    
+#     # Seleccionamos un nodo aleatorio
+#     sender_index = np.random.randint(0, len(node_uw))  # Selección aleatoria de nodo
+#     sender = node_uw[sender_index]
+
+#     # Obtener el ID del Cluster Head (CH)
+#     ch_id = sender.get("ClusterHead")
+
+#     # Validar que el nodo tiene un Cluster Head asignado
+#     if ch_id is None or ch_id == sender["NodeID"]:
+#         continue  # Saltar si el nodo no tiene CH o si es su propio CH
+
+#     # Obtener el nodo Cluster Head
+#     receiver = node_uw[ch_id - 1]
+
+#     # Transmitir datos
+#     transmit_data("bbdd_keys_shared_sign_cipher.db", sender, receiver, f"Temperatura: {np.random.uniform(5, 30):.2f}°C")
+
+#     completed_transmissions += 1  # Incrementar transmisiones realizadas
+
+# # 📌 Simulación de CH enviando datos al Sink
+# for ch in CH:
+#     node_cluster = node_uw[ch - 1]
+#     transmit_data("bbdd_keys_shared_sign_cipher.db", node_cluster, node_sink, "Datos agregados del cluster")
+
+# print(f"✅ Simulación completa: {completed_transmissions}/{total_transmissions} transmisiones realizadas.")
+# #################

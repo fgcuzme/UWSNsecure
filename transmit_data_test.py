@@ -462,7 +462,7 @@ import numpy as np
 import random
 import time
 
-def simulate_ack_response(sender_node, receiver_node, E_schedule, ack_size_bits=48, bitrate=9200, sink=False):
+def simulate_ack_response(sender_node, receiver_node, E_schedule, ack_size_bits=72, bitrate=9200, sink=False):
     # 1. Calcular distancia
     distance = np.linalg.norm(np.array(sender_node["Position"]) - np.array(receiver_node["Position"]))  # se debe comentar 10/09/2025
 
