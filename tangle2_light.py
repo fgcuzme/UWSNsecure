@@ -7,7 +7,7 @@ import json, hashlib, os
 import numpy as np
 from collections import deque
 from tangle_logger_light import log_tangle_event, MsTimer
-# import msgpack
+import msgpack
 
 
 _TTL_tx = float(120.0)          # rango 120-300s -> 2–5 × (t_propagación_max + colas)
@@ -54,8 +54,8 @@ def _canonical_bytes_for_sig(tx_dict: dict) -> bytes:
         "Nonce":        tx_dict.get("Nonce", "")
     }
     view_norm = _to_builtin(view)
-    return json.dumps(view_norm, sort_keys=True, separators=(",", ":")).encode("utf-8")
-    # return msgpack.packb(view_norm, use_bin_type=True)
+    # return json.dumps(view_norm, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return msgpack.packb(view_norm, use_bin_type=True)
 
 # # Se cambia por la función siguiente
 # # Función para verificar la firma de una transacción
@@ -170,7 +170,8 @@ def sign_transaction(data_bytes, private_key_bytes):
     if isinstance(data_bytes, (str, int)):
         data_bytes = str(data_bytes).encode("utf-8")
     elif not isinstance(data_bytes, (bytes, bytearray)):
-        data_bytes = json.dumps(data_bytes, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        raise ValueError("sign_transaction() espera bytes ya serializados")
+        # data_bytes = json.dumps(data_bytes, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
     if isinstance(private_key_bytes, ed25519.Ed25519PrivateKey):
         actual_private_key = private_key_bytes
@@ -295,20 +296,24 @@ def create_transaction(RUN_ID, node_id, payload, transaction_type, approvedtips,
         "ID": transaction_id,                       # ID único de la transacción -> 32 bytes
         "Timestamp": float(time.time()),            # Marca de tiempo en segundos -> 2 bytes
         "Source": int(node_id),                     # Nodo que genera la transacción -> 2 bytes -> si son menos de 255 nodos puede ser un byte
-        "Type": str(transaction_type),              # Tipo de transacción: 'Data', 'Sync', etc. -> 1 bytes
-        "Payload": str(payload),                    # Datos a transmitir -> 32-64 bytes
-        "ApprovedTx": [str(t) for t in approvedtips],  # Lista de transacciones aprobadas por esta transacción -> 64 bytes
+        "Type": transaction_type,              # Tipo de transacción: 'Data', 'Sync', etc. -> 1 bytes
+        # "Payload": str(payload),                    # Datos a transmitir -> 32-64 bytes
+        "Payload": payload if isinstance(payload, bytes) else str(payload).encode("utf-8"),                    # Datos a transmitir -> 32-64 bytes
+        # "ApprovedTx": [str(t) for t in approvedtips],  # Lista de transacciones aprobadas por esta transacción -> 64 bytes
+        "ApprovedTx": approvedtips,  # Lista de transacciones aprobadas por esta transacción -> 64 bytes
         # "Weight": 1.0,                            # Peso inicial de la transacción -> Eliminar
         # "TipSelectionCount": 0,                   # Contador de veces seleccionada como tip -> Eliminar
         "TTL": _TTL_tx,
         "Nonce": ascon.hash((str(node_id) + str(time.time())).encode(), "Ascon-Hash", 32).hex()[:16],
     }
-    
+
+    print("Tx_canonica", tx)
+
     with MsTimer() as t_canon:
         # 3) Firmar la vista canónica
         to_sign = _canonical_bytes_for_sig(tx)
     canonical_ms = t_canon.ms
-    
+
     with MsTimer() as t_sign:
         signature = sign_transaction(to_sign, private_key)  # Firma con clave privada -> 32 bytes
     sign_ms = t_sign.ms
@@ -324,6 +329,32 @@ def create_transaction(RUN_ID, node_id, payload, transaction_type, approvedtips,
     # 4) Adjuntar firma y devolver
     tx["Signature"] = signature
 
+
+    ## obtener tiempos
+    # Después de obtener canonical_ms, sign_ms y hash_ms
+    tx["Perf"] = tx.get("Perf", {})
+    tx["Perf"]["tx_proc"] = {
+        "encode_ms":   0.0,            # si mides msgpack/json, completa aquí
+        "canon_ms":    canonical_ms,
+        "sign_ms":     sign_ms,
+        "tipselect_ms":0.0,            # si tienes tip selection medido, colócalo
+        "hash_ms":     hash_ms,
+        "other_ms":    0.0
+    }
+    # suma total (opcional)
+    tx["Perf"]["tx_proc"]["total_ms"] = (
+        tx["Perf"]["tx_proc"]["encode_ms"] +
+        tx["Perf"]["tx_proc"]["canon_ms"] +
+        tx["Perf"]["tx_proc"]["sign_ms"] +
+        tx["Perf"]["tx_proc"]["tipselect_ms"] +
+        tx["Perf"]["tx_proc"]["hash_ms"] +
+        tx["Perf"]["tx_proc"]["other_ms"]
+    )
+
+    # MUY ÚTIL: haz que create_transaction retorne también la perf tx_proc
+    return tx, tx["Perf"]["tx_proc"]
+
+    ##
     return tx
 
 # TAMAÑO TX -> 32 + 2 + 2 + 64 + 64 + 32 = 196 bytes = 1568 bits
@@ -368,9 +399,14 @@ def create_gen_block(RUN_ID, sink_id, private_key):
     approved_tips = []
 
     # print('Antes de entrar a la función crear Tx... ')
+    payload_str = 'payload'
+    payoad_bytes = payload_str.encode('utf-8')  # → binario UTF-8
+
+    type_str = '0x20'
+    type_bytes = type_str.encode('utf-8')  # → binario UTF-8
 
     # Crear la transacción génesis
-    genesis_block = create_transaction(RUN_ID, sink_id, 'AUTH-REQUEST = 1 -> Génesis de la red', 'AUTH:GEN', approved_tips, private_key)
+    genesis_block = create_transaction(RUN_ID, sink_id, payoad_bytes, type_bytes, approved_tips, private_key)
 
     # Agrega la Tx a la lista
 
@@ -408,8 +444,13 @@ def create_auth_response_tx(RUN_ID, node_ch1):
 
     approved_tips1 = select_valid_tips(RUN_ID,node_ch1, num_tips=2, check_nonce=True, check_fresh=True)
 
-    payload = f'{int(node_ch1["NodeID"])};{int(node_ch1["Id_pair_keys_sign"])};{int(node_ch1["Id_pair_keys_shared"])}'
-    new_tx = create_transaction(RUN_ID, int(node_ch1['NodeID']), payload, 'AUTH:RESP', approved_tips1, node_ch1['PrivateKey_sign'])
+    payload_str = f'{int(node_ch1["NodeID"])};{int(node_ch1["Id_pair_keys_sign"])};{int(node_ch1["Id_pair_keys_shared"])}'
+    payoad_bytes = payload_str.encode('utf-8')  # → binario UTF-8
+
+    type_str = '0x21'
+    type_bytes = type_str.encode('utf-8')  # → binario UTF-8
+
+    new_tx = create_transaction(RUN_ID, int(node_ch1['NodeID']), payoad_bytes, type_bytes, approved_tips1, node_ch1['PrivateKey_sign'])
 
     # mover tips aprobados a ApprovedTransactions
     node_ch1["Tips"] = _to_id_list(node_ch1["Tips"])
@@ -604,7 +645,7 @@ def select_valid_tips(RUN_ID, node, num_tips=2, check_nonce=True, check_fresh=Tr
                 if not nonce or _nonce_seen(node, f"TIPSEL:{nonce}"):
                     continue
             valid.append(tid)
-    
+
     # logging (una sola fila por selección; guardamos agregados básicos)
     if RUN_ID is not None:
         log_tangle_event(
@@ -639,7 +680,7 @@ def ingest_tx(RUN_ID,node, tx: dict, add_as_tip: bool = True):
         node_id=node.get("NodeID"), tx_id=txid, tx_type=tx.get("Type"),
         tips_before=tips_before, tips_after=len(node["Tips"]),
         approved_count=len(tx.get("ApprovedTx", [])),
-        t_tips_store=t_store.ms, t_idx_upd=t_store.ms
+        t_tips_store=t_store.ms, t_idx_upd=None
     )
 
 

@@ -717,7 +717,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                 # El CH coloca su estado de autenticado cuando inicia el proceso de propagación de la TX
                 ch_node1['Authenticated'] = True
 
-                payload = auth_response_tx1['Payload']
+                payload = auth_response_tx1['Payload'].decode('utf-8')
                 # Dividir el payload por el separador ";"
                 payload_parts = payload.split(';') # obtener el identificador de la firma utilizada
                 id_pair_keys_sign = payload_parts[1] # Obtener el identificador del par de firmas (segundo elemento)
@@ -878,7 +878,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                         # Los nodos que reciben la Tx de respuesta del CH, tambien deben buscar la clave en la bbd y verificarl
                         # print(f"El nodo sensor {node['NodeID']} recibio la Tx del CH {ch['NodeID']}...")
 
-                        payload = auth_response_tx1['Payload']
+                        payload = auth_response_tx1['Payload'].decode('utf-8')
                         # Dividir el payload por el separador ";"
                         payload_parts = payload.split(';') # obtener el identificador de la firma utilizada
                         id_pair_keys_sign = payload_parts[1] # Obtener el identificador del par de firmas (segundo elemento)
@@ -1137,7 +1137,7 @@ def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retrie
                     # CH recibe la transacción y verifica si el nodo está sincronizado
                     if node4['IsSynced']:
                         # Dividir el payload para obtener el identificador de la firma
-                        payload = node_auth_tx['Payload']
+                        payload = node_auth_tx['Payload'].decode('utf-8')
                         payload_parts = payload.split(';')
                         id_pair_keys_sign = payload_parts[1]
 

@@ -402,6 +402,7 @@ for i in range(rondas):
 
     print('Tiempo de creación de Tx genesis Sink: ', time_createTX)
     print('Bloque genesis', txgenesis)
+    time.sleep(100)
 
     print("-")
     print ('PROPAGACIÓN DE LA TX GENESIS A LOS CH...')

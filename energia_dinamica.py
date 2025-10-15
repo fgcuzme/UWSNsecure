@@ -194,7 +194,7 @@ def calculate_timeout(sink_pos, ch_pos, bitrate=9200, packet_size=72, proc_time_
     lat_tx = packet_size / bitrate
 
     # Tiempo de procesamiento (empírico)
-    lat_proc = (proc_time_s if (proc_time_s is not None) else 0.020)  # s, por defecto 20 ms
+    lat_proc = (proc_time_s if (proc_time_s is not None) else 0.005)  # s, por defecto 5 ms
 
     # Margen de seguridad (30% - 50%)
     margin = 0.3 * (lat_prop + lat_tx + lat_proc)

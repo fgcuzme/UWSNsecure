@@ -10,11 +10,11 @@ PER_VARIABLE = None
 # Función para crear un paquete SYN desde el Sink
 def create_syn_packet(sink_id):
     packet = {
-        "PacketID": np.random.randint(0, 65535),  # ID del paquete
-        "PacketType": 0x01,  # Tipo de paquete SYN
-        "SourceID": sink_id,  # ID del Sink
-        "Timestamp": time.time(),  # Marca de tiempo actual
-        "Hops": 0  # Inicialmente 0 saltos
+        "PacketID": np.random.randint(0, 65535),    # 2B - ID del paquete 
+        "PacketType": b'0x10',                      # 2B - Tipo de paquete SYN
+        "SourceID": sink_id,                        # 2B - ID del Sink
+        "Timestamp": time.time(),                   # 4B - Marca de tiempo actual
+        #"Hops": 0                                  # Inicialmente 0 saltos
     }
     return packet
 
@@ -191,7 +191,8 @@ def propagate_syn_to_CH_tdma(RUN_ID, sink, CH_ids, node_uw, max_retries=3, timeo
 
 # Función para sincronizar nodos con el Cluster Head, incluyendo retransmisiones en nodos sensores
 def synchronize_nodes_tdma(RUN_ID, CH_id, syn_packet, node_uw, max_retries_sensor, timeout_sinktoch, type_packet, E_schedule):
-    print(f"Sincronizando Cluster Head {CH_id + 1} con Timestamp: {syn_packet['Timestamp']} y Hops: {syn_packet['Hops']}")
+    # print(f"Sincronizando Cluster Head {CH_id + 1} con Timestamp: {syn_packet['Timestamp']} y Hops: {syn_packet['Hops']}")
+    print(f"Sincronizando Cluster Head {CH_id + 1} con Timestamp: {syn_packet['Timestamp']}")
     timeout_chtosn = 0
     # print(' Verificar CH_id en nodes : ', CH_id)
 
@@ -540,8 +541,9 @@ def propagate_syn_to_CH_cdma(sink, CH_ids, node_uw, max_retries=3, timeout=2, fr
 # Función para sincronizar nodos con el Cluster Head bajo CDMA, incluyendo retransmisiones
 def synchronize_nodes_cdma(CH_id, syn_packet, node_uw, timeout, freq, processing_energy_cdma, max_retries_sensor, packet_size_bits, alpha, P_r, E_listen, E_standby):
     
-    print(f"Sincronizando Cluster Head {CH_id + 1} con Timestamp: {syn_packet['Timestamp']} y Hops: {syn_packet['Hops']}")
-    
+    # print(f"Sincronizando Cluster Head {CH_id + 1} con Timestamp: {syn_packet['Timestamp']} y Hops: {syn_packet['Hops']}")
+    print(f"Sincronizando Cluster Head {CH_id + 1} con Timestamp: {syn_packet['Timestamp']}")
+
     # Filtrar los nodos que tienen a este CH como su ClusterHead y que no sean el propio CH
     cluster_nodes = [node for node in node_uw if node["ClusterHead"] == (CH_id + 1) and node["NodeID"] != (CH_id + 1)]
 
