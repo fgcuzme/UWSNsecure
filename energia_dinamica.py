@@ -134,8 +134,8 @@ def calcular_energia_paquete(tipo_paquete, distance_m, es_tx=True):
     tamanos = {
         "sync": 7 * 8,      # 7 Bytes
         "tx": 185 * 8,      # 185 Bytes
-        "data": 48 * 8,     # 48 Bytes
-        "agg": 201 * 8,     # 201 Bytes
+        "data": 70 * 8,     # 70 Bytes
+        "agg": 103 * 8,     # 103 Bytes
         "ack": 7 * 8        # 7 Bytes
     }
 

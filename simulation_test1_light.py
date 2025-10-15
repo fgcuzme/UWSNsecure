@@ -517,7 +517,7 @@ print("-")
 print ('INICIO PROCESO DE TRANSMISIÓN DE DATOS CIFRADOS CON ASCON...')
 
 # from transmit_data_test import create_shared_keys_table, generate_shared_keys, transmit_data
-from transmit_data_light_uan import create_shared_keys_table, generate_shared_keys, transmit_data
+from transmit_data_light_uan import create_shared_keys_table, generate_shared_keys, transmit_data, encode_marine_payload
 
 # Se crea la tabla en la BBDD donde se van a crear las claves compartidas
 create_shared_keys_table("bbdd_keys_shared_sign_cipher.db")
@@ -768,7 +768,7 @@ PROJECTION_REF_S = 24*3600
 PROJECTION_FACTOR = (PROJECTION_REF_S / SIM_DURATION_S) if PROJECT_TO_24H else 1.0
 
 JITTER_BOOTSTRAP_S = 5          # desfase inicial aleatorio pequeño
-MAX_BUFFER = 5
+MAX_BUFFER = 10
 AGGREGATION_TIMEOUT = 600       # todo en segundos de tiempo simulado
 
 def _is_tx_allowed(node) -> bool:
@@ -818,22 +818,34 @@ while sim_now < sim_end and events_processed < MAX_EVENTS and len(next_send_time
 
     # 3) envío SN -> CH
     print("El SN envia datos al CH...")
-    data_str = f"{np.random.uniform(0, 30):.3f}"
+    # data_str = f"{np.random.uniform(0, 30):.3f}"
+    payload, (temp, salinity, pressure) = encode_marine_payload()
+
+    print("payload, (temp, salinity, pressure) : ", payload, (temp, salinity, pressure), "Tamaño binario del payload : ", len(payload))
+
     encrypted_msg = transmit_data(
         RUN_ID, "bbdd_keys_shared_sign_cipher.db", node_uw,
-        sender, ch_node, str(data_str),
+        sender, ch_node, str(payload),
         E_schedule, source='SN', dest='CH'
     )
     # encrypted_str = encrypted_msg.hex()
     # buffer_CH[ch_id-1].append(encrypted_str)
-    buffer_CH[ch_id-1].append(data_str)
+    buffer_CH[ch_id-1].append(payload)
 
     # 4) ¿CH -> Sink? solo si CH sync+auth y toca por buffer/timeout
     if _is_tx_allowed(ch_node) and (
         len(buffer_CH[ch_id-1]) >= MAX_BUFFER or (sim_now - ultimo_envio_CH[ch_id-1]) >= AGGREGATION_TIMEOUT
     ):
         print("El CH envia datos al Sink...")
-        datos_agregados = "; ".join(buffer_CH[ch_id-1])
+        # datos_agregados = "; ".join(buffer_CH[ch_id-1])
+        # datos_agregados = "; ".join(x.hex() for x in buffer_CH[ch_id-1])
+        datos_agregados = b"".join(buffer_CH[ch_id-1])  # binario puro
+        print("datos_agregados : ", datos_agregados, "len binarios: ", len(datos_agregados))
+
+        # import base64
+        # datos_agregados1 = "; ".join(base64.b64encode(x).decode('utf-8') for x in buffer_CH[ch_id-1])
+        # print("datos_agregados1 : ", datos_agregados1)
+
         transmit_data(
             RUN_ID, "bbdd_keys_shared_sign_cipher.db", node_uw,
             ch_node, node_sink, datos_agregados,

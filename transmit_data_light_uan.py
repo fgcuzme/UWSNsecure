@@ -170,7 +170,16 @@ def encrypt_message(shared_key, plaintext):
     key = shared_key[:16]  # ASCON-128 requiere 16 bytes de clave
     nonce = os.urandom(16)
     associated_data = b""
-    ciphertext = encrypt(key, nonce, associated_data, plaintext.encode(), variant="Ascon-128")
+        # Detectar si es str o bytes
+    if isinstance(plaintext, str):
+        plaintext_bytes = plaintext.encode('utf-8')
+    elif isinstance(plaintext, bytes):
+        plaintext_bytes = plaintext
+    else:
+        raise TypeError("El parámetro 'plaintext' debe ser str o bytes")
+
+    ciphertext = encrypt(key, nonce, associated_data, plaintext_bytes, variant="Ascon-128")
+    print("ciphertext : ", ciphertext, " Len : ", len(ciphertext), "nonce : ", nonce, " Len : ", len(nonce))
     return nonce + ciphertext
 
 def decrypt_message(shared_key, encrypted_message):
@@ -178,7 +187,15 @@ def decrypt_message(shared_key, encrypted_message):
     key = shared_key[:16]
     nonce, ciphertext = encrypted_message[:16], encrypted_message[16:]
     associated_data = b""
-    return decrypt(key, nonce, associated_data, ciphertext, variant="Ascon-128").decode()
+
+    decrypted = decrypt(key, nonce, associated_data, ciphertext, variant="Ascon-128")
+
+    try:
+        # Intentar decodificar como texto UTF-8
+        return decrypted.decode('utf-8')
+    except UnicodeDecodeError:
+        # Si no es texto, devolver como binario
+        return decrypted
 
 
 import time
@@ -502,7 +519,8 @@ def transmit_data(RUN_ID, db_path, nodes, sender_node, receiver_node, plaintext,
     t1 = time.perf_counter()
     t_enc_s = t1 - t0
 
-    print("Mensaje encriptado : ", encrypted_msg.hex(), " time : ", t_enc_s, "tamaño : ", len(encrypted_msg))
+    print("Mensaje encriptado : ", encrypted_msg.hex(), " time : ", t_enc_s, "tamaño (hex) : ", len(encrypted_msg.hex()))
+    print("Mensaje encriptado : ", encrypted_msg, " time : ", t_enc_s, "tamaño (bin): ", len(encrypted_msg))
 
     # Nota: aquí solo medimos descifrado local para stats (RX real descifra después)
     t2 = time.perf_counter()
@@ -614,6 +632,24 @@ def transmit_data(RUN_ID, db_path, nodes, sender_node, receiver_node, plaintext,
     #                             sink=(dest=='Sink'))
     
     return encrypted_msg
+
+import struct
+
+def encode_marine_payload():
+    # Rangos típicos
+    temp = round(random.uniform(0.0, 30.0), 3)       # °C
+    salinity = round(random.uniform(30.0, 40.0), 3)  # PSU
+    pressure = round(random.uniform(0.0, 6000.0), 2) # dbar
+
+    # Escalado
+    T = int(temp * 1000)       # 3 decimales → uint16
+    S = int(salinity * 1000)   # 3 decimales → uint16
+    P = int(pressure * 10)     # 1 decimales → uint16 (hasta 6553.5 dbar)
+
+    # Empaquetar en binario
+    payload = struct.pack(">HHH", T, S, P)  # 6 bytes
+
+    return payload, (temp, salinity, pressure)
 
 
 # ######################
