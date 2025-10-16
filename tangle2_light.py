@@ -268,7 +268,7 @@ def generate_unique_id_asconhash(node_id):
 # generate_unique_id_asconhash(1)
 
 # Función para crear una transacción en el Tangle
-def create_transaction(RUN_ID, node_id, payload, transaction_type, approvedtips, private_key):
+def create_transaction(RUN_ID, node_id, payload, transaction_type, approvedtips, private_key, selTips_ms=None):
     """
     Crear una transacción en el Tangle.
 
@@ -324,37 +324,18 @@ def create_transaction(RUN_ID, node_id, payload, transaction_type, approvedtips,
         t_canon=t_canon.ms, t_hash=t_hash.ms, t_sign=t_sign.ms,
         payload_bytes=len(str(payload).encode("utf-8")),
         tx_bytes=len(str(tx).encode("utf-8")),
-        ts_ok=True
+        ts_ok=True, t_tips_sel=selTips_ms
     )
     # 4) Adjuntar firma y devolver
     tx["Signature"] = signature
 
+    # === TIEMPO DE PROCESAMIENTO TOTAL (TX) ===
+    # Si además mides selección/almacenamiento de tips en este lado, súmalos aquí.
+    proc_tx_ms = hash_ms + canonical_ms + sign_ms + selTips_ms
+    tx["_proc_ms_tx"] = float(proc_tx_ms)   # <- queda disponible para el módulo de propagación
 
-    # ## obtener tiempos
-    # # Después de obtener canonical_ms, sign_ms y hash_ms
-    # tx["Perf"] = tx.get("Perf", {})
-    # tx["Perf"]["tx_proc"] = {
-    #     "encode_ms":   0.0,            # si mides msgpack/json, completa aquí
-    #     "canon_ms":    canonical_ms,
-    #     "sign_ms":     sign_ms,
-    #     "tipselect_ms":0.0,            # si tienes tip selection medido, colócalo
-    #     "hash_ms":     hash_ms,
-    #     "other_ms":    0.0
-    # }
-    # # suma total (opcional)
-    # tx["Perf"]["tx_proc"]["total_ms"] = (
-    #     tx["Perf"]["tx_proc"]["encode_ms"] +
-    #     tx["Perf"]["tx_proc"]["canon_ms"] +
-    #     tx["Perf"]["tx_proc"]["sign_ms"] +
-    #     tx["Perf"]["tx_proc"]["tipselect_ms"] +
-    #     tx["Perf"]["tx_proc"]["hash_ms"] +
-    #     tx["Perf"]["tx_proc"]["other_ms"]
-    # )
+    return tx
 
-    # MUY ÚTIL: haz que create_transaction retorne también la perf tx_proc
-    return tx
-    ##
-    return tx
 
 # TAMAÑO TX -> 32 + 2 + 2 + 64 + 64 + 32 = 196 bytes = 1568 bits
 # TAMAÑO TX -> 32 + 2 + 2 + 64 + 64 + 20 = 184 bytes = 1472 bits
@@ -441,7 +422,7 @@ def create_gen_block(RUN_ID, sink_id, private_key):
 def create_auth_response_tx(RUN_ID, node_ch1):
     _ensure_dag_state(node_ch1)
 
-    approved_tips1 = select_valid_tips(RUN_ID,node_ch1, num_tips=2, check_nonce=True, check_fresh=True)
+    approved_tips1, selTips_ms = select_valid_tips(RUN_ID,node_ch1, num_tips=2, check_nonce=True, check_fresh=True)
 
     payload_str = f'{int(node_ch1["NodeID"])};{int(node_ch1["Id_pair_keys_sign"])};{int(node_ch1["Id_pair_keys_shared"])}'
     payoad_bytes = payload_str.encode('utf-8')  # → binario UTF-8
@@ -449,7 +430,7 @@ def create_auth_response_tx(RUN_ID, node_ch1):
     type_str = '0x21'
     type_bytes = type_str.encode('utf-8')  # → binario UTF-8
 
-    new_tx = create_transaction(RUN_ID, int(node_ch1['NodeID']), payoad_bytes, type_bytes, approved_tips1, node_ch1['PrivateKey_sign'])
+    new_tx = create_transaction(RUN_ID, int(node_ch1['NodeID']), payoad_bytes, type_bytes, approved_tips1, node_ch1['PrivateKey_sign'], selTips_ms=selTips_ms)
 
     # mover tips aprobados a ApprovedTransactions
     node_ch1["Tips"] = _to_id_list(node_ch1["Tips"])
@@ -612,6 +593,7 @@ def _purge_expired_nonces(node, now=None):
     while len(window) > node["_max_nonce_cache"]:
         nonce, _ = window.popleft(); s.discard(nonce)
 
+
 def _nonce_seen(node, nonce, now=None):
     _ensure_dag_state(node)
     if now is None: now = time.time()
@@ -621,10 +603,12 @@ def _nonce_seen(node, nonce, now=None):
     s.add(nonce); node["_nonce_window"].append((nonce, now))
     return False
 
+
 def _is_fresh_tx(tx, now=None):
     if now is None: now = time.time()
     ts, ttl = float(tx.get("Timestamp", 0.0)), float(tx.get("TTL", 0.0))
     return ttl > 0 and (now >= ts) and (now <= ts + ttl)
+
 
 def select_valid_tips(RUN_ID, node, num_tips=2, check_nonce=True, check_fresh=True):
     _ensure_dag_state(node)
@@ -632,6 +616,8 @@ def select_valid_tips(RUN_ID, node, num_tips=2, check_nonce=True, check_fresh=Tr
 
     tips_before = len(node["Tips"])
     
+    # MIDE CUANDO SE CREA UNA NUEVA TX QUE NO SEA LA GENESIS
+    # lo hace el tx
     with MsTimer() as t_sel:
         valid = []
 
@@ -645,6 +631,7 @@ def select_valid_tips(RUN_ID, node, num_tips=2, check_nonce=True, check_fresh=Tr
                 if not nonce or _nonce_seen(node, f"TIPSEL:{nonce}"):
                     continue
             valid.append(tid)
+    selTips_ms = t_sel.ms
 
     # logging (una sola fila por selección; guardamos agregados básicos)
     if RUN_ID is not None:
@@ -656,7 +643,7 @@ def select_valid_tips(RUN_ID, node, num_tips=2, check_nonce=True, check_fresh=Tr
         )
 
     if len(valid) <= num_tips: return valid[:]
-    return random.sample(valid, num_tips)
+    return random.sample(valid, num_tips), selTips_ms
 
 
 # tangle2_light.py
@@ -666,6 +653,7 @@ def ingest_tx(RUN_ID,node, tx: dict, add_as_tip: bool = True):
     txid = str(tx["ID"])
     tips_before = len(node["Tips"])
 
+    # Almacena el proceso de almacenamiento de la tx
     with MsTimer() as t_store:
         # de-dup en Transactions
         if txid not in node.get("_tx_index", {}):
@@ -674,6 +662,7 @@ def ingest_tx(RUN_ID,node, tx: dict, add_as_tip: bool = True):
         # meter como tip (si no está caduca) para que luego pueda ser aprobada
         if add_as_tip and txid not in node["Tips"]:
             node["Tips"].append(txid)
+    store_ms = t_store.ms
 
     log_tangle_event(
         run_id=RUN_ID, phase="auth", module="tangle", op="tips_store",
@@ -682,6 +671,7 @@ def ingest_tx(RUN_ID,node, tx: dict, add_as_tip: bool = True):
         approved_count=len(tx.get("ApprovedTx", [])),
         t_tips_store=t_store.ms, t_idx_upd=None
     )
+    return store_ms
 
 
 # === RX: validar y loggear Nonce/TS/Replay ===
@@ -689,6 +679,7 @@ def validate_rx_tx_and_log(RUN_ID, node, tx, phase="auth", module="tangle"):
     _ensure_dag_state(node)
     now = time.time()
 
+    # almacena la validación de la tx, lo hace el receptor
     with MsTimer() as t_nonce:
         nonce = str(tx.get("Nonce", ""))
         # Namespacing para RX (no colisiona con TIPSEL)
@@ -696,12 +687,18 @@ def validate_rx_tx_and_log(RUN_ID, node, tx, phase="auth", module="tangle"):
             nonce_ok = False
         else:
             nonce_ok = not _nonce_seen(node, f"RX:{nonce}", now=now)
+    nonce_ms = t_nonce.ms
 
     with MsTimer() as t_ts:
         ts_ok = _is_fresh_tx(tx, now=now)
+    ts_ms = t_ts.ms
 
     with MsTimer() as t_replay:
         replay_ok = (nonce_ok and ts_ok)
+    replay_ms = t_replay.ms
+
+    # Suma de tiempos de este tiempo
+    validate_ms = nonce_ms + ts_ms + replay_ms
 
     log_tangle_event(
         run_id=RUN_ID, phase=phase, module=module, op="rx_checks",
@@ -711,40 +708,4 @@ def validate_rx_tx_and_log(RUN_ID, node, tx, phase="auth", module="tangle"):
         tx_bytes=len(str(tx).encode("utf-8"))
     )
 
-
-    #  # construir bloque RX agrupado (sin verify ni ingest todavía)
-    # rx_proc = {
-    #     "decode_ms":       0.0,            # Si decodificas antes, asignaló fuera
-    #     "verify_sig_ms":   0.0,            # Se actualizará desde el llamador (ya lo mides)
-    #     "nonce_check_ms":  t_nonce.ms,
-    #     "replay_check_ms": t_replay.ms,    # incluye ts_ok y nonce_ok en tu lógica
-    #     "dag_update_ms":   0.0,            # Se actualizará desde el llamador
-    #     "other_ms":        t_ts.ms         # registramos TS como “other” -> t_ts_chk=t_ts.ms
-    # }
-
-    return replay_ok
-
-
-
-# dicicionario para acumular procesamiento
-# Diccionario de performance (tiempos en MILISEGUNDOS)
-perf = {
-    "rx_proc": {                # RECIBIR y validar una TX
-        "decode_ms": 0.0,       # parse/decodificación (json/msgpack)
-        "verify_sig_ms": 0.0,   # verificación Ed25519
-        "nonce_check_ms": 0.0,  # chequeo de nonce
-        "replay_check_ms": 0.0, # anti-replay (cache/DB)
-        "dag_update_ms": 0.0,   # ingest/update DAG local
-        "other_ms": 0.0,        # (ej. TS freshness si no lo metes en replay)
-        "total_ms": 0.0         # suma (puedes calcularla si no la llenas)
-    },
-    "tx_proc": {                # CREAR y firmar una TX para enviarla
-        "encode_ms": 0.0,       # serialización (json/msgpack)
-        "canon_ms": 0.0,        # vista canónica (bytes para firma)
-        "sign_ms": 0.0,         # firma Ed25519
-        "tipselect_ms": 0.0,    # selección de tips
-        "hash_ms": 0.0,         # hash/ID (Ascon/SHA)
-        "other_ms": 0.0,        # cualquier otro proceso
-        "total_ms": 0.0
-    }
-}
+    return replay_ok, validate_ms
