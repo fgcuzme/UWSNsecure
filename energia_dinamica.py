@@ -6,7 +6,6 @@ import numpy as np
 import time
 import os
 
-
 # Agregardo 02/10/2025
 # === Perfil de cómputo (Raspberry Pi 3 B+, n=1000) ===
 # Conmutador: usa 'median' (robusto) o 'mean' (promedio) como nominal

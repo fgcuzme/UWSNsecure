@@ -330,30 +330,29 @@ def create_transaction(RUN_ID, node_id, payload, transaction_type, approvedtips,
     tx["Signature"] = signature
 
 
-    ## obtener tiempos
-    # Después de obtener canonical_ms, sign_ms y hash_ms
-    tx["Perf"] = tx.get("Perf", {})
-    tx["Perf"]["tx_proc"] = {
-        "encode_ms":   0.0,            # si mides msgpack/json, completa aquí
-        "canon_ms":    canonical_ms,
-        "sign_ms":     sign_ms,
-        "tipselect_ms":0.0,            # si tienes tip selection medido, colócalo
-        "hash_ms":     hash_ms,
-        "other_ms":    0.0
-    }
-    # suma total (opcional)
-    tx["Perf"]["tx_proc"]["total_ms"] = (
-        tx["Perf"]["tx_proc"]["encode_ms"] +
-        tx["Perf"]["tx_proc"]["canon_ms"] +
-        tx["Perf"]["tx_proc"]["sign_ms"] +
-        tx["Perf"]["tx_proc"]["tipselect_ms"] +
-        tx["Perf"]["tx_proc"]["hash_ms"] +
-        tx["Perf"]["tx_proc"]["other_ms"]
-    )
+    # ## obtener tiempos
+    # # Después de obtener canonical_ms, sign_ms y hash_ms
+    # tx["Perf"] = tx.get("Perf", {})
+    # tx["Perf"]["tx_proc"] = {
+    #     "encode_ms":   0.0,            # si mides msgpack/json, completa aquí
+    #     "canon_ms":    canonical_ms,
+    #     "sign_ms":     sign_ms,
+    #     "tipselect_ms":0.0,            # si tienes tip selection medido, colócalo
+    #     "hash_ms":     hash_ms,
+    #     "other_ms":    0.0
+    # }
+    # # suma total (opcional)
+    # tx["Perf"]["tx_proc"]["total_ms"] = (
+    #     tx["Perf"]["tx_proc"]["encode_ms"] +
+    #     tx["Perf"]["tx_proc"]["canon_ms"] +
+    #     tx["Perf"]["tx_proc"]["sign_ms"] +
+    #     tx["Perf"]["tx_proc"]["tipselect_ms"] +
+    #     tx["Perf"]["tx_proc"]["hash_ms"] +
+    #     tx["Perf"]["tx_proc"]["other_ms"]
+    # )
 
     # MUY ÚTIL: haz que create_transaction retorne también la perf tx_proc
-    return tx, tx["Perf"]["tx_proc"]
-
+    return tx
     ##
     return tx
 
@@ -632,6 +631,7 @@ def select_valid_tips(RUN_ID, node, num_tips=2, check_nonce=True, check_fresh=Tr
     if not node["_tx_index"]: _rebuild_tx_index(node)
 
     tips_before = len(node["Tips"])
+    
     with MsTimer() as t_sel:
         valid = []
 
@@ -710,4 +710,41 @@ def validate_rx_tx_and_log(RUN_ID, node, tx, phase="auth", module="tangle"):
         nonce_ok=nonce_ok, ts_ok=ts_ok, replay_ok=replay_ok,
         tx_bytes=len(str(tx).encode("utf-8"))
     )
+
+
+    #  # construir bloque RX agrupado (sin verify ni ingest todavía)
+    # rx_proc = {
+    #     "decode_ms":       0.0,            # Si decodificas antes, asignaló fuera
+    #     "verify_sig_ms":   0.0,            # Se actualizará desde el llamador (ya lo mides)
+    #     "nonce_check_ms":  t_nonce.ms,
+    #     "replay_check_ms": t_replay.ms,    # incluye ts_ok y nonce_ok en tu lógica
+    #     "dag_update_ms":   0.0,            # Se actualizará desde el llamador
+    #     "other_ms":        t_ts.ms         # registramos TS como “other” -> t_ts_chk=t_ts.ms
+    # }
+
     return replay_ok
+
+
+
+# dicicionario para acumular procesamiento
+# Diccionario de performance (tiempos en MILISEGUNDOS)
+perf = {
+    "rx_proc": {                # RECIBIR y validar una TX
+        "decode_ms": 0.0,       # parse/decodificación (json/msgpack)
+        "verify_sig_ms": 0.0,   # verificación Ed25519
+        "nonce_check_ms": 0.0,  # chequeo de nonce
+        "replay_check_ms": 0.0, # anti-replay (cache/DB)
+        "dag_update_ms": 0.0,   # ingest/update DAG local
+        "other_ms": 0.0,        # (ej. TS freshness si no lo metes en replay)
+        "total_ms": 0.0         # suma (puedes calcularla si no la llenas)
+    },
+    "tx_proc": {                # CREAR y firmar una TX para enviarla
+        "encode_ms": 0.0,       # serialización (json/msgpack)
+        "canon_ms": 0.0,        # vista canónica (bytes para firma)
+        "sign_ms": 0.0,         # firma Ed25519
+        "tipselect_ms": 0.0,    # selección de tips
+        "hash_ms": 0.0,         # hash/ID (Ascon/SHA)
+        "other_ms": 0.0,        # cualquier otro proceso
+        "total_ms": 0.0
+    }
+}
