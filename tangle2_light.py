@@ -331,7 +331,8 @@ def create_transaction(RUN_ID, node_id, payload, transaction_type, approvedtips,
 
     # === TIEMPO DE PROCESAMIENTO TOTAL (TX) ===
     # Si además mides selección/almacenamiento de tips en este lado, súmalos aquí.
-    proc_tx_ms = hash_ms + canonical_ms + sign_ms + selTips_ms
+    selTips_ms = selTips_ms if selTips_ms is not None else 0.0
+    proc_tx_ms = float(hash_ms + canonical_ms + sign_ms + selTips_ms)
     tx["_proc_ms_tx"] = float(proc_tx_ms)   # <- queda disponible para el módulo de propagación
 
     return tx
