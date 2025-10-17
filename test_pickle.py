@@ -61,11 +61,19 @@ with open(os.path.join(carpeta_destino, 'nodos_guardados.json'), 'w') as nodes_f
 # print(node_uw[14])
 # print(node_uw[1])
 
-import numpy as np
-# dist = np.linalg.norm(node_uw[5]["Position"] - node_uw[2]["Position"])  # Distancia entre el nodo y el objetivo
-dist = np.linalg.norm(node_uw[10]["Position"] - nodo_sink["Position"])  # Distancia entre el nodo y el objetivo
-print("Distancia entre el sink y ch : ", dist)
+# import numpy as np
+# # dist = np.linalg.norm(node_uw[5]["Position"] - node_uw[2]["Position"])  # Distancia entre el nodo y el objetivo
+# dist = np.linalg.norm(node_uw[17]["Position"] - nodo_sink["Position"])  # Distancia entre el nodo y el objetivo
+# print("Distancia entre el sink y ch : ", dist)
 
-dist = np.linalg.norm(node_uw[15]["Position"] - nodo_sink["Position"])  # Distancia entre el nodo y el objetivo
+# dist = np.linalg.norm(node_uw[21]["Position"] - nodo_sink["Position"])  # Distancia entre el nodo y el objetivo
+# print("Distancia entre el sink y ch : ", dist)
 
-print("Distancia entre el sink y ch : ", dist)
+# dist = np.linalg.norm(node_uw[22]["Position"] - nodo_sink["Position"])  # Distancia entre el nodo y el objetivo
+# print("Distancia entre el sink y ch : ", dist)
+
+# dist = np.linalg.norm(node_uw[24]["Position"] - nodo_sink["Position"])  # Distancia entre el nodo y el objetivo
+# print("Distancia entre el sink y ch : ", dist)
+
+# dist = np.linalg.norm(node_uw[26]["Position"] - nodo_sink["Position"])  # Distancia entre el nodo y el objetivo
+# print("Distancia entre el sink y ch : ", dist)

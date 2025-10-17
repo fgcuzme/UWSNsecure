@@ -3,9 +3,13 @@ import os, csv
 import pandas as pd
 from collections import defaultdict
 
+PHASE = "syn"
+# PHASE = "auth"
+# PHASE = "data"
+
 CANON_CSV = os.environ.get("UWSN_EVENTS_CSV", "stats/transmissions.csv")
 
-def summarize_per_node(input_csv=CANON_CSV, output_csv="stats/transmission_summary_per_node.csv"):
+def summarize_per_node(input_csv=CANON_CSV, output_csv=f"stats/transmission_summary_per_node_{PHASE}.csv"):
     if not os.path.exists(input_csv):
         print(f"🚨 Archivo no encontrado: {input_csv}")
         return
@@ -13,32 +17,67 @@ def summarize_per_node(input_csv=CANON_CSV, output_csv="stats/transmission_summa
 
     # Solo consideramos eventos de datos (puedes filtrar por phase/msg_type si quieres)
     # mask = df["msg_type"].astype(str).str.contains("DATA")
-    mask = df["msg_type"].astype(str).str.contains("SYN:TDMA")
+    mask = df["phase"].astype(str).str.contains(PHASE)
+    # mask = df["msg_type"].astype(str).str.contains("SYN:TDMA")
     d = df[mask].copy()
 
-    summary = d.groupby("sender_id").agg(
+    # Separar eventos TX y RX
+    tx = d[d["energy_event_type"] == "tx"]
+    rx = d[d["energy_event_type"] == "rx"]
+
+    print(tx)
+    print(rx)
+
+    tx_summary = tx.groupby("sender_id").agg(
         transmissions=("success","count"),
         successes=("success","sum"),
         latency_avg_ms=("latency_ms","mean"),
-        energy_total_j=("energy_j","sum"),
+        energy_tx_j=("energy_j","sum"),
         clusterId=("cluster_id","first"),
         packet_lost=("packet_lost","sum")
-    ).reset_index()
-    summary["packet_loss_percent"] = (summary["packet_lost"] / summary["transmissions"] * 100).round(2)
+    ).reset_index().rename(columns={"sender_id": "node_id"})
+
+    print(tx_summary)
+
+    rx_summary = rx.groupby("receiver_id").agg(
+        # transmissions_rx=("success","count"),
+        # successes_rx=("success","sum"),
+        # latency_avg_ms_rx=("latency_ms","mean"),
+        energy_rx_j=("energy_j","sum")
+        # clusterId=("cluster_id","first"),
+        # packet_lost_tx=("packet_lost","sum")
+    ).reset_index().reset_index().rename(columns={"receiver_id": "node_id"})
+    print(rx_summary)
+
+    # Combinar ambos por nodo
+    summary = pd.merge(tx_summary, rx_summary, on="node_id", how="outer")
+    summary["energy_tx_j"] = summary["energy_tx_j"].fillna(0.0)
+    summary["energy_rx_j"] = summary["energy_rx_j"].fillna(0.0)
+    summary["energy_total_j"] = summary["energy_tx_j"] + summary["energy_rx_j"]
     summary["latency_avg_ms"] = summary["latency_avg_ms"].round(2)
+    summary["energy_tx_j"] = summary["energy_tx_j"].round(8)
+    summary["energy_rx_j"] = summary["energy_rx_j"].round(8)
     summary["energy_total_j"] = summary["energy_total_j"].round(8)
-    summary = summary[["sender_id","clusterId","transmissions","successes","latency_avg_ms","energy_total_j","packet_loss_percent"]]
+    summary["packet_loss_percent"] = (summary["packet_lost"] / summary["transmissions"] * 100).round(2)
+    # Selección final de columnas
+    summary = summary[[
+        "node_id", "clusterId", "transmissions", "successes",
+        "latency_avg_ms", "energy_tx_j", "energy_rx_j", "energy_total_j",
+        "packet_loss_percent"
+    ]]
+    
     os.makedirs(os.path.dirname(output_csv), exist_ok=True)
     summary.to_csv(output_csv, index=False)
     print(f"📁 Resumen por nodo exportado a {output_csv}")
 
-def summarize_global(input_csv=CANON_CSV, output_csv="stats/transmission_summary_global.csv"):
+def summarize_global(input_csv=CANON_CSV, output_csv=f"stats/transmission_summary_global_{PHASE}.csv"):
     if not os.path.exists(input_csv):
         print(f"🚨 Archivo no encontrado: {input_csv}")
         return
     df = pd.read_csv(input_csv)
     # mask = df["msg_type"].astype(str).str.contains("DATA")
-    mask = df["msg_type"].astype(str).str.contains("SYN:TDMA")
+    mask = df["phase"].astype(str).str.contains(PHASE)
+    # mask = df["msg_type"].astype(str).str.contains("SYN:TDMA")
     d = df[mask].copy()
 
     total_tx = len(d)
@@ -56,3 +95,8 @@ def summarize_global(input_csv=CANON_CSV, output_csv="stats/transmission_summary
         w.writerow(["total_transmissions","successful_receptions","avg_latency_ms","avg_throughput_kbps","total_energy_j","avg_energy_j","packet_loss_percent"])
         w.writerow([total_tx, successful, round(avg_latency or 0,2), round(kbps,2), round(total_energy or 0,8), round(avg_energy or 0,8), round(loss_pct,2)])
     print(f"📊 Resumen global exportado a {output_csv}")
+
+
+# Resumen y PROYECCIÓN
+summarize_per_node()
+summarize_global()

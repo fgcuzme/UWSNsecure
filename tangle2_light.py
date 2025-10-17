@@ -709,7 +709,7 @@ def validate_rx_tx_and_log(RUN_ID, node, tx, phase="auth", module="tangle"):
         node_id=node.get("NodeID"), tx_id=tx.get("ID"), tx_type=tx.get("Type"),
         t_nonce_chk=t_nonce.ms, t_ts_chk=t_ts.ms, t_replay_chk=t_replay.ms,
         nonce_ok=nonce_ok, ts_ok=ts_ok, replay_ok=replay_ok,
-        tx_bytes=len(str(tx).encode("utf-8")), t_total=t_nonce.ms + t_ts.ms + t_replay.ms
+        tx_bytes=len(str(tx).encode("utf-8")) #, t_total=t_nonce.ms + t_ts.ms + t_replay.ms
     )
 
     return replay_ok, t_nonce.ms + t_ts.ms + t_replay.ms

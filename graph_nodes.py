@@ -92,3 +92,4 @@ ax.set_zlabel('Posición Z')
 ax.legend()
 plt.grid(True)
 plt.show()
+
