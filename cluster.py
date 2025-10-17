@@ -1,4 +1,5 @@
 import numpy as np
+import time
 # from test_throp import propagation_time, compute_path_loss
 
 # # Función de pérdida acústica (implementada previamente)
@@ -35,6 +36,9 @@ def classify_levels(dist_al_sink, num_levels):
     dist_max = np.max(dist_al_sink)
     niveles_limites = np.linspace(dist_min, dist_max, num_levels + 1)
     
+    print("niveles_limites : ", niveles_limites)
+    time.sleep(20)
+    
     # Inicializar los niveles
     niveles = np.zeros(len(dist_al_sink), dtype=int)
     
@@ -60,7 +64,8 @@ import numpy as np
 def select_cluster_heads(energia_nodos, niveles, threshold_bateria=None):
     E_init = np.max(energia_nodos)
     if threshold_bateria is None:
-        threshold_bateria = 0.357 * E_init  # Basado en el consumo real de un CH (~4279 J)
+        # threshold_bateria = 0.357 * E_init  # Basado en el consumo real de un CH (~4279 J)
+        threshold_bateria = 0.10 * E_init  # Basado en el consumo real de un CH (~4279 J)
 
     N = len(energia_nodos)
     tiempo_espera = np.full(N, np.inf)

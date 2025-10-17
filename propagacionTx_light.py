@@ -137,12 +137,6 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
                     verify_ms = t_v.ms
                     end_time_verify_ms = (time.perf_counter() - time_start)*1000 # se la obtiene en milisegundos
 
-                    log_tangle_event(
-                        run_id=RUN_ID, phase="auth", module="tangle", op="verify_tx",
-                        node_id=genesis_tx.get("Source"), tx_id=genesis_tx.get("ID"),
-                        tx_type=genesis_tx.get("Type"),
-                        t_verify=t_v.ms, sig_ok=bool(isverify)
-                    )
                     # times_verify_all_ch.append(end_time_verify)  # Guardar el tiempo de verificación para este CH
 
                     # CH recibe y verifica génesis # esto se comenta 16/10/2025
@@ -253,10 +247,17 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
                             energy_event_type='rx', energy_j=energy_consumed_ch_rx,
                             residual_sender=None, residual_receiver=Ch_node["ResidualEnergy"],
                             bitrate=9200, freq_khz=20,
-                            lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=t_proc_ch_recv_gen,
+                            lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=t_proc_ch_recv_gen*1000.0,
                             snr_db=snr_db, per=per_sink_ch_auth,
                             lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
                         )
+                    # Se almacena en el log_tangle
+                    log_tangle_event(
+                        run_id=RUN_ID, phase="auth", module="tangle", op="verify_tx",
+                        node_id=genesis_tx.get("Source"), tx_id=genesis_tx.get("ID"),
+                        tx_type=genesis_tx.get("Type"),
+                        t_verify=t_v.ms, sig_ok=bool(isverify), t_tips_store=store_ms, t_total=t_proc_ch_recv_gen*1000.0
+                    )
 
                 else:
                     print(f"CH {Ch_node['NodeID']} no recibió la Tx génesis. Reintentando...")
@@ -383,13 +384,6 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                     verify_ms = t_v.ms
                     end_time_verify_ms = (time.perf_counter()- time_start)*1000
 
-                    log_tangle_event(
-                        run_id=RUN_ID, phase="auth", module="tangle", op="verify_tx",
-                        node_id=genesis_tx.get("Source"), tx_id=genesis_tx.get("ID"),
-                        tx_type=genesis_tx.get("Type"),
-                        t_verify=t_v.ms, sig_ok=bool(isverify)
-                    )
-
                     # CH recibe y verifica génesis
                     # t_proc_sn_recv_gen = estimate_proc_time_s(do_sign=True, do_tips=True)
 
@@ -511,11 +505,18 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                         energy_event_type='rx', energy_j=energy_consumed_sn_rx,
                         residual_sender=ch_node1["ResidualEnergy"], residual_receiver=node1["ResidualEnergy"],
                         bitrate=9200, freq_khz=20,
-                        lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=t_proc_sn_recv_gen,
+                        lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=t_proc_sn_recv_gen*1000.0,
                         snr_db=snr_db, per=per_ch_to_sn,
                         lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
                     )
 
+                    # se almacena en el log_tangle
+                    log_tangle_event(
+                        run_id=RUN_ID, phase="auth", module="tangle", op="verify_tx",
+                        node_id=genesis_tx.get("Source"), tx_id=genesis_tx.get("ID"),
+                        tx_type=genesis_tx.get("Type"),
+                        t_verify=t_v.ms, sig_ok=bool(isverify), t_tips_store=store_ms, t_total=t_proc_sn_recv_gen*1000.0
+                    )
 
                 else:
                     print(f"Nodo {node1['NodeID']} no recibió la Tx génesis. Reintentando... ({retries + 1}/{max_retries})")
@@ -693,7 +694,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                 energy_event_type='tx', energy_j=energy_consumed_ch_tx,
                 residual_sender=ch_node1["ResidualEnergy"], residual_receiver=None,
                 bitrate=9200, freq_khz=20,
-                lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=t_proc_ch_resp_auth,
+                lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=t_proc_ch_resp_auth*1000.0,
                 snr_db=snr_db, per=per_resp_auth_ch_sink,
                 lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
                 )
@@ -726,13 +727,8 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                                                             key_public_sign)
                 verify_ms = t_v.ms
 
-                end_time_verify_ms = (time.perf_counter() - time_start)*1000
-                log_tangle_event(
-                    run_id=RUN_ID, phase="auth", module="tangle", op="verify_tx",
-                    node_id=auth_response_tx1.get("Source"), tx_id=auth_response_tx1.get("ID"),
-                    tx_type=auth_response_tx1.get("Type"),
-                    t_verify=t_v.ms, sig_ok=bool(isverify)
-                )
+                end_time_verify_ms = (time.perf_counter() - time_start)*1000.0
+
 
                 # # CH to Sink
                 # La tx es verificada por el sink con la firma publica obtenida de la bbdd, el identificador
@@ -798,7 +794,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                                 energy_event_type='rx', energy_j=energy_consumed_ch_rx,
                                 residual_sender=None, residual_receiver=ch_node1["ResidualEnergy"],
                                 bitrate=9200, freq_khz=20,
-                                lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=proce_ms,
+                                lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=proce_ms*1000.0,
                                 snr_db=snr_db, per=per_sink_ch_ack,
                                 lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
                                 )
@@ -808,7 +804,14 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                             print(f"El Ch no recibio la confirmaciòn ACK... Reintentando")
                 else:
                     print(f"El Sink falló en la verificación de la Tx de CH {ch_node1['NodeID']}")
-
+                
+                # Se alamcena en el log_tangle
+                log_tangle_event(
+                    run_id=RUN_ID, phase="auth", module="tangle", op="verify_tx",
+                    node_id=auth_response_tx1.get("Source"), tx_id=auth_response_tx1.get("ID"),
+                    tx_type=auth_response_tx1.get("Type"),
+                    t_verify=t_v.ms, sig_ok=bool(isverify), t_tips_store=store_ms, t_total=proce_ms*1000.0
+                )
             else:
                 retries_ch += 1
                 ack_received_chtosink = False
@@ -916,14 +919,8 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                             isverify2 = verify_transaction_signature(auth_response_tx1, auth_response_tx1['Signature'], 
                                                                      key_public_sign)
                         verify_ms = t_v.ms
-                        end_time_verify1_ms = (time.perf_counter() - time_start1)*1000
+                        end_time_verify1_ms = (time.perf_counter() - time_start1)*1000.0
 
-                        log_tangle_event(
-                            run_id=RUN_ID, phase="auth", module="tangle", op="verify_tx",
-                            node_id=auth_response_tx1.get("Source"), tx_id=auth_response_tx1.get("ID"),
-                            tx_type=auth_response_tx1.get("Type"),
-                            t_verify=t_v.ms, sig_ok=bool(isverify2)
-                        )
                         # SN recibe y verifica la tx del ch
                         # t_proc_ch_resp_auth = estimate_proc_time_s(do_verify=True, do_tips=True)
 
@@ -1044,10 +1041,18 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                             energy_event_type='rx', energy_j=energy_consumed_sn_rx,
                             residual_sender=ch_node1["ResidualEnergy"], residual_receiver=node2["ResidualEnergy"],
                             bitrate=9200, freq_khz=20,
-                            lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=t_proc_ch_resp_auth,
+                            lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=t_proc_ch_resp_auth*1000.0,
                             snr_db=snr_db, per=per_resp_auth_ch_sn,
                             lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
                             )
+                        
+                        # Se almacena en el log_tangle
+                        log_tangle_event(
+                            run_id=RUN_ID, phase="auth", module="tangle", op="verify_tx",
+                            node_id=auth_response_tx1.get("Source"), tx_id=auth_response_tx1.get("ID"),
+                            tx_type=auth_response_tx1.get("Type"),
+                            t_verify=t_v.ms, sig_ok=bool(isverify2), t_tips_store=store_ms, t_total=t_proc_ch_resp_auth*1000.0
+                        )
                     else:
                         retries_sn += 1
                         print(f"Nodo {node2['NodeID']} no recibió la Tx de autenticación. Reintentando... ({retries_sn}/{max_retries})")
@@ -1166,7 +1171,7 @@ def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retrie
                     energy_event_type='tx', energy_j=energy_consumed_sn_tx,
                     residual_sender=node4["ResidualEnergy"], residual_receiver=node_ch["ResidualEnergy"],
                     bitrate=9200, freq_khz=20,
-                    lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=t_proc_sn_resp_auth,
+                    lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=t_proc_sn_resp_auth*1000,
                     snr_db=snr_db, per=per_sn_resp_ch,
                     lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
                     )
@@ -1194,13 +1199,7 @@ def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retrie
                                                                      key_public_sign)
                         verify_ms = t_v.ms
                         end_time_verify1_ms = (time.perf_counter() - time_start1)*1000
-                        log_tangle_event(
-                            run_id=RUN_ID, phase="auth", module="tangle", op="verify_tx",
-                            node_id=node_auth_tx.get("Source"), tx_id=node_auth_tx.get("ID"),
-                            tx_type=node_auth_tx.get("Type"),
-                            t_verify=t_v.ms, sig_ok=bool(isverify2)
-                        )
-
+                        
                         # CH to SN
                         # Verificar la transacción con la clave pública
                         if isverify2:
@@ -1348,10 +1347,17 @@ def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retrie
                             energy_event_type='rx', energy_j=energy_consumed_ch_rx,
                             residual_sender=node4["ResidualEnergy"], residual_receiver=node_ch["ResidualEnergy"],
                             bitrate=9200, freq_khz=20,
-                            lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=t_proc_ch_recieve,
+                            lat_prop_ms=lat_prop, lat_tx_ms=lat_tx, lat_proc_ms=t_proc_ch_recieve*1000.0,
                             snr_db=snr_db, per=per_sn_resp_ch,
                             lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
                             )
+                        # Se alamcena en el log tangle
+                        log_tangle_event(
+                            run_id=RUN_ID, phase="auth", module="tangle", op="verify_tx",
+                            node_id=node_auth_tx.get("Source"), tx_id=node_auth_tx.get("ID"),
+                            tx_type=node_auth_tx.get("Type"),
+                            t_verify=t_v.ms, sig_ok=bool(isverify2), t_tips_store=store_ms, t_total=t_proc_ch_recieve*1000.0
+                        )
 
                     else:
                         print(f"El Nodo {node4['NodeID']} no está sincronizado con el CH {node_ch['NodeID']}. No se puede autenticar.")

@@ -53,7 +53,7 @@ sink_pos = np.array([500, 500, 0])  # Posición del Sink en el centro
 # Este diseño es ideal para despliegues controlados (12–24 h), como misiones de muestreo
 #  temporal o experimentación oceanográfica.
 # Ref: chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://www.evologics.com/web/content/15634?unique=be7aa65d1c113e56664940ddea7cf65757e6648e
-E_init = 10  # Energía inicial realista en julios (≈ 0.9 Ah @ 3.7V)
+E_init = 100  # Energía inicial realista en julios (≈ 0.9 Ah @ 3.7V)
 
 # Frecuencia de transmisión en kHz
 freq = 20  # Ajusta la frecuencia según el entorno de la red subacuática
@@ -67,7 +67,8 @@ E_schedule = 5 * 10**-9  # Energía de programación (Joules/bit) # Joules/bit =
 # threshold_bateria = 1  # Umbral de energía de la batería (Joules)
 
 # Se ajusta el umbral de la capacidad de la bateria en vista que la carga inicial de los nodos aumenta
-threshold_bateria = 0.357 * E_init  # 10% de la capacidad
+# threshold_bateria = 0.357 * E_init  # 10% de la capacidad
+threshold_bateria = 0.10 * E_init  # 10% de la capacidad
 
 # Posicionamiento de los nodos (valores aleatorios dentro del área de despliegue)
 pos_nodes = np.random.rand(num_nodes, 3) * [dim_x, dim_y, dim_z]
@@ -402,7 +403,7 @@ for i in range(rondas):
 
     print('Tiempo de creación de Tx genesis Sink: ', time_createTX)
     print('Bloque genesis', txgenesis)
-    time.sleep(100)
+    # time.sleep(100)
 
     print("-")
     print ('PROPAGACIÓN DE LA TX GENESIS A LOS CH...')

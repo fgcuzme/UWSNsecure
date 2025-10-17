@@ -318,14 +318,6 @@ def create_transaction(RUN_ID, node_id, payload, transaction_type, approvedtips,
         signature = sign_transaction(to_sign, private_key)  # Firma con clave privada -> 32 bytes
     sign_ms = t_sign.ms
 
-    log_tangle_event(
-        run_id=RUN_ID, phase="auth", module="tangle", op="create_tx",
-        node_id=node_id, tx_id=tx["ID"], tx_type=transaction_type,
-        t_canon=t_canon.ms, t_hash=t_hash.ms, t_sign=t_sign.ms,
-        payload_bytes=len(str(payload).encode("utf-8")),
-        tx_bytes=len(str(tx).encode("utf-8")),
-        ts_ok=True, t_tips_sel=selTips_ms
-    )
     # 4) Adjuntar firma y devolver
     tx["Signature"] = signature
 
@@ -334,6 +326,16 @@ def create_transaction(RUN_ID, node_id, payload, transaction_type, approvedtips,
     selTips_ms = selTips_ms if selTips_ms is not None else 0.0
     proc_tx_ms = float(hash_ms + canonical_ms + sign_ms + selTips_ms)
     tx["_proc_ms_tx"] = float(proc_tx_ms)   # <- queda disponible para el módulo de propagación
+
+    log_tangle_event(
+        run_id=RUN_ID, phase="auth", module="tangle", op="create_tx",
+        node_id=node_id, tx_id=tx["ID"], tx_type=transaction_type,
+        t_canon=t_canon.ms, t_hash=t_hash.ms, t_sign=t_sign.ms,
+        payload_bytes=len(str(payload).encode("utf-8")),
+        tx_bytes=len(str(tx).encode("utf-8")),
+        # ts_ok=True, t_tips_sel=selTips_ms, t_total=proc_tx_ms
+        ts_ok=True, t_tips_sel=selTips_ms, t_total=t_hash.ms+t_canon.ms+t_sign.ms+selTips_ms
+    )
 
     return tx
 
@@ -643,8 +645,9 @@ def select_valid_tips(RUN_ID, node, num_tips=2, check_nonce=True, check_fresh=Tr
             t_tips_sel=t_sel.ms
         )
 
-    if len(valid) <= num_tips: return valid[:]
-    return random.sample(valid, num_tips), selTips_ms
+    if len(valid) <= num_tips: return valid[:], t_sel.ms
+    
+    return random.sample(valid, num_tips), t_sel.ms
 
 
 # tangle2_light.py
@@ -672,7 +675,7 @@ def ingest_tx(RUN_ID,node, tx: dict, add_as_tip: bool = True):
         approved_count=len(tx.get("ApprovedTx", [])),
         t_tips_store=t_store.ms, t_idx_upd=None
     )
-    return store_ms
+    return t_store.ms
 
 
 # === RX: validar y loggear Nonce/TS/Replay ===
@@ -706,7 +709,7 @@ def validate_rx_tx_and_log(RUN_ID, node, tx, phase="auth", module="tangle"):
         node_id=node.get("NodeID"), tx_id=tx.get("ID"), tx_type=tx.get("Type"),
         t_nonce_chk=t_nonce.ms, t_ts_chk=t_ts.ms, t_replay_chk=t_replay.ms,
         nonce_ok=nonce_ok, ts_ok=ts_ok, replay_ok=replay_ok,
-        tx_bytes=len(str(tx).encode("utf-8"))
+        tx_bytes=len(str(tx).encode("utf-8")), t_total=t_nonce.ms + t_ts.ms + t_replay.ms
     )
 
-    return replay_ok, validate_ms
+    return replay_ok, t_nonce.ms + t_ts.ms + t_replay.ms
