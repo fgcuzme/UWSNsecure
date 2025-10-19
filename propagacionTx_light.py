@@ -14,6 +14,11 @@ global VERBOSE
 
 PER_VARIABLE = None
 VERBOSE = False
+PACKET_SIZE_ACK = 72    # bits
+PACKET_SIZE_AUTH = 1480 # bits
+
+PAYLOAD_BITS = 32*8 # 256 bits
+PAYLOAD_ACK = 0     # 0 bits
 
 ### agregado 28/09/2025
 # --- Componentes de latencia (todo en ms) ---
@@ -113,7 +118,7 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
 
                 # calular el per
                 per_sink_ch_auth, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, 
-                                                                              L=1480, bitrate=9200)
+                                                                              L=PACKET_SIZE_AUTH, bitrate=9200)
 
                 start_position = sink1["Position"]
                 end_position = Ch_node["Position"]
@@ -125,8 +130,8 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
 
                 success_auth = propagate_with_probability(per=per_sink_ch_auth, override_per=PER_VARIABLE)
                 p_lost_auth = not success_auth
-                bits_sent_auth = 1480 # bits
-                bits_received_auth = 1480 if success_auth else 0
+                bits_sent_auth = PACKET_SIZE_AUTH # bits
+                bits_received_auth = PACKET_SIZE_AUTH if success_auth else 0
 
                 # Simular probabilidad de recepción
                 if success_auth:
@@ -166,16 +171,16 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
                             initial_energy_ch_tx = Ch_node["ResidualEnergy"]
 
                             # calular el per
-                            per_ch_sink_auth_ack, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=72, bitrate=9200)
+                            per_ch_sink_auth_ack, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=PACKET_SIZE_ACK, bitrate=9200)
 
                             success_auth_ack = propagate_with_probability(per=per_ch_sink_auth_ack, override_per=PER_VARIABLE)
                             p_lost_auth_ack = not success_auth_ack
-                            bits_sent_auth_ack = 72 # bits
-                            bits_received_auth_ack = 72 if success_auth_ack else 0
+                            bits_sent_auth_ack = PACKET_SIZE_ACK # bits
+                            bits_received_auth_ack = PACKET_SIZE_ACK if success_auth_ack else 0
 
                             # Calcular el timeout de espera
                             lat_prop, lat_tx, lat_proc, timeout_chtosink = calculate_timeout(start_position, end_position, bitrate=9200, 
-                                                                                             packet_size=72)
+                                                                                             packet_size=PACKET_SIZE_ACK)
 
                             # Actualiza energía del nodo
                             Ch_node = update_energy_node_tdma(Ch_node, sink1["Position"], E_schedule,
@@ -248,7 +253,7 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
                             run_id=RUN_ID, phase="auth", module="tangle", msg_type="AUTH:GEN",
                             sender_id=sink1["NodeID"], receiver_id=Ch_node["NodeID"], cluster_id=Ch_node["ClusterHead"],
                             start_pos=start_position, end_pos=end_position,
-                            bits_sent=bits_sent_auth, bits_received=bits_received_auth,
+                            bits_sent=bits_sent_auth, bits_received=bits_received_auth, payload_bits=PAYLOAD_BITS,
                             success=success_auth, packet_lost=p_lost_auth,
                             energy_event_type='rx', energy_j=energy_consumed_ch_rx,
                             residual_sender=None, residual_receiver=Ch_node["ResidualEnergy"],
@@ -341,7 +346,7 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                 initial_energy_ch_tx = ch_node1["ResidualEnergy"]
                 # Calcular el timeout de espera
                 lat_prop, lat_tx, lat_proc, timeout_ch_to_sn = calculate_timeout(start_position, end_position, 
-                                                                                 bitrate=9200, packet_size=1480)
+                                                                                 bitrate=9200, packet_size=PACKET_SIZE_AUTH)
                 # Actualiza energía del nodo
                 ch_node1 = update_energy_node_tdma(ch_node1, node1["Position"], E_schedule,
                                                     timeout_ch_to_sn, type_packet, role='CH', action='tx', 
@@ -350,13 +355,13 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                 energy_consumed_ch_tx = ((initial_energy_ch_tx - ch_node1["ResidualEnergy"]))
                 print(f'Energy consumed del CH en Tx - Tx-genesis : ', energy_consumed_ch_tx)
 
-                per_ch_to_sn, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=1480, 
+                per_ch_to_sn, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=PACKET_SIZE_AUTH, 
                                                                           bitrate=9200)
 
                 success_auth = propagate_with_probability(per=per_ch_to_sn, override_per=PER_VARIABLE)
                 p_lost_auth = not success_auth
-                bits_sent_auth = 1480 # bits
-                bits_received_auth = 1480 if success_auth else 0
+                bits_sent_auth = PACKET_SIZE_AUTH # bits
+                bits_received_auth = PACKET_SIZE_AUTH if success_auth else 0
 
                 # Se almacena en log_event tx del msj de auth-genesis-sink
                 log_event(
@@ -410,19 +415,19 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                             rx_ok, validate_ms  = validate_rx_tx_and_log(RUN_ID, node1, genesis_tx, phase="auth", module="tangle")
 
                             # calular el per
-                            per_sn_gen_ack, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=72, bitrate=9200)
+                            per_sn_gen_ack, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=PACKET_SIZE_ACK, bitrate=9200)
 
                             success_gen_ack = propagate_with_probability(per=per_sn_gen_ack, override_per=PER_VARIABLE)
                             p_lost_gen_ack = not success_gen_ack
-                            bits_sent_gen_ack = 72 # bits
-                            bits_received_gen_ack = 72 if success_gen_ack else 0
+                            bits_sent_gen_ack = PACKET_SIZE_ACK # bits
+                            bits_received_gen_ack = PACKET_SIZE_ACK if success_gen_ack else 0
 
                             # Actualizar la energia del SN en Tx del ACK
                             initial_energy_sn_tx = node1["ResidualEnergy"]
                             # Calcular el timeout de espera
                             lat_prop, lat_tx, lat_proc, timeout_sn_to_ch = calculate_timeout(start_position, end_position, 
                                                                                              bitrate=9200, 
-                                                                                             packet_size=72)
+                                                                                             packet_size=PACKET_SIZE_ACK)
                             # Actualiza energía del nodo
                             node1 = update_energy_node_tdma(node1, ch_node1["Position"], E_schedule,
                                                                 timeout_sn_to_ch, type_packet_control, role='SN', 
@@ -457,7 +462,7 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                                 initial_energy_ch_rx = ch_node1["ResidualEnergy"]
                                 # Calcular el timeout de espera
                                 lat_prop, lat_tx, lat_proc, timeout_sn_to_ch = calculate_timeout(start_position, end_position, 
-                                                                                                 bitrate=9200, packet_size=72)
+                                                                                                 bitrate=9200, packet_size=PACKET_SIZE_ACK)
                                 # Actualiza energía del nodo
                                 ch_node1 = update_energy_node_tdma(ch_node1, node1["Position"], E_schedule,
                                                                     timeout_sn_to_ch, type_packet_control, role='CH', 
@@ -470,7 +475,7 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                                         run_id=RUN_ID, phase="auth", module="tangle", msg_type="AUTH:GEN:ACK",
                                         sender_id=ch_node1["NodeID"], receiver_id=node1["NodeID"], cluster_id=node1["ClusterHead"],
                                         start_pos=start_position, end_pos=end_position,
-                                        bits_sent=bits_sent_gen_ack, bits_received=bits_received_gen_ack,
+                                        bits_sent=bits_sent_gen_ack, bits_received=bits_received_gen_ack, payload_bits=PAYLOAD_ACK,
                                         success=success_gen_ack, packet_lost=p_lost_gen_ack,
                                         energy_event_type='rx', energy_j=energy_consumed_ch_rx,
                                         residual_sender=node1["ResidualEnergy"], residual_receiver=ch_node1["ResidualEnergy"],
@@ -498,7 +503,7 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                     initial_energy_sn_rx = node1["ResidualEnergy"]
                     # Calcular el timeout de espera
                     lat_prop, lat_tx, _, timeout_ch_to_sn = calculate_timeout(start_position, end_position, 
-                                                                              bitrate=9200, packet_size=1480, 
+                                                                              bitrate=9200, packet_size=PACKET_SIZE_AUTH, 
                                                                               proc_time_s=t_proc_sn_recv_gen)
                     # Actualiza energía del nodo
                     node1 = update_energy_node_tdma(node1, ch_node1["Position"], E_schedule,
@@ -512,7 +517,7 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                         run_id=RUN_ID, phase="auth", module="tangle", msg_type="AUTH:GEN",
                         sender_id=ch_node1["NodeID"], receiver_id=node1["NodeID"], cluster_id=node1["ClusterHead"],
                         start_pos=start_position, end_pos=end_position,
-                        bits_sent=bits_sent_auth, bits_received=bits_received_auth,
+                        bits_sent=bits_sent_auth, bits_received=bits_received_auth, payload_bits=PAYLOAD_BITS,
                         success=success_auth, packet_lost=p_lost_auth,
                         energy_event_type='rx', energy_j=energy_consumed_sn_rx,
                         residual_sender=ch_node1["ResidualEnergy"], residual_receiver=node1["ResidualEnergy"],
@@ -671,7 +676,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
 
             # calculos de calidad del enlace
             per_resp_auth_ch_sink, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, 
-                                                                               L=1480, bitrate=9200)
+                                                                               L=PACKET_SIZE_AUTH, bitrate=9200)
 
             # CH crea y firma tx de respuesta
             # t_proc_ch_resp_auth = estimate_proc_time_s(do_sign=True, do_tips=True)
@@ -680,14 +685,14 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
 
             success_resp_auth = propagate_with_probability(per=per_resp_auth_ch_sink, override_per=PER_VARIABLE)
             p_lost_resp_auth = not success_resp_auth
-            bits_sent_resp_auth = 1480 # bits
-            bits_received_resp_auth = 1480 if success_resp_auth else 0
+            bits_sent_resp_auth = PACKET_SIZE_AUTH # bits
+            bits_received_resp_auth = PACKET_SIZE_AUTH if success_resp_auth else 0
 
             # guardar la energía antes de actualizar
             initial_energy_ch_tx = ch_node1["ResidualEnergy"]
             # Calcular el timeout de espera
             lat_prop, lat_tx, _, timeout_ch_resp_auth = calculate_timeout(start_position, end_position, 
-                                                                          bitrate=9200, packet_size=1480, 
+                                                                          bitrate=9200, packet_size=PACKET_SIZE_AUTH, 
                                                                           proc_time_s=t_proc_ch_resp_auth)
             # Actualiza energía del nodo
             ch_node1 = update_energy_node_tdma(ch_node1, sink1["Position"], E_schedule,
@@ -772,12 +777,12 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                     while retries_sink < max_retries and not ack_received_CH:
                         # calular el per
                         per_sink_ch_ack, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, 
-                                                                                     L=72, bitrate=9200)
+                                                                                     L=PACKET_SIZE_ACK, bitrate=9200)
 
                         success_auth_ack = propagate_with_probability(per=per_sink_ch_ack, override_per=PER_VARIABLE)
                         p_lost_auth_ack = not success_auth_ack
-                        bits_sent_auth_ack = 72 # bits
-                        bits_received_auth_ack = 72 if success_auth_ack else 0
+                        bits_sent_auth_ack = PACKET_SIZE_ACK # bits
+                        bits_received_auth_ack = PACKET_SIZE_ACK if success_auth_ack else 0
                         ## Simula al emisión y recepción del ack
                         if success_auth_ack:
                             ack_received_CH = True
@@ -787,7 +792,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                             initial_energy_ch_rx = ch_node1["ResidualEnergy"]
                             # Calcular el timeout de espera
                             lat_prop, lat_tx, _, timeout_ch = calculate_timeout(start_position, end_position, 
-                                                                                bitrate=9200, packet_size=72, 
+                                                                                bitrate=9200, packet_size=PACKET_SIZE_ACK, 
                                                                                 proc_time_s=proce_ms)
                             # Actualiza energía del nodo
                             ch_node1 = update_energy_node_tdma(ch_node1, sink1["Position"], E_schedule,
@@ -801,7 +806,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                                 run_id=RUN_ID, phase="auth", module="tangle", msg_type="AUTH:RESP:ACK",
                                 sender_id=sink1["NodeID"], receiver_id=ch_node1["NodeID"], cluster_id=ch_node1["ClusterHead"],
                                 start_pos=start_position, end_pos=end_position,
-                                bits_sent=bits_sent_auth_ack, bits_received=bits_received_auth_ack,
+                                bits_sent=bits_sent_auth_ack, bits_received=bits_received_auth_ack, payload_bits=PAYLOAD_ACK,
                                 success=success_auth_ack, packet_lost=p_lost_auth_ack,
                                 energy_event_type='rx', energy_j=energy_consumed_ch_rx,
                                 residual_sender=None, residual_receiver=ch_node1["ResidualEnergy"],
@@ -872,17 +877,17 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                     # times_propagation_tx_response = delay
 
                     per_resp_auth_ch_sn, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, 
-                                                                                     L=1480, bitrate=9200)
+                                                                                     L=PACKET_SIZE_AUTH, bitrate=9200)
                     success_resp_auth = propagate_with_probability(per=per_resp_auth_ch_sn, override_per=PER_VARIABLE)
                     p_lost_resp_auth = not success_resp_auth
-                    bits_sent_resp_auth = 1480 # bits
-                    bits_received_resp_auth = 1480 if success_resp_auth else 0
+                    bits_sent_resp_auth = PACKET_SIZE_AUTH # bits
+                    bits_received_resp_auth = PACKET_SIZE_AUTH if success_resp_auth else 0
 
                     # guardar la energía antes de actualizar
                     initial_energy_ch_tx = ch_node1["ResidualEnergy"]
                     # Calcular el timeout de espera
                     lat_prop, lat_tx, lat_proc, timeout_ch = calculate_timeout(start_position, end_position, 
-                                                                               bitrate=9200, packet_size=1480)
+                                                                               bitrate=9200, packet_size=PACKET_SIZE_AUTH)
                     # Actualiza energía del nodo
                     ch_node1 = update_energy_node_tdma(ch_node1, node2["Position"], E_schedule,
                                                         timeout_ch, type_packet, role='CH', action='tx', verbose=VERBOSE)
@@ -952,19 +957,19 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                             while retries_SNtoCH < max_retries and not ack_received_sntoch:
                                 # calular el per
                                 per_sn_resp_ack, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist,
-                                                                                              L=72, bitrate=9200)
+                                                                                              L=PACKET_SIZE_ACK, bitrate=9200)
                                 success_resp_ack = propagate_with_probability(per=per_sn_resp_ack, 
                                                                               override_per=PER_VARIABLE)
                                 p_lost_resp_ack = not success_resp_ack
-                                bits_sent_resp_ack = 72 # bits
-                                bits_received_resp_ack = 72 if success_resp_ack else 0
+                                bits_sent_resp_ack = PACKET_SIZE_ACK # bits
+                                bits_received_resp_ack = PACKET_SIZE_ACK if success_resp_ack else 0
 
                                 # guardar la energía antes de actualizar
                                 initial_energy_sn_tx = node2["ResidualEnergy"]
                                 # Calcular el timeout de espera
                                 lat_prop, lat_tx, lat_proc, timeout_sn = calculate_timeout(start_position, 
                                                                                            end_position, bitrate=9200, 
-                                                                                           packet_size=72)
+                                                                                           packet_size=PACKET_SIZE_ACK)
                                 # Actualiza energía del nodo
                                 node2 = update_energy_node_tdma(node2, ch_node1["Position"], E_schedule,
                                                                     timeout_sn, type_packet_control, role='SN', 
@@ -997,7 +1002,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                                     initial_energy_ch_rx = ch_node1["ResidualEnergy"]
                                     # Calcular el timeout de espera
                                     lat_prop, lat_tx, lat_proc, timeout_ch = calculate_timeout(start_position, end_position, 
-                                                                                               bitrate=9200, packet_size=72)
+                                                                                               bitrate=9200, packet_size=PACKET_SIZE_ACK)
                                     # Actualiza energía del nodo
                                     ch_node1 = update_energy_node_tdma(ch_node1, node2["Position"], E_schedule,
                                                                         timeout_ch, type_packet_control, role='CH', 
@@ -1009,7 +1014,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                                         run_id=RUN_ID, phase="auth", module="tangle", msg_type="AUTH:RESP:ACK",
                                         sender_id=node2["NodeID"], receiver_id=ch_node1["NodeID"], cluster_id=node2["ClusterHead"],
                                         start_pos=start_position, end_pos=end_position,
-                                        bits_sent=bits_sent_resp_ack, bits_received=bits_received_resp_ack,
+                                        bits_sent=bits_sent_resp_ack, bits_received=bits_received_resp_ack, payload_bits=PAYLOAD_ACK,
                                         success=success_resp_ack, packet_lost=p_lost_resp_ack,
                                         energy_event_type='rx', energy_j=energy_consumed_ch_rx,
                                         residual_sender=node2["ResidualEnergy"], residual_receiver=ch_node1["ResidualEnergy"],
@@ -1037,7 +1042,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                         initial_energy_sn_rx = node2["ResidualEnergy"]
                         # Calcular el timeout de espera
                         lat_prop, lat_tx, lat_proc, timeout_sn = calculate_timeout(start_position, end_position, 
-                                                                                   bitrate=9200, packet_size=1480, 
+                                                                                   bitrate=9200, packet_size=PACKET_SIZE_AUTH, 
                                                                                    proc_time_s=t_proc_ch_resp_auth)
                         # Actualiza energía del nodo
                         node2 = update_energy_node_tdma(node2, ch_node1["Position"], E_schedule,
@@ -1051,7 +1056,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                             run_id=RUN_ID, phase="auth", module="tangle", msg_type="AUTH:RESP",
                             sender_id=ch_node1["NodeID"], receiver_id=node2["NodeID"], cluster_id=node2["ClusterHead"],
                             start_pos=start_position, end_pos=end_position,
-                            bits_sent=bits_sent_resp_auth, bits_received=bits_received_resp_auth,
+                            bits_sent=bits_sent_resp_auth, bits_received=bits_received_resp_auth, payload_bits=PAYLOAD_BITS,
                             success=success_resp_auth, packet_lost=p_lost_resp_auth,
                             energy_event_type='rx', energy_j=energy_consumed_sn_rx,
                             residual_sender=ch_node1["ResidualEnergy"], residual_receiver=node2["ResidualEnergy"],
@@ -1153,21 +1158,21 @@ def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retrie
                 # time.sleep(delay)  # Simular el tiempo de sincronización
 
                 per_sn_resp_ch, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, 
-                                                                            L=1480, bitrate=9200)
+                                                                            L=PACKET_SIZE_AUTH, bitrate=9200)
                 # SN crea y firma tx de respuesta al CH
                 # t_proc_sn_resp_auth = estimate_proc_time_s(do_sign=True, do_tips=True)
                 t_proc_sn_resp_auth = float(node_auth_tx.get("_proc_ms_tx", 0.0)) / 1000.0
 
                 success_resp_auth = propagate_with_probability(per=per_sn_resp_ch, override_per=PER_VARIABLE)
                 p_lost_resp_auth = not success_resp_auth
-                bits_sent_resp_auth = 1480 # bits
-                bits_received_resp_auth = 1480 if success_resp_auth else 0
+                bits_sent_resp_auth = PACKET_SIZE_AUTH # bits
+                bits_received_resp_auth = PACKET_SIZE_AUTH if success_resp_auth else 0
 
                 # guardar la energía antes de actualizar
                 initial_energy_sn_tx = node4["ResidualEnergy"]
                 # Calcular el timeout de espera
                 lat_prop, lat_tx, _, timeout_sn = calculate_timeout(start_position, end_position, 
-                                                                           bitrate=9200, packet_size=1480, 
+                                                                           bitrate=9200, packet_size=PACKET_SIZE_AUTH, 
                                                                            proc_time_s=t_proc_sn_resp_auth)
                 # Actualiza energía del nodo
                 node4 = update_energy_node_tdma(node4, node_ch["Position"], E_schedule,
@@ -1253,19 +1258,19 @@ def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retrie
                                 # guardar la energía antes de actualizar
                                 per_sn_resp_ack_ch, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, 
                                                                                                 distance_m=dist, 
-                                                                                                L=72, bitrate=9200)
+                                                                                                L=PACKET_SIZE_ACK, bitrate=9200)
 
                                 # CH confirma el ack
                                 success_resp_auth_ack = propagate_with_probability(per=per_sn_resp_ack_ch, 
                                                                                    override_per=PER_VARIABLE)
                                 p_lost_resp_auth_ack = not success_resp_auth_ack
-                                bits_sent_resp_auth_ack = 72 # bits
-                                bits_received_resp_auth_ack = 72 if success_resp_auth else 0
+                                bits_sent_resp_auth_ack = PACKET_SIZE_ACK # bits
+                                bits_received_resp_auth_ack = PACKET_SIZE_ACK if success_resp_auth else 0
 
                                 # Calcular el timeout de espera
                                 lat_prop, lat_tx, lat_proc, timeout_ch = calculate_timeout(start_position, 
                                                                                            end_position, bitrate=9200, 
-                                                                                           packet_size=72)
+                                                                                           packet_size=PACKET_SIZE_ACK)
 
                                 initial_energy_ch_tx = node_ch["ResidualEnergy"]
                                 # Actualiza energía del nodo
@@ -1303,7 +1308,7 @@ def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retrie
                                     lat_prop, lat_tx, lat_proc, timeout_sn = calculate_timeout(start_position, 
                                                                                                end_position, 
                                                                                                bitrate=9200, 
-                                                                                               packet_size=72)
+                                                                                               packet_size=PACKET_SIZE_ACK)
                                     # Actualiza energía del nodo
                                     node4 = update_energy_node_tdma(node4, node_ch["Position"], E_schedule,
                                                                                 timeout_sn, type_packet_control, 
@@ -1318,7 +1323,7 @@ def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retrie
                                         sender_id=node_ch["NodeID"], receiver_id=node4["NodeID"], cluster_id=node4["ClusterHead"],
                                         start_pos=start_position, end_pos=end_position,
                                         bits_sent=bits_sent_resp_auth_ack, bits_received=bits_received_resp_auth_ack,
-                                        success=success_resp_auth_ack, packet_lost=p_lost_resp_auth_ack,
+                                        success=success_resp_auth_ack, packet_lost=p_lost_resp_auth_ack, payload_bits=PAYLOAD_ACK,
                                         energy_event_type='rx', energy_j=energy_consumed_sn_rx,
                                         residual_sender=node_ch["ResidualEnergy"], residual_receiver=node4["ResidualEnergy"],
                                         bitrate=9200, freq_khz=20,
@@ -1343,7 +1348,7 @@ def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retrie
                         initial_energy_ch_rx = node_ch["ResidualEnergy"]
                         # Calcular el timeout de espera
                         lat_prop, lat_tx, _, timeout_ch = calculate_timeout(start_position, end_position, 
-                                                                                   bitrate=9200, packet_size=1480,
+                                                                                   bitrate=9200, packet_size=PACKET_SIZE_AUTH,
                                                                                    proc_time_s=t_proc_ch_recieve)
                         # Actualiza energía del nodo
                         node_ch = update_energy_node_tdma(node_ch, node4["Position"], E_schedule,
@@ -1357,7 +1362,7 @@ def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retrie
                             run_id=RUN_ID, phase="auth", module="tangle", msg_type="AUTH:RESP",
                             sender_id=node4["NodeID"], receiver_id=node_ch["NodeID"], cluster_id=node4["ClusterHead"],
                             start_pos=start_position, end_pos=end_position,
-                            bits_sent=bits_sent_resp_auth, bits_received=bits_received_resp_auth,
+                            bits_sent=bits_sent_resp_auth, bits_received=bits_received_resp_auth, payload_bits=PAYLOAD_BITS,
                             success=success_resp_auth, packet_lost=p_lost_resp_auth,
                             energy_event_type='rx', energy_j=energy_consumed_ch_rx,
                             residual_sender=node4["ResidualEnergy"], residual_receiver=node_ch["ResidualEnergy"],

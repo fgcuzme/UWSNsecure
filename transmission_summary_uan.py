@@ -3,9 +3,9 @@ import os, csv
 import pandas as pd
 from collections import defaultdict
 
-PHASE = "syn"
+# PHASE = "syn"
 # PHASE = "auth"
-# PHASE = "data"
+PHASE = "data"
 
 CANON_CSV = os.environ.get("UWSN_EVENTS_CSV", "stats/transmissions.csv")
 
@@ -77,8 +77,15 @@ def summarize_global(input_csv=CANON_CSV, output_csv=f"stats/transmission_summar
     df = pd.read_csv(input_csv)
     # mask = df["msg_type"].astype(str).str.contains("DATA")
     mask = df["phase"].astype(str).str.contains(PHASE)
+
     # mask = df["msg_type"].astype(str).str.contains("SYN:TDMA")
     d = df[mask].copy()
+
+    # Calcular payload_bits (solo si existe payload_len)
+    if "payload_len" in d.columns:
+        d["payload_bits"] = d["payload_len"].fillna(0).astype(int) * 8
+    else:
+        d["payload_bits"] = 0
 
     total_tx = len(d)
     successful = int(d["success"].sum())
@@ -86,17 +93,35 @@ def summarize_global(input_csv=CANON_CSV, output_csv=f"stats/transmission_summar
     total_energy = d["energy_j"].sum()
     avg_energy = d["energy_j"].mean()
     # Throughput efectivo (kbps) = sum(bits_recibidos) / sum(latency_ms)
-    kbps = (d["bits_received"].sum()/1024.0) / (d["latency_ms"].sum()/1000.0) if d["latency_ms"].sum() > 0 else 0.0
+    # kbps = (d["bits_received"].sum()/1024.0) / (d["latency_ms"].sum()/1000.0) if d["latency_ms"].sum() > 0 else 0.0
+    # Throughput bruto (kbps)
+    kbps_bruto = (d["bits_received"].sum()/1024.0) / (d["latency_ms"].sum()/1000.0) if d["latency_ms"].sum() > 0 else 0.0
+    # Throughput útil (solo payload)
+    kbps_util = (d["payload_bits"].sum()/1024.0) / (d["latency_ms"].sum()/1000.0) if d["latency_ms"].sum() > 0 else 0.0
+    # Eficiencia relativa
+    eff_pct = (d["payload_bits"].sum() / d["bits_received"].sum() * 100.0) if d["bits_received"].sum() > 0 else 0.0
+
     loss_pct = 100.0 * (1.0 - (successful / total_tx)) if total_tx>0 else 0.0
 
     os.makedirs(os.path.dirname(output_csv), exist_ok=True)
     with open(output_csv, "w", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["total_transmissions","successful_receptions","avg_latency_ms","avg_throughput_kbps","total_energy_j","avg_energy_j","packet_loss_percent"])
-        w.writerow([total_tx, successful, round(avg_latency or 0,2), round(kbps,2), round(total_energy or 0,8), round(avg_energy or 0,8), round(loss_pct,2)])
+        # w.writerow(["total_transmissions","successful_receptions","avg_latency_ms","avg_throughput_kbps","total_energy_j","avg_energy_j","packet_loss_percent"])
+        # w.writerow([total_tx, successful, round(avg_latency or 0,2), round(kbps,2), round(total_energy or 0,8), round(avg_energy or 0,8), round(loss_pct,2)])
+        w.writerow([
+        "total_transmissions","successful_receptions","avg_latency_ms",
+        "avg_throughput_bruto_kbps","avg_throughput_util_kbps",
+        "efficiency_percent","total_energy_j","avg_energy_j","packet_loss_percent"
+        ])
+        w.writerow([
+            total_tx, successful, round(avg_latency or 0,2),
+            round(kbps_bruto,2), round(kbps_util,2),
+            round(eff_pct,2), round(total_energy or 0,8),
+            round(avg_energy or 0,8), round(loss_pct,2)
+        ])
     print(f"📊 Resumen global exportado a {output_csv}")
 
 
-# # Resumen y PROYECCIÓN
-# summarize_per_node()
-# summarize_global()
+# Resumen y PROYECCIÓN
+summarize_per_node()
+summarize_global()

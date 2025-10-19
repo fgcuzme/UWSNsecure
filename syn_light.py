@@ -9,6 +9,8 @@ global VERBOSE
 
 PER_VARIABLE = None
 VERBOSE = False
+PACKET_SIZE_SYN = 72 # bits
+PAYLOAD_ACK = 0 # bits
 
 # Función para crear un paquete SYN desde el Sink
 def create_syn_packet(sink_id):
@@ -77,13 +79,13 @@ def propagate_syn_to_CH_tdma(RUN_ID, sink, CH_ids, node_uw, max_retries=3, timeo
             
             # time.sleep(delay)  # Simular el tiempo de sincronización
             # Calcular el timeout de espera, se calcula el tiempo de procesamiento empirico 0.01 - 0.05 s
-            lat_prop, lat_tx, lat_proc, timeout_sinktoch = calculate_timeout(start_position, end_position, bitrate=9200, packet_size=72)
+            lat_prop, lat_tx, lat_proc, timeout_sinktoch = calculate_timeout(start_position, end_position, bitrate=9200, packet_size=PACKET_SIZE_SYN)
             
             # calular el per
-            per_sink_ch, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=72, bitrate=9200)
+            per_sink_ch, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=PACKET_SIZE_SYN, bitrate=9200)
             success_syn = propagate_with_probability(per=per_sink_ch, override_per=PER_VARIABLE)
             p_lost_syn = not success_syn
-            bits_received_syn = 72 if success_syn else 0
+            bits_received_syn = PACKET_SIZE_SYN if success_syn else 0
 
             # DEscuenta energía de los demas nodos
             # Los nodos consumen cuando no estan transmitiendo.
@@ -110,7 +112,7 @@ def propagate_syn_to_CH_tdma(RUN_ID, sink, CH_ids, node_uw, max_retries=3, timeo
                     run_id=RUN_ID, phase="sync", module="syn_light", msg_type="SYN:TDMA",
                     sender_id=sink["NodeID"], receiver_id=node_uw[ch]["NodeID"], cluster_id=node_uw[ch]["ClusterHead"],
                     start_pos=start_position, end_pos=end_position,
-                    bits_sent=72, bits_received=bits_received_syn,
+                    bits_sent=PACKET_SIZE_SYN, bits_received=bits_received_syn, payload_bits=PAYLOAD_ACK,
                     success=success_syn, packet_lost=p_lost_syn, 
                     energy_event_type='rx', energy_j=energy_consumed_ch_rx,
                     residual_sender=None, residual_receiver=node_uw[ch]["ResidualEnergy"],
@@ -127,10 +129,10 @@ def propagate_syn_to_CH_tdma(RUN_ID, sink, CH_ids, node_uw, max_retries=3, timeo
                     initial_energy_tx = node_uw[ch]["ResidualEnergy"]
 
                     # calular el per
-                    per_ack_ch_sink, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=72, bitrate=9200)                
+                    per_ack_ch_sink, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=PACKET_SIZE_SYN, bitrate=9200)                
                     success_ack = propagate_with_probability(per=per_ack_ch_sink, override_per=PER_VARIABLE)
                     p_lost_ack = not success_ack
-                    bits_received_ack = 72 if success_ack else 0
+                    bits_received_ack = PACKET_SIZE_SYN if success_ack else 0
                     
                     # Actualiza energía de la tx de la confirmación (ACK)
                     node_uw[ch] = update_energy_node_tdma(node_uw[ch], sink["Position"], E_schedule, timeout_sinktoch, 
@@ -145,7 +147,7 @@ def propagate_syn_to_CH_tdma(RUN_ID, sink, CH_ids, node_uw, max_retries=3, timeo
                             run_id=RUN_ID, phase="sync", module="syn_light", msg_type="SYN:TDMA:ACK",
                             sender_id=node_uw[ch]["NodeID"], receiver_id=sink["NodeID"], cluster_id=node_uw[ch]["ClusterHead"],
                             start_pos=start_position, end_pos=end_position,
-                            bits_sent=72, bits_received=bits_received_ack,
+                            bits_sent=PACKET_SIZE_SYN, bits_received=bits_received_ack,
                             success=success_ack, packet_lost=p_lost_ack, 
                             energy_event_type='tx', energy_j=energy_consumed_ch_tx,
                             residual_sender=node_uw[ch]["ResidualEnergy"], residual_receiver=None,
@@ -233,15 +235,15 @@ def synchronize_nodes_tdma(RUN_ID, CH_id, syn_packet, node_uw, max_retries_senso
             # time.sleep(delay)  # Simular el tiempo de sincronización
 
             # PER desde CH al nodo
-            per_ch_sn, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=72, bitrate=9200)
+            per_ch_sn, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=PACKET_SIZE_SYN, bitrate=9200)
             # succesks_rx = np.random.rand() > 0.3
             success_tx = propagate_with_probability(per=per_ch_sn, override_per=PER_VARIABLE)
             p_lost_tx = not success_tx
-            bits_received = 72 if success_tx else 0
+            bits_received = PACKET_SIZE_SYN if success_tx else 0
 
             # Calcular el timeout de espera
             lat_prop, lat_tx, lat_proc, timeout_chtosn = calculate_timeout(node_uw[CH_id]["Position"], node["Position"], 
-                                                                           bitrate=9200, packet_size=72)
+                                                                           bitrate=9200, packet_size=PACKET_SIZE_SYN)
 
             # CH transmite el paquete de sincronización
             initial_energy_ch_tx = node_uw[CH_id]["ResidualEnergy"] 
@@ -253,7 +255,7 @@ def synchronize_nodes_tdma(RUN_ID, CH_id, syn_packet, node_uw, max_retries_senso
                 run_id=RUN_ID, phase="sync", module="syn_light", msg_type="SYN:TDMA",
                 sender_id=node_uw[CH_id]["NodeID"], receiver_id=node["NodeID"], cluster_id=node["ClusterHead"],
                 start_pos=start_position, end_pos=end_position,
-                bits_sent=72, bits_received=bits_received,
+                bits_sent=PACKET_SIZE_SYN, bits_received=bits_received,
                 success=success_tx, packet_lost=p_lost_tx, 
                 energy_event_type='tx', energy_j=energy_consumed_ch_tx,
                 residual_sender=node_uw[CH_id]["ResidualEnergy"], residual_receiver=node["ResidualEnergy"],
@@ -280,7 +282,7 @@ def synchronize_nodes_tdma(RUN_ID, CH_id, syn_packet, node_uw, max_retries_senso
                     run_id=RUN_ID, phase="sync", module="syn_light", msg_type="SYN:TDMA",
                     sender_id=node_uw[CH_id]["NodeID"], receiver_id=node["NodeID"], cluster_id=node["ClusterHead"],
                     start_pos=start_position, end_pos=end_position,
-                    bits_sent=72, bits_received=bits_received,
+                    bits_sent=PACKET_SIZE_SYN, bits_received=bits_received, payload_bits=0,
                     success=success_tx, packet_lost=p_lost_tx, 
                     energy_event_type='rx', energy_j=energy_consumed_sn_rx,
                     residual_sender=node_uw[CH_id]["ResidualEnergy"], residual_receiver=node["ResidualEnergy"],
@@ -292,10 +294,10 @@ def synchronize_nodes_tdma(RUN_ID, CH_id, syn_packet, node_uw, max_retries_senso
 
                 while ack_retries < max_retries_sensor and not ack_received_node:
                     # Nodo responde con ACK (también puede fallar)
-                    per_sn_ch, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=72, bitrate=9200)
+                    per_sn_ch, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=PACKET_SIZE_SYN, bitrate=9200)
                     success_ack = propagate_with_probability(per=per_sn_ch, override_per=PER_VARIABLE)
                     p_lost_ack = not success_ack
-                    bits_sent_ack = 72
+                    bits_sent_ack = PACKET_SIZE_SYN
 
                     initial_energy_sn_tx = node["ResidualEnergy"]
                     node = update_energy_node_tdma(node, node_uw[CH_id]["Position"], E_schedule, timeout_chtosn, 
@@ -335,7 +337,7 @@ def synchronize_nodes_tdma(RUN_ID, CH_id, syn_packet, node_uw, max_retries_senso
                             run_id=RUN_ID, phase="sync", module="syn_light", msg_type="SYN:TDMA:ACK",
                             sender_id=node["NodeID"], receiver_id=node_uw[CH_id]["NodeID"], cluster_id=node["ClusterHead"],
                             start_pos=start_position, end_pos=end_position,
-                            bits_sent=bits_sent_ack, bits_received=bits_received,
+                            bits_sent=bits_sent_ack, bits_received=bits_received, payload_bits=0,
                             success=success_ack, packet_lost=p_lost_ack, 
                             energy_event_type='rx', energy_j=energy_consumed_ch_rx,
                             residual_sender=node["ResidualEnergy"], residual_receiver=node_uw[CH_id]["ResidualEnergy"],

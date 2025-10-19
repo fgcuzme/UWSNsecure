@@ -12,9 +12,9 @@ FIELDS = [
     "sender_id","receiver_id","cluster_id",
     "distance_m",
     "latency_ms","lat_prop_ms","lat_tx_ms","lat_proc_ms","lat_dag_ms",
-    "bits_sent","bits_received","success","packet_lost","energy_event_type",
+    "bits_sent","bits_received","payload_len","success","packet_lost","energy_event_type",
     "energy_j","residual_energy_sender","residual_energy_receiver",
-    "bitrate","SNR_dB","PER","freq_khz","SL_db", "EbN0_db", "BER",
+    "bitrate","SNR_dB","PER","freq_khz","SL_db", "EbN0_db", "BER"
 ]
 
 def _init(csv_path: str):
@@ -32,7 +32,7 @@ def log_event(*,
               residual_sender=None, residual_receiver=None,
               bitrate=9200, freq_khz=20,
               lat_prop_ms=None, lat_tx_ms=None, lat_proc_ms=0.0, lat_dag_ms=0.0,
-              snr_db=None, per=None, SL_db=None, EbN0_db=None, BER=None,
+              snr_db=None, per=None, SL_db=None, EbN0_db=None, BER=None, payload_bits=None,
               csv_path: str = EVENTS_CSV):
     """
     Registro canónico de un evento.
@@ -57,6 +57,7 @@ def log_event(*,
         "lat_proc_ms": round(lproc, 4),
         "lat_dag_ms": round(ldag, 4),
         "bits_sent": int(bits_sent or 0),
+        "payload_len": int(payload_bits or 0),
         "bits_received": int(bits_received or 0),
         "success": bool(success),
         "packet_lost": bool(packet_lost),

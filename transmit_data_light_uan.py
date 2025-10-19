@@ -9,6 +9,8 @@ global VERBOSE
 
 PER_VARIABLE = None
 VERBOSE = False
+PAYLOAD_BITS_SN = 60*8 # 480 bits
+PAYLOAD_BITS_CH = 92*8 # 736 bits
 
 # Crea la tabla para almacenar las claves compartidas en la BBDD del nodo
 def create_shared_keys_table(db_path):
@@ -609,7 +611,7 @@ def transmit_data(RUN_ID, db_path, nodes, sender_node, receiver_node, plaintext,
             run_id=RUN_ID, phase="data", module="ascon", msg_type=f"DATA:{msg_type}:RX",
             sender_id=sender_id, receiver_id=receiver_id, cluster_id=receiver_node.get("ClusterHead") if not(dest == 'Sink') else sender_node.get("ClusterHead"),
             start_pos=start_pos, end_pos=end_pos,
-            bits_sent=bits_sent, bits_received=bits_rcv,
+            bits_sent=bits_sent, bits_received=bits_rcv, payload_bits=PAYLOAD_BITS_SN if dest == 'CH' else PAYLOAD_BITS_CH,
             success=success, packet_lost=p_lost,
             energy_event_type='rx', energy_j=E_rx,
             residual_sender=sender_node["ResidualEnergy"], residual_receiver=0 if dest == 'Sink' else receiver_node["ResidualEnergy"],
