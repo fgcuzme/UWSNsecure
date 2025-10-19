@@ -11,6 +11,7 @@ import time
 from tangle_logger_light import MsTimer, log_tangle_event
 
 PER_VARIABLE = None
+VERBOSE = True
 
 ### agregado 28/09/2025
 # --- Componentes de latencia (todo en ms) ---
@@ -171,11 +172,12 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
                             bits_received_auth_ack = 72 if success_auth_ack else 0
 
                             # Calcular el timeout de espera
-                            lat_prop, lat_tx, lat_proc, timeout_chtosink = calculate_timeout(start_position, end_position, bitrate=9200, packet_size=72)
+                            lat_prop, lat_tx, lat_proc, timeout_chtosink = calculate_timeout(start_position, end_position, bitrate=9200, 
+                                                                                             packet_size=72)
 
                             # Actualiza energía del nodo
                             Ch_node = update_energy_node_tdma(Ch_node, sink1["Position"], E_schedule,
-                                                        timeout_chtosink, type_packet_control, role='CH', action='tx', verbose=True)
+                                                        timeout_chtosink, type_packet_control, role='CH', action='tx', verbose=VERBOSE)
                             energy_consumed_ch_tx = ((initial_energy_ch_tx - Ch_node["ResidualEnergy"]))
                             print(f'Energy consumed del CH en Tx ACK : ', energy_consumed_ch_tx)
 
@@ -204,7 +206,7 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
 
                             # Se actualiza la energia de los demas nodos
                             active_ids = [Ch_node["NodeID"]]
-                            node_uw1 = update_energy_standby_others(node_uw1, active_ids, timeout_chtosink, verbose=True)
+                            node_uw1 = update_energy_standby_others(node_uw1, active_ids, timeout_chtosink, verbose=VERBOSE)
 
                             # # Ch to Sink
                             # Propagar la Tx Génesis a los nodos del cluster del CH
@@ -232,7 +234,7 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
                     # Actualiza energía del nodo
                     Ch_node = update_energy_node_tdma(Ch_node, sink1["Position"], E_schedule,
                                                    timeout_sinktoch, type_packet, role='CH', action='rx', 
-                                                   verbose=True, t_verif_s=t_proc_ch_recv_gen)
+                                                   verbose=VERBOSE, t_verif_s=t_proc_ch_recv_gen)
 
                     energy_consumed_ch_rx = ((initial_energy_ch_rx - Ch_node["ResidualEnergy"]))
                     print(f'Energy consumed del CH en Rx : ', energy_consumed_ch_rx)
@@ -269,7 +271,7 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
 
                 # Se actualiza la energia de los demas nodos exista o no recepción del mensaje en el nodo
                 active_ids = [Ch_node["NodeID"]]
-                node_uw1 = update_energy_standby_others(node_uw1, active_ids, timeout_sinktoch, verbose=True)
+                node_uw1 = update_energy_standby_others(node_uw1, active_ids, timeout_sinktoch, verbose=VERBOSE)
 
             else:
                 print(f"CH {Ch_node['NodeID']} no está sincronizado. Omitido.")
@@ -339,7 +341,7 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                 # Actualiza energía del nodo
                 ch_node1 = update_energy_node_tdma(ch_node1, node1["Position"], E_schedule,
                                                     timeout_ch_to_sn, type_packet, role='CH', action='tx', 
-                                                    verbose=True)
+                                                    verbose=VERBOSE)
 
                 energy_consumed_ch_tx = ((initial_energy_ch_tx - ch_node1["ResidualEnergy"]))
                 print(f'Energy consumed del CH en Tx - Tx-genesis : ', energy_consumed_ch_tx)
@@ -369,7 +371,7 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
 
                 # Se actualiza la energia de los demas nodos
                 active_ids = [ch_node1["NodeID"],node1["NodeID"]]
-                node_uw2 = update_energy_standby_others(node_uw2, active_ids, timeout_ch_to_sn, verbose=True)
+                node_uw2 = update_energy_standby_others(node_uw2, active_ids, timeout_ch_to_sn, verbose=VERBOSE)
 
                 # CH to SN
                 # confirma la recepción del pkt
@@ -414,10 +416,12 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                             # Actualizar la energia del SN en Tx del ACK
                             initial_energy_sn_tx = node1["ResidualEnergy"]
                             # Calcular el timeout de espera
-                            lat_prop, lat_tx, lat_proc, timeout_sn_to_ch = calculate_timeout(start_position, end_position, bitrate=9200, packet_size=72)
+                            lat_prop, lat_tx, lat_proc, timeout_sn_to_ch = calculate_timeout(start_position, end_position, bitrate=9200, 
+                                                                                             packet_size=72)
                             # Actualiza energía del nodo
                             node1 = update_energy_node_tdma(node1, ch_node1["Position"], E_schedule,
-                                                                timeout_sn_to_ch, type_packet_control, role='SN', action='tx', verbose=True)
+                                                                timeout_sn_to_ch, type_packet_control, role='SN', 
+                                                                action='tx', verbose=VERBOSE)
                             energy_consumed_sn_tx = ((initial_energy_sn_tx - node1["ResidualEnergy"]))
                             print(f'Energy consumed del SN en Tx - ACK : ', energy_consumed_sn_tx)
 
@@ -438,7 +442,7 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                                     )
                             # Se actualiza la energia de los demas nodos
                             active_ids = [node1["NodeID"], ch_node1["NodeID"]]
-                            node_uw2 = update_energy_standby_others(node_uw2, active_ids, timeout_sn_to_ch, verbose=True)
+                            node_uw2 = update_energy_standby_others(node_uw2, active_ids, timeout_sn_to_ch, verbose=VERBOSE)
 
                             if success_gen_ack:
                                 ack_received_CH = True
@@ -447,10 +451,12 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                                 # guardar la energía antes de actualizar
                                 initial_energy_ch_rx = ch_node1["ResidualEnergy"]
                                 # Calcular el timeout de espera
-                                lat_prop, lat_tx, lat_proc, timeout_sn_to_ch = calculate_timeout(start_position, end_position, bitrate=9200, packet_size=72)
+                                lat_prop, lat_tx, lat_proc, timeout_sn_to_ch = calculate_timeout(start_position, end_position, 
+                                                                                                 bitrate=9200, packet_size=72)
                                 # Actualiza energía del nodo
                                 ch_node1 = update_energy_node_tdma(ch_node1, node1["Position"], E_schedule,
-                                                                    timeout_sn_to_ch, type_packet_control, role='CH', action='rx', verbose=True)
+                                                                    timeout_sn_to_ch, type_packet_control, role='CH', 
+                                                                    action='rx', verbose=VERBOSE)
                                 energy_consumed_ch_rx = ((initial_energy_ch_rx - ch_node1["ResidualEnergy"]))
                                 print(f'Energy consumed del CH en Tx - Tx-genesis : ', energy_consumed_ch_rx)
 
@@ -491,7 +497,7 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                     # Actualiza energía del nodo
                     node1 = update_energy_node_tdma(node1, ch_node1["Position"], E_schedule,
                                                         timeout_ch_to_sn, type_packet, role='SN', action='rx', 
-                                                        verbose=True, t_verif_s=t_proc_sn_recv_gen)
+                                                        verbose=VERBOSE, t_verif_s=t_proc_sn_recv_gen)
                     energy_consumed_sn_rx = ((initial_energy_sn_rx - node1["ResidualEnergy"]))
                     print(f'Energy consumed del SN en Rx - Tx-genesis : ', energy_consumed_sn_rx)
 
@@ -680,7 +686,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
             # Actualiza energía del nodo
             ch_node1 = update_energy_node_tdma(ch_node1, sink1["Position"], E_schedule,
                                                 timeout_ch_resp_auth, type_packet, role='CH', action='tx', 
-                                                verbose=True, t_verif_s=t_proc_ch_resp_auth)
+                                                verbose=VERBOSE, t_verif_s=t_proc_ch_resp_auth)
             energy_consumed_ch_tx = ((initial_energy_ch_tx - ch_node1["ResidualEnergy"]))
             print(f'Energy consumed del CH en Tx - Tx-genesis : ', energy_consumed_ch_tx)
 
@@ -701,7 +707,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
 
             ## Energia de los demas nodos
             active_ids = [ch_node1["NodeID"]]
-            node_uw3 = update_energy_standby_others(node_uw3, active_ids, timeout_ch_resp_auth, verbose=True)
+            node_uw3 = update_energy_standby_others(node_uw3, active_ids, timeout_ch_resp_auth, verbose=VERBOSE)
 
 
             # Simular la probabiidad de recepción AL SINK
@@ -780,7 +786,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                             # Actualiza energía del nodo
                             ch_node1 = update_energy_node_tdma(ch_node1, sink1["Position"], E_schedule,
                                                             timeout_ch, type_packet_control, role='CH', action='rx', 
-                                                            verbose=True)
+                                                            verbose=VERBOSE)
                             energy_consumed_ch_rx = ((initial_energy_ch_rx - ch_node1["ResidualEnergy"]))
                             # print(f'Energy consumed del CH en Tx - Tx-genesis : ', energy_consumed_ch_rx)
 
@@ -873,7 +879,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                                                                                bitrate=9200, packet_size=1480)
                     # Actualiza energía del nodo
                     ch_node1 = update_energy_node_tdma(ch_node1, node2["Position"], E_schedule,
-                                                        timeout_ch, type_packet, role='CH', action='tx', verbose=True)
+                                                        timeout_ch, type_packet, role='CH', action='tx', verbose=VERBOSE)
                     energy_consumed_ch_tx = ((initial_energy_ch_tx - ch_node1["ResidualEnergy"]))
                     print(f'Energy consumed del CH en Tx - Tx-response : ', energy_consumed_ch_tx)
 
@@ -894,7 +900,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
 
                     ## Energia de los demas nodos
                     active_ids = [ch_node1["NodeID"], node2["NodeID"]]
-                    node_uw3 = update_energy_standby_others(node_uw3, active_ids, timeout_ch, verbose=True)
+                    node_uw3 = update_energy_standby_others(node_uw3, active_ids, timeout_ch, verbose=VERBOSE)
 
                     # # CH to SN
                     if success_resp_auth:
@@ -956,13 +962,13 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                                 # Actualiza energía del nodo
                                 node2 = update_energy_node_tdma(node2, ch_node1["Position"], E_schedule,
                                                                     timeout_sn, type_packet_control, role='SN', 
-                                                                    action='tx', verbose=True)
+                                                                    action='tx', verbose=VERBOSE)
                                 energy_consumed_sn_tx = ((initial_energy_sn_tx - node2["ResidualEnergy"]))
 
                                 ## Energia de los demas nodos
                                 active_ids = [ch_node1["NodeID"], node2["NodeID"]]
                                 node_uw3 = update_energy_standby_others(node_uw3, active_ids, t_proc_ch_resp_auth, 
-                                                                        verbose=True)
+                                                                        verbose=VERBOSE)
 
                                 # Se almacena en log_event de la tx del ack:auth
                                 log_event(
@@ -984,10 +990,12 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                                     # guardar la energía antes de actualizar
                                     initial_energy_ch_rx = ch_node1["ResidualEnergy"]
                                     # Calcular el timeout de espera
-                                    lat_prop, lat_tx, lat_proc, timeout_ch = calculate_timeout(start_position, end_position, bitrate=9200, packet_size=72)
+                                    lat_prop, lat_tx, lat_proc, timeout_ch = calculate_timeout(start_position, end_position, 
+                                                                                               bitrate=9200, packet_size=72)
                                     # Actualiza energía del nodo
                                     ch_node1 = update_energy_node_tdma(ch_node1, node2["Position"], E_schedule,
-                                                                        timeout_ch, type_packet_control, role='CH', action='rx', verbose=True)
+                                                                        timeout_ch, type_packet_control, role='CH', 
+                                                                        action='rx', verbose=VERBOSE)
                                     energy_consumed_ch_rx = ((initial_energy_ch_rx - ch_node1["ResidualEnergy"]))
 
                                     # Se almacena en log_event de la tx del ack:auth
@@ -1026,7 +1034,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                                                                                    proc_time_s=t_proc_ch_resp_auth)
                         # Actualiza energía del nodo
                         node2 = update_energy_node_tdma(node2, ch_node1["Position"], E_schedule,
-                                                            timeout_sn, type_packet, role='SN', action='rx', verbose=True, 
+                                                            timeout_sn, type_packet, role='SN', action='rx', verbose=VERBOSE, 
                                                             t_verif_s=t_proc_ch_resp_auth)
                         energy_consumed_sn_rx = ((initial_energy_sn_rx - node2["ResidualEnergy"]))
                         print(f'Energy consumed del CH en Tx - Tx-response : ', energy_consumed_sn_rx)
@@ -1157,7 +1165,7 @@ def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retrie
                 # Actualiza energía del nodo
                 node4 = update_energy_node_tdma(node4, node_ch["Position"], E_schedule,
                                                             timeout_sn, type_packet, role='SN', action='tx', 
-                                                            verbose=True, t_verif_s=t_proc_sn_resp_auth)
+                                                            verbose=VERBOSE, t_verif_s=t_proc_sn_resp_auth)
                 energy_consumed_sn_tx = ((initial_energy_sn_tx - node4["ResidualEnergy"]))
                 print(f'Energy consumed del SN en Tx - Tx-responseSN : ', energy_consumed_sn_tx)
 
@@ -1178,7 +1186,7 @@ def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retrie
 
                 ## Energia de los demas nodos
                 active_ids = [node_ch["NodeID"], node4["NodeID"]]
-                nodes = update_energy_standby_others(nodes, active_ids, timeout_sn, verbose=True)
+                nodes = update_energy_standby_others(nodes, active_ids, timeout_sn, verbose=VERBOSE)
 
                 if success_resp_auth:
                     # CH recibe la transacción y verifica si el nodo está sincronizado
@@ -1256,7 +1264,7 @@ def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retrie
                                 # Actualiza energía del nodo
                                 node_ch = update_energy_node_tdma(node_ch, node4["Position"], E_schedule,
                                                                     timeout_ch, type_packet_control, role='CH', 
-                                                                    action='tx', verbose=True)
+                                                                    action='tx', verbose=VERBOSE)
                                 energy_consumed_ch_tx = ((initial_energy_ch_tx - node_ch["ResidualEnergy"]))
                                 print(f'Energy consumed del CH en Tx - Tx-response-ACK : ', energy_consumed_ch_tx)
 
@@ -1277,7 +1285,7 @@ def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retrie
 
                                 ## Energia de los demas nodos
                                 active_ids = [node_ch["NodeID"], node4["NodeID"]]
-                                nodes = update_energy_standby_others(nodes, active_ids, timeout_ch, verbose=True)
+                                nodes = update_energy_standby_others(nodes, active_ids, timeout_ch, verbose=VERBOSE)
 
                                 if success_resp_auth_ack:
                                     authenticated_ack = True
@@ -1293,7 +1301,7 @@ def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retrie
                                     node4 = update_energy_node_tdma(node4, node_ch["Position"], E_schedule,
                                                                                 timeout_sn, type_packet_control, 
                                                                                 role='SN', action='rx', 
-                                                                                verbose=True)
+                                                                                verbose=VERBOSE)
                                     energy_consumed_sn_rx = ((initial_energy_sn_rx - node4["ResidualEnergy"]))
                                     print(f'Energy consumed del SN en Tx - Tx-responseSN : ', energy_consumed_sn_rx)
 
@@ -1333,7 +1341,7 @@ def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retrie
                         # Actualiza energía del nodo
                         node_ch = update_energy_node_tdma(node_ch, node4["Position"], E_schedule,
                                                             timeout_ch, type_packet, role='CH', action='rx', 
-                                                            verbose=True, t_verif_s=t_proc_ch_recieve)
+                                                            verbose=VERBOSE, t_verif_s=t_proc_ch_recieve)
                         energy_consumed_ch_rx = ((initial_energy_ch_rx - node_ch["ResidualEnergy"]))
                         print(f'Energy consumed del CH en Rx - Tx-responseSN : ', energy_consumed_ch_rx)
 

@@ -6,6 +6,7 @@ from per_from_link_uan import per_from_link, propagate_with_probability
 from transmission_logger_uan import log_event
 
 PER_VARIABLE = None
+VERBOSE = False
 
 # Crea la tabla para almacenar las claves compartidas en la BBDD del nodo
 def create_shared_keys_table(db_path):
@@ -249,7 +250,8 @@ def transmit_data(db_path, sender_id, receiver_id, plaintext, E_schedule, source
 
     # Obtener la clave compartida entre los nodos
     # cursor.execute("SELECT shared_key FROM shared_keys WHERE node_id = ? AND peer_id = ?", (sender_id, receiver_id)) # accede al dato tipo blob
-    cursor.execute("SELECT shared_key, id FROM shared_keys WHERE node_id = ? AND peer_id = ?", (int(sender), int(receiver))) # accede al dato tipo int
+    cursor.execute("SELECT shared_key, id FROM shared_keys WHERE node_id = ? AND peer_id = ?", 
+                   (int(sender), int(receiver))) # accede al dato tipo int
     row = cursor.fetchone()
     conn.close()
 
@@ -307,9 +309,10 @@ def transmit_data(db_path, sender_id, receiver_id, plaintext, E_schedule, source
             print('Energía inicial antes de actualizar el nodo : ', initial_energy_sn)
 
             # Calcular el timeout de espera
-            lat_prop, lat_tx, lat_proc, timeout = calculate_timeout(start_position, end_position, bitrate=9200, packet_size=bits_sent)
+            lat_prop, lat_tx, lat_proc, timeout = calculate_timeout(start_position, end_position, bitrate=9200, 
+                                                                    packet_size=bits_sent)
             sender_id = update_energy_node_tdma(sender_id, receiver_id["Position"], E_schedule, timeout, 
-                                                type_packet, role='SN', action='tx', verbose=True)
+                                                type_packet, role='SN', action='tx', verbose=VERBOSE)
             
             print('Energía del SN despues de tx datos : ', sender_id['ResidualEnergy'])
             
@@ -326,9 +329,10 @@ def transmit_data(db_path, sender_id, receiver_id, plaintext, E_schedule, source
             initial_energy_ch = receiver_id['ResidualEnergy']
             print('Energía inicial antes de actualizar el CH : ', initial_energy_ch)
             # Calcular el timeout de espera
-            lat_prop, lat_tx, lat_proc, timeout = calculate_timeout(start_position, end_position, bitrate=9200, packet_size=bits_received)
+            lat_prop, lat_tx, lat_proc, timeout = calculate_timeout(start_position, end_position, bitrate=9200, 
+                                                                    packet_size=bits_received)
             receiver_id = update_energy_node_tdma(receiver_id, sender_id["Position"], E_schedule, timeout, 
-                                                type_packet, role='CH', action='rx', verbose=True)
+                                                type_packet, role='CH', action='rx', verbose=VERBOSE)
             
             # print('Nodo CH : ', receiver_id)
 
@@ -355,9 +359,10 @@ def transmit_data(db_path, sender_id, receiver_id, plaintext, E_schedule, source
             initial_energy = sender_id['ResidualEnergy']
             print('Energía inicial antes de actualizar : ', initial_energy)
             # Calcular el timeout de espera
-            lat_prop, lat_tx, lat_proc, timeout = calculate_timeout(start_position, end_position, bitrate=9200, packet_size=bits_received)
+            lat_prop, lat_tx, lat_proc, timeout = calculate_timeout(start_position, end_position, bitrate=9200, 
+                                                                    packet_size=bits_received)
             sender_id = update_energy_node_tdma(sender_id, receiver_id["Position"], E_schedule, timeout, 
-                                                type_packet, role='CH', action='tx', verbose=True)
+                                                type_packet, role='CH', action='tx', verbose=VERBOSE)
             
             # energía despues de la trasmisión 
             energy_consumed_ch += ((initial_energy - sender_id["ResidualEnergy"]))
@@ -485,7 +490,8 @@ def simulate_ack_response(sender_node, receiver_node, E_schedule, ack_size_bits=
         ack_lost = False
 
     # 4. Timeout basado en distancia y tamaño de ACK
-    lat_prop, lat_tx, lat_proc, timeout = calculate_timeout(receiver_node["Position"], sender_node["Position"], bitrate=bitrate, packet_size=ack_size_bits)
+    lat_prop, lat_tx, lat_proc, timeout = calculate_timeout(receiver_node["Position"], sender_node["Position"], 
+                                                            bitrate=bitrate, packet_size=ack_size_bits)
 
     # 6. Tiempo estimado del ACK
     ack_tx_time = (ack_size_bits / bitrate) * 1000
@@ -496,7 +502,7 @@ def simulate_ack_response(sender_node, receiver_node, E_schedule, ack_size_bits=
     if sink == False:
         receiver_initial_energy = receiver_node["ResidualEnergy"]
         receiver_node = update_energy_node_tdma(receiver_node, sender_node["Position"], E_schedule, timeout,
-                                                type_packet="ack", role="ACK_SENDER", action="tx", verbose=True)
+                                                type_packet="ack", role="ACK_SENDER", action="tx", verbose=VERBOSE)
         E_tx = receiver_initial_energy - receiver_node["ResidualEnergy"]
 
         log_transmission_event(sender_id=receiver_node['NodeID'], receiver_id=sender_node['NodeID'], 

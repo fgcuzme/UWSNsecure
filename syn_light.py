@@ -6,6 +6,7 @@ from transmission_logger_uan import log_event
 from per_from_link_uan import per_from_link, propagate_with_probability
 
 PER_VARIABLE = None
+VERBOSE = False
 
 # Función para crear un paquete SYN desde el Sink
 def create_syn_packet(sink_id):
@@ -85,7 +86,7 @@ def propagate_syn_to_CH_tdma(RUN_ID, sink, CH_ids, node_uw, max_retries=3, timeo
             # DEscuenta energía de los demas nodos
             # Los nodos consumen cuando no estan transmitiendo.
             active_ids = [node_uw[ch]["NodeID"]]
-            node_uw = update_energy_standby_others(node_uw, active_ids, timeout_sinktoch, verbose=True)
+            node_uw = update_energy_standby_others(node_uw, active_ids, timeout_sinktoch, verbose=VERBOSE)
 
             # Simular probabilidad de recepción
             if success_syn: # Si recibe el packet de syn
@@ -96,7 +97,8 @@ def propagate_syn_to_CH_tdma(RUN_ID, sink, CH_ids, node_uw, max_retries=3, timeo
                 initial_energy_rx = node_uw[ch]["ResidualEnergy"]
 
                 # Actualizar la energía del Cluster Head
-                node_uw[ch] = update_energy_node_tdma(node_uw[ch], sink["Position"], E_schedule, timeout_sinktoch, type_packet, role='CH', action='rx', verbose=True)
+                node_uw[ch] = update_energy_node_tdma(node_uw[ch], sink["Position"], E_schedule, timeout_sinktoch, 
+                                                      type_packet, role='CH', action='rx', verbose=VERBOSE)
                 
                 # **Nuevo: Calcular la energía consumida**
                 energy_consumed_ch_rx = ((initial_energy_rx - node_uw[ch]["ResidualEnergy"]))
@@ -129,7 +131,8 @@ def propagate_syn_to_CH_tdma(RUN_ID, sink, CH_ids, node_uw, max_retries=3, timeo
                     bits_received_ack = 72 if success_ack else 0
                     
                     # Actualiza energía de la tx de la confirmación (ACK)
-                    node_uw[ch] = update_energy_node_tdma(node_uw[ch], sink["Position"], E_schedule, timeout_sinktoch, type_packet, role='CH', action='tx', verbose=True)
+                    node_uw[ch] = update_energy_node_tdma(node_uw[ch], sink["Position"], E_schedule, timeout_sinktoch, 
+                                                          type_packet, role='CH', action='tx', verbose=VERBOSE)
                     # Estadistica
 
                     # **Nuevo: Calcular la energía consumida**
@@ -152,7 +155,7 @@ def propagate_syn_to_CH_tdma(RUN_ID, sink, CH_ids, node_uw, max_retries=3, timeo
                     
                     # Los nodos consumen cuando no estan transmitiendo.
                     active_ids = [node_uw[ch]["NodeID"]]
-                    node_uw = update_energy_standby_others(node_uw, active_ids, timeout_sinktoch, verbose=True)
+                    node_uw = update_energy_standby_others(node_uw, active_ids, timeout_sinktoch, verbose=VERBOSE)
 
                     # Simulación de recepción de ACK para el CH, se considera 0 como escenario ideal
                     # Pero se puede manejar una probabilidad de acuerdo a otros estudios
@@ -172,7 +175,8 @@ def propagate_syn_to_CH_tdma(RUN_ID, sink, CH_ids, node_uw, max_retries=3, timeo
                         sink['RegisterNodes'][ch]['Status_syn'] = True
 
                     # Sincronizar nodos bajo el CH, auqnue el ack de respuesta no se haya recibido por el sink
-                    synchronize_nodes_tdma(RUN_ID, ch, syn_packet, node_uw, max_retries_sensor, timeout_sinktoch, type_packet, E_schedule)
+                    synchronize_nodes_tdma(RUN_ID, ch, syn_packet, node_uw, max_retries_sensor, timeout_sinktoch, 
+                                           type_packet, E_schedule)
                     success_syn = False
                     # # Los nodos consumen cuando no estan transmitiendo.
                     # active_ids = [node_uw[ch]["NodeID"]]
@@ -233,11 +237,13 @@ def synchronize_nodes_tdma(RUN_ID, CH_id, syn_packet, node_uw, max_retries_senso
             bits_received = 72 if success_tx else 0
 
             # Calcular el timeout de espera
-            lat_prop, lat_tx, lat_proc, timeout_chtosn = calculate_timeout(node_uw[CH_id]["Position"], node["Position"], bitrate=9200, packet_size=72)
+            lat_prop, lat_tx, lat_proc, timeout_chtosn = calculate_timeout(node_uw[CH_id]["Position"], node["Position"], 
+                                                                           bitrate=9200, packet_size=72)
 
             # CH transmite el paquete de sincronización
             initial_energy_ch_tx = node_uw[CH_id]["ResidualEnergy"] 
-            node_uw[CH_id] = update_energy_node_tdma(node_uw[CH_id], node["Position"], E_schedule, timeout_chtosn, type_packet, role='CH', action='tx', verbose=True)
+            node_uw[CH_id] = update_energy_node_tdma(node_uw[CH_id], node["Position"], E_schedule, timeout_chtosn, 
+                                                     type_packet, role='CH', action='tx', verbose=VERBOSE)
             energy_consumed_ch_tx = ((initial_energy_ch_tx - node_uw[CH_id]["ResidualEnergy"]))
             
             log_event(
@@ -256,14 +262,15 @@ def synchronize_nodes_tdma(RUN_ID, CH_id, syn_packet, node_uw, max_retries_senso
             
             # Los nodos consumen cuando no estan transmitiendo.
             active_ids = [node_uw[CH_id]["NodeID"],  node["NodeID"]]
-            node_uw = update_energy_standby_others(node_uw, active_ids, timeout_chtosn, verbose=True)
+            node_uw = update_energy_standby_others(node_uw, active_ids, timeout_chtosn, verbose=VERBOSE)
             
             if success_tx:
                 ack_received_CH = True
                 print("El nodo recibio el paquete de syn...")
                 # Nodo recibe el paquete
                 initial_energy_sn_rx = node["ResidualEnergy"]
-                node = update_energy_node_tdma(node, node_uw[CH_id]["Position"], E_schedule, timeout_chtosn, type_packet, role='SN', action='rx', verbose=True)
+                node = update_energy_node_tdma(node, node_uw[CH_id]["Position"], E_schedule, timeout_chtosn, 
+                                               type_packet, role='SN', action='rx', verbose=VERBOSE)
                 energy_consumed_sn_rx = (initial_energy_sn_rx - node["ResidualEnergy"])
 
                 log_event(
@@ -288,7 +295,8 @@ def synchronize_nodes_tdma(RUN_ID, CH_id, syn_packet, node_uw, max_retries_senso
                     bits_sent_ack = 72
 
                     initial_energy_sn_tx = node["ResidualEnergy"]
-                    node = update_energy_node_tdma(node, node_uw[CH_id]["Position"], E_schedule, timeout_chtosn, type_packet, role='SN', action='tx', verbose=True)
+                    node = update_energy_node_tdma(node, node_uw[CH_id]["Position"], E_schedule, timeout_chtosn, 
+                                                   type_packet, role='SN', action='tx', verbose=VERBOSE)
                     energy_consumed_sn_tx = (initial_energy_sn_tx - node["ResidualEnergy"])            
 
                     log_event(
@@ -307,7 +315,7 @@ def synchronize_nodes_tdma(RUN_ID, CH_id, syn_packet, node_uw, max_retries_senso
 
                     # Los nodos consumen cuando no estan transmitiendo.
                     active_ids = [node_uw[CH_id]["NodeID"],  node["NodeID"]]
-                    node_uw = update_energy_standby_others(node_uw, active_ids, timeout_chtosn, verbose=True)
+                    node_uw = update_energy_standby_others(node_uw, active_ids, timeout_chtosn, verbose=VERBOSE)
                     
                     if success_ack:
                         print(f"Nodo {node['NodeID']} sincronizado exitosamente.")
@@ -316,7 +324,8 @@ def synchronize_nodes_tdma(RUN_ID, CH_id, syn_packet, node_uw, max_retries_senso
 
                         # Actualizar la energía del Cluster Head
                         initial_energy_ch_rx = node_uw[CH_id]["ResidualEnergy"] 
-                        node_uw[CH_id] = update_energy_node_tdma(node_uw[CH_id], node["Position"], E_schedule, timeout_chtosn, type_packet, role='CH', action='rx', verbose=True)
+                        node_uw[CH_id] = update_energy_node_tdma(node_uw[CH_id], node["Position"], E_schedule, timeout_chtosn, 
+                                                                 type_packet, role='CH', action='rx', verbose=VERBOSE)
                         energy_consumed_ch_rx = (initial_energy_ch_rx - node_uw[CH_id]["ResidualEnergy"])
                         
                         log_event(
