@@ -875,8 +875,8 @@ while sim_now < sim_end and events_processed < MAX_EVENTS and len(next_send_time
 #         ultimo_envio_CH[ch_id] = sim_now
 
 # Resumen y PROYECCIÓN
-summarize_per_node()
-summarize_global()
+# summarize_per_node()
+# summarize_global()
 
 print(f"\n--- Proyección a 24h ---")
 print(f"Ventana simulada: {SIM_DURATION_S/3600:.2f} h; factor F = {PROJECTION_FACTOR:.2f}")

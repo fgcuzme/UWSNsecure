@@ -10,8 +10,10 @@ import random
 import time
 from tangle_logger_light import MsTimer, log_tangle_event
 
+global VERBOSE
+
 PER_VARIABLE = None
-VERBOSE = True
+VERBOSE = False
 
 ### agregado 28/09/2025
 # --- Componentes de latencia (todo en ms) ---
@@ -207,7 +209,8 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
 
                             # Se actualiza la energia de los demas nodos
                             active_ids = [Ch_node["NodeID"]]
-                            node_uw1 = update_energy_standby_others(node_uw1, active_ids, timeout_chtosink, verbose=VERBOSE)
+                            node_uw1 = update_energy_standby_others(node_uw1, active_ids, 
+                                                                    timeout_chtosink, verbose=VERBOSE)
 
                             # # Ch to Sink
                             # Propagar la Tx Génesis a los nodos del cluster del CH
@@ -267,7 +270,7 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
                     retries += 1
                     # Actualiza la energía del nodo en caso de no recibir el pkt, pero esta escuchando en su slot
                     Ch_node = update_energy_failed_rx(Ch_node, sink1["Position"], timeout_sinktoch, role="CH", 
-                                                      verbose=False)
+                                                      verbose=VERBOSE)
                     # time.sleep(timeout)
 
                 # Se actualiza la energia de los demas nodos exista o no recepción del mensaje en el nodo

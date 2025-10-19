@@ -97,6 +97,6 @@ def summarize_global(input_csv=CANON_CSV, output_csv=f"stats/transmission_summar
     print(f"📊 Resumen global exportado a {output_csv}")
 
 
-# Resumen y PROYECCIÓN
-summarize_per_node()
-summarize_global()
+# # Resumen y PROYECCIÓN
+# summarize_per_node()
+# summarize_global()

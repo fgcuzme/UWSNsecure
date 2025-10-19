@@ -5,6 +5,8 @@ from energia_dinamica import calcular_energia_paquete, energy_listen, energy_sta
 from transmission_logger_uan import log_event
 from per_from_link_uan import per_from_link, propagate_with_probability
 
+global VERBOSE
+
 PER_VARIABLE = None
 VERBOSE = False
 
