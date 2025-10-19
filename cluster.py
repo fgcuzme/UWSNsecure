@@ -37,7 +37,7 @@ def classify_levels(dist_al_sink, num_levels):
     niveles_limites = np.linspace(dist_min, dist_max, num_levels + 1)
     
     print("niveles_limites : ", niveles_limites)
-    time.sleep(20)
+    # time.sleep(20)
     
     # Inicializar los niveles
     niveles = np.zeros(len(dist_al_sink), dtype=int)
