@@ -4,8 +4,8 @@ import pandas as pd
 from collections import defaultdict
 
 # PHASE = "syn"
-# PHASE = "auth"
-PHASE = "data"
+PHASE = "auth"
+# PHASE = "data"
 
 CANON_CSV = os.environ.get("UWSN_EVENTS_CSV", "stats/transmissions.csv")
 
