@@ -514,7 +514,7 @@ def simulate_ack_response(sender_node, receiver_node, E_schedule, ack_size_bits=
 
     sender_initial_energy = sender_node["ResidualEnergy"]
     sender_node = update_energy_node_tdma(sender_node, receiver_node["Position"], E_schedule, timeout,
-                                          type_packet="ack", role="ACK_RECEIVER", action="rx", verbose=True)
+                                          type_packet="ack", role="ACK_RECEIVER", action="rx", verbose=VERBOSE)
     E_rx = sender_initial_energy - sender_node["ResidualEnergy"]
 
     log_transmission_event(sender_id=receiver_node['NodeID'], receiver_id=sender_node['NodeID'], 

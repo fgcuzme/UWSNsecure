@@ -177,7 +177,8 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
 
                             # Actualiza energía del nodo
                             Ch_node = update_energy_node_tdma(Ch_node, sink1["Position"], E_schedule,
-                                                        timeout_chtosink, type_packet_control, role='CH', action='tx', verbose=VERBOSE)
+                                                        timeout_chtosink, type_packet_control, role='CH', 
+                                                        action='tx', verbose=VERBOSE)
                             energy_consumed_ch_tx = ((initial_energy_ch_tx - Ch_node["ResidualEnergy"]))
                             print(f'Energy consumed del CH en Tx ACK : ', energy_consumed_ch_tx)
 
@@ -416,7 +417,8 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                             # Actualizar la energia del SN en Tx del ACK
                             initial_energy_sn_tx = node1["ResidualEnergy"]
                             # Calcular el timeout de espera
-                            lat_prop, lat_tx, lat_proc, timeout_sn_to_ch = calculate_timeout(start_position, end_position, bitrate=9200, 
+                            lat_prop, lat_tx, lat_proc, timeout_sn_to_ch = calculate_timeout(start_position, end_position, 
+                                                                                             bitrate=9200, 
                                                                                              packet_size=72)
                             # Actualiza energía del nodo
                             node1 = update_energy_node_tdma(node1, ch_node1["Position"], E_schedule,
@@ -480,7 +482,8 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                                 retries_SNtoCH += 1
                                 print(f"El CH {ch_node1['NodeID']} no recibió el ack de la Tx génesis enviada al SN {node1['NodeID']}. Reintentando...")
                                 # Actualiza la energía del nodo en caso de no recibir el pkt, pero esta escuchando en su slot
-                                ch_node1 = update_energy_failed_rx(ch_node1, node1["Position"], timeout_sn_to_ch, role="CH", verbose=False)
+                                ch_node1 = update_energy_failed_rx(ch_node1, node1["Position"], 
+                                                                   timeout_sn_to_ch, role="CH", verbose=VERBOSE)
                     else:
                         print(f"Nodo {node1['NodeID']} falló en la verificación de la Tx génesis.")
                         retries += 1
@@ -529,7 +532,7 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                     retries += 1
                     # Actualiza la energía del nodo en caso de no recibir el pkt, pero esta escuchando en su slot
                     node1 = update_energy_failed_rx(node1, ch_node1["Position"], timeout_ch_to_sn, role="SN", 
-                                                    verbose=False)
+                                                    verbose=VERBOSE)
                     # time.sleep(timeout)
             # Si se alcanzan los reintentos máximos
             if retries == max_retries:
@@ -822,7 +825,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                 retries_ch += 1
                 ack_received_chtosink = False
                 # Actualiza la energía del nodo en caso de no recibir el pkt, pero esta escuchando en su slot
-                ch_node1 = update_energy_failed_rx(ch_node1, sink1["Position"], timeout_ch, role="CH", verbose=False)
+                ch_node1 = update_energy_failed_rx(ch_node1, sink1["Position"], timeout_ch, role="CH", verbose=VERBOSE)
 
         if retries_ch == max_retries:
             print(f"Sink {sink1['NodeID']} no respondió tras {max_retries} reintentos.")
@@ -1017,7 +1020,8 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                                     ack_received_sntoch = False
                                     retries_SNtoCH += 1
                                     # Actualiza la energía del nodo en caso de no recibir el pkt, pero esta escuchando en su slot
-                                    ch_node1 = update_energy_failed_rx(ch_node1, node2["Position"], timeout_sn, role="CH", verbose=False)
+                                    ch_node1 = update_energy_failed_rx(ch_node1, node2["Position"], timeout_sn, 
+                                                                       role="CH", verbose=VERBOSE)
                         else:
                             print(f"Nodo {node2['NodeID']} falló en la verificación de la Tx de autenticación.")
                             # retries += 1
@@ -1065,7 +1069,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                         retries_sn += 1
                         print(f"Nodo {node2['NodeID']} no recibió la Tx de autenticación. Reintentando... ({retries_sn}/{max_retries})")
                         # Actualiza la energía del nodo en caso de no recibir el pkt, pero esta escuchando en su slot
-                        node2 = update_energy_failed_rx(node2, ch_node1["Position"], timeout_sn, role="SN", verbose=False)
+                        node2 = update_energy_failed_rx(node2, ch_node1["Position"], timeout_sn, role="SN", verbose=VERBOSE)
                         # time.sleep(timeout)
 
                 if retries_sn == max_retries:
@@ -1325,7 +1329,7 @@ def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retrie
                                     retries_sntoch += 1
                                     # Actualiza la energía del nodo en caso de no recibir el pkt, pero esta escuchando en su slot
                                     node4 = update_energy_failed_rx(node4, node_ch["Position"], timeout_sn, 
-                                                                    role="SN", verbose=False)
+                                                                    role="SN", verbose=VERBOSE)
                         else:
                             print(f"CH {node_ch['NodeID']} falló en la verificación de la autenticación de Nodo {node4['NodeID']}.")
                             # retries += 1
@@ -1373,7 +1377,7 @@ def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retrie
                     retries += 1
                     print(f"CH {node_ch['NodeID']} no recibió la Tx de autenticación. Reintentando... ({retries}/{max_retries})")
                     # Actualiza la energía del nodo en caso de no recibir el pkt, pero esta escuchando en su slot
-                    node_ch = update_energy_failed_rx(node_ch, node4["Position"], timeout_ch, role="CH", verbose=False)
+                    node_ch = update_energy_failed_rx(node_ch, node4["Position"], timeout_ch, role="CH", verbose=VERBOSE)
                     # time.sleep(timeout)
 
             if retries == max_retries:

@@ -186,7 +186,8 @@ def propagate_syn_to_CH_tdma(RUN_ID, sink, CH_ids, node_uw, max_retries=3, timeo
                 success_syn = False
                 retries_sinktoch += 1
                 # Actualiza la energía del nodo en caso de no recibir el pkt, pero esta escuchando en su slot
-                node_uw[ch] = update_energy_failed_rx(node_uw[ch], sink["Position"], timeout_sinktoch, role="CH", verbose=False)
+                node_uw[ch] = update_energy_failed_rx(node_uw[ch], sink["Position"], timeout_sinktoch, 
+                                                      role="CH", verbose=VERBOSE)
 
         # if not node_uw[ch]["IsSynced"] and retries == max_retries:
         #     print(f"Fallo la sincronización con el Cluster Head {ch + 1} después de {retries} intentos.")
@@ -348,13 +349,14 @@ def synchronize_nodes_tdma(RUN_ID, CH_id, syn_packet, node_uw, max_retries_senso
                         print(f"Nodo {node['NodeID']} falló en sincronizarse, intento {retries_ChtoSn+1}")
                         ack_retries += 1
                         # Actualiza la energía del nodo en caso de no recibir el pkt, pero esta escuchando en su slot
-                        node_uw[CH_id] = update_energy_failed_rx(node_uw[CH_id], node["Position"], timeout_chtosn, role="CH", verbose=False)
+                        node_uw[CH_id] = update_energy_failed_rx(node_uw[CH_id], node["Position"], timeout_chtosn, 
+                                                                 role="CH", verbose=VERBOSE)
 
             else:
                 print(f"Nodo {node['NodeID']} falló en sincronizarse, intento {retries_ChtoSn+1}")
                 retries_ChtoSn += 1
                 # Actualiza la energía del nodo en caso de no recibir el pkt, pero esta escuchando en su slot
-                node = update_energy_failed_rx(node, node_uw[CH_id]["Position"], timeout_sinktoch, role="SN", verbose=False)
+                node = update_energy_failed_rx(node, node_uw[CH_id]["Position"], timeout_sinktoch, role="SN", verbose=VERBOSE)
                 # time.sleep(timeout_node)  # Retransmitir con timeout     
 
         # sync_end_time_node = time.time() - start_time_node
