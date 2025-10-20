@@ -189,7 +189,7 @@ def flush_all():
     _flush_events()
 
     # Obtener el run_id desde variable de entorno o parámetro
-    run_id = os.environ.get("RUN", "run01")  # puedes usar str(run_num) si lo tienes como entero
+    run_id = int(os.environ.get("RUN", "run01"))  # puedes usar str(run_num) si lo tienes como entero
 
     # escribir resumen
     _ensure_dir(CSV_SUMMARY)
