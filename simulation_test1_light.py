@@ -933,9 +933,17 @@ def run_one(RUN_NUM:int, SEED:int, NUM_NODES:int):
     if not os.path.exists(carpeta_destino):
         os.makedirs(carpeta_destino)
 
-    # Ruta completa del archivo de la base de datos dentro de la carpeta 'save_struct'
-    ruta_nodos = os.path.join(carpeta_destino, 'nodos_guardados.pkl')
-    ruta_sink = os.path.join(carpeta_destino, 'sink_guardado.pkl')
+    # Obtener el run_id desde variable de entorno o parámetro
+    run_id = os.environ.get("RUN", "run01")  # puedes usar str(run_num) si lo tienes como entero
+    num_nodes = os.environ.get("NUM_NODES", "20")  # puedes usar str(run_num) si lo tienes como entero
+
+    # # Ruta completa del archivo de la base de datos dentro de la carpeta 'save_struct'
+    # ruta_nodos = os.path.join(carpeta_destino, 'nodos_guardados.pkl')
+    # ruta_sink = os.path.join(carpeta_destino, 'sink_guardado.pkl')
+    # Rutas con nombre por run
+    ruta_nodos = os.path.join(carpeta_destino, f'nodos_guardados_{run_id}_{num_nodes}.pkl')
+    ruta_sink = os.path.join(carpeta_destino, f'sink_guardado_{run_id}_{num_nodes}.pkl')
+
 
     # Supongamos que node_uw es tu lista de nodos
     with open(ruta_nodos, 'wb') as file:
@@ -955,5 +963,5 @@ if __name__ == "__main__":
     # Defaults si no te pasan nada
     RUN_NUM = int(os.environ.get("RUN", "1"))
     SEED    = int(os.environ.get("UWSN_SEED", "1337"))
-    NUM_NODES = int(os.environ.get("NUM_NODES", "100"))
+    NUM_NODES = int(os.environ.get("NUM_NODES", "20"))
     run_one(RUN_NUM, SEED, NUM_NODES)
