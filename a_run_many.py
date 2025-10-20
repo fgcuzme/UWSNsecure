@@ -26,7 +26,7 @@ def run_batch(
 
 if __name__ == "__main__":
     run_batch(scenario=os.environ.get("SCENARIO_ID","1000km_W5_Sh0.5"),
-              runs=int(os.environ.get("RUNS","3")),
+              runs=int(os.environ.get("RUNS","1")),
               seed0=int(os.environ.get("SEED0","1337")),
               num_nodes=int(os.environ.get("NUM_NODES", "20")),
               seeds_mode=os.environ.get("SEEDS_MODE","inc"))

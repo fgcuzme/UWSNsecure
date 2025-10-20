@@ -534,7 +534,8 @@ def run_one(RUN_NUM:int, SEED:int, NUM_NODES:int):
 
 
     #%%
-    from transmission_summary_uan import summarize_per_node, summarize_global
+    # from transmission_summary_uan import summarize_per_node, summarize_global
+    from transmission_summary_uan import summarize_global_by_run, summarize_per_node_by_run
 
     ## INICIO PROCESO DE TRANSMISIÓN DE DATOS CIFRADOS CON ASCON
     print("-")
