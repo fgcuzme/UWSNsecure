@@ -69,9 +69,9 @@ def propagate_with_probability(per: float = 0.05, override_per: float = None) ->
     return random.random() >= effective_per
 
 
-for d in [100, 500, 1000, 1500, 2000, 2500, 3000]:
-    per, SL_db, snr_db, EbN0_db, ber = per_from_link(20, d, 4160)
-    print(f"Distancia: {d} m → PER: {per:.20f}, SNR: {snr_db:.2f} dB, Eb/N0: {EbN0_db:.2f} dB, BER: {ber:.2e}")
+# for d in [100, 500, 1000, 1500, 2000, 2500, 3000]:
+#     per, SL_db, snr_db, EbN0_db, ber = per_from_link(20, d, 4160)
+#     print(f"Distancia: {d} m → PER: {per:.20f}, SNR: {snr_db:.2f} dB, Eb/N0: {EbN0_db:.2f} dB, BER: {ber:.2e}")
 
 # per, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=1000, L=4160, bitrate=9200)
 # print("per: ", per)

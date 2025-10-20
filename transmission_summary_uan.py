@@ -201,7 +201,7 @@ def summarize_global_by_run(input_csv=CANON_CSV, output_dir="stats/summary_globa
 
         tx_events = d[d["energy_event_type"] == "tx"]
         total_tx = len(tx_events)
-        rx_events = df[df.energy_event_type == "rx"]
+        rx_events = d[d.energy_event_type == "rx"]
         successful = int(rx_events["success"].sum())
 
         avg_latency = d["latency_ms"].mean()
