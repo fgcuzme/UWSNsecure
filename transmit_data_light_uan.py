@@ -134,7 +134,7 @@ def generate_shared_keys(db_path, node_uw, CH, node_sink):
         # Evitar que el nodo genere una clave con él mismo
         if node_id == ch_id:
             # print(f"⚠️ Nodo {node_id} es un CH y no generará clave consigo mismo.")
-            print(f"⚠️ Nodo {node_id} es un CH...")
+            # print(f"⚠️ Nodo {node_id} es un CH...")
 
             # Obtener claves del nodo y su Cluster Head
             x_pub_node, x_priv_node = get_x25519_keys(db_path, key_id)
@@ -143,7 +143,7 @@ def generate_shared_keys(db_path, node_uw, CH, node_sink):
 
             #print("db_path : ", db_path, "node_id : ", node_id, "node_sink[NodeID] : ", node_sink["NodeID"], "shared_key : ", shared_key.hex())
             store_shared_key(db_path, node_id, node_sink["NodeID"], shared_key)
-            print(f"🔐 CH {node_id} generó clave compartida con el Sink", shared_key.hex())
+            # print(f"🔐 CH {node_id} generó clave compartida con el Sink", shared_key.hex())
             # if_node_ch = 1
             continue
         # else:
@@ -164,7 +164,7 @@ def generate_shared_keys(db_path, node_uw, CH, node_sink):
 
             #print("db_path : ", db_path, "node_id : ", node_id, "ch_id : ", ch_id, "shared_key : ", shared_key.hex())
             store_shared_key(db_path, node_id, ch_id, shared_key)
-            print(f"🔐 Nodo {node_id} generó clave compartida con CH {ch_id}", shared_key.hex())
+            # print(f"🔐 Nodo {node_id} generó clave compartida con CH {ch_id}", shared_key.hex())
 
         #if node_id in CH:  # Si el nodo es un CH, genera clave con el Sink
             
@@ -186,7 +186,7 @@ def encrypt_message(shared_key, plaintext):
         raise TypeError("El parámetro 'plaintext' debe ser str o bytes")
 
     ciphertext = encrypt(key, nonce, associated_data, plaintext_bytes, variant="Ascon-128")
-    print("ciphertext : ", ciphertext, " Len : ", len(ciphertext), "nonce : ", nonce, " Len : ", len(nonce))
+    # print("ciphertext : ", ciphertext, " Len : ", len(ciphertext), "nonce : ", nonce, " Len : ", len(nonce))
     return nonce + ciphertext
 
 def decrypt_message(shared_key, encrypted_message):
@@ -530,8 +530,8 @@ def transmit_data(RUN_ID, db_path, nodes, sender_node, receiver_node, plaintext,
     t1 = time.perf_counter()
     t_enc_s = t1 - t0
 
-    print("Mensaje encriptado : ", encrypted_msg.hex(), " time : ", t_enc_s, "tamaño (hex) : ", len(encrypted_msg.hex()))
-    print("Mensaje encriptado : ", encrypted_msg, " time : ", t_enc_s, "tamaño (bin): ", len(encrypted_msg))
+    # print("Mensaje encriptado : ", encrypted_msg.hex(), " time : ", t_enc_s, "tamaño (hex) : ", len(encrypted_msg.hex()))
+    # print("Mensaje encriptado : ", encrypted_msg, " time : ", t_enc_s, "tamaño (bin): ", len(encrypted_msg))
 
     # Nota: aquí solo medimos descifrado local para stats (RX real descifra después)
     t2 = time.perf_counter()
@@ -539,7 +539,7 @@ def transmit_data(RUN_ID, db_path, nodes, sender_node, receiver_node, plaintext,
     t3 = time.perf_counter()
     t_dec_s = t3 - t2
 
-    print("Mensaje desencriptado : ", desencrypted_msg, " time : ", t_dec_s, len(desencrypted_msg))
+    # print("Mensaje desencriptado : ", desencrypted_msg, " time : ", t_dec_s, len(desencrypted_msg))
 
     # 4) Geometría + tiempos físicos
     start_pos = np.array(sender_node["Position"])
@@ -551,7 +551,7 @@ def transmit_data(RUN_ID, db_path, nodes, sender_node, receiver_node, plaintext,
     else:
         bits_sent = int((len(encrypted_msg) * 8) + (11 * 8)) # se suman los bytes del header paquete agregado
 
-    print("bits_sent :", bits_sent)
+    # print("bits_sent :", bits_sent)
     t_tx_s    = bits_sent / float(bitrate)
 
     # 5) PER del enlace y Bernoulli

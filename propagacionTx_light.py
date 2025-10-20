@@ -187,7 +187,7 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
                                                         timeout_chtosink, type_packet_control, role='CH', 
                                                         action='tx', verbose=VERBOSE)
                             energy_consumed_ch_tx = ((initial_energy_ch_tx - Ch_node["ResidualEnergy"]))
-                            print(f'Energy consumed del CH en Tx ACK : ', energy_consumed_ch_tx)
+                            # print(f'Energy consumed del CH en Tx ACK : ', energy_consumed_ch_tx)
 
                             # Se almacena en log_event
                             log_event(
@@ -245,7 +245,7 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
                                                    verbose=VERBOSE, t_verif_s=t_proc_ch_recv_gen)
 
                     energy_consumed_ch_rx = ((initial_energy_ch_rx - Ch_node["ResidualEnergy"]))
-                    print(f'Energy consumed del CH en Rx : ', energy_consumed_ch_rx)
+                    # print(f'Energy consumed del CH en Rx : ', energy_consumed_ch_rx)
 
                     # Se almacena en log_event
                     log_event(
@@ -352,7 +352,7 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                                                     verbose=VERBOSE)
 
                 energy_consumed_ch_tx = ((initial_energy_ch_tx - ch_node1["ResidualEnergy"]))
-                print(f'Energy consumed del CH en Tx - Tx-genesis : ', energy_consumed_ch_tx)
+                # print(f'Energy consumed del CH en Tx - Tx-genesis : ', energy_consumed_ch_tx)
 
                 per_ch_to_sn, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=PACKET_SIZE_AUTH, 
                                                                           bitrate=9200)
@@ -432,7 +432,7 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                                                                 timeout_sn_to_ch, type_packet_control, role='SN', 
                                                                 action='tx', verbose=VERBOSE)
                             energy_consumed_sn_tx = ((initial_energy_sn_tx - node1["ResidualEnergy"]))
-                            print(f'Energy consumed del SN en Tx - ACK : ', energy_consumed_sn_tx)
+                            # print(f'Energy consumed del SN en Tx - ACK : ', energy_consumed_sn_tx)
 
 
                             # Se almacena en log_event de la tx del ack:auth
@@ -467,7 +467,7 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                                                                     timeout_sn_to_ch, type_packet_control, role='CH', 
                                                                     action='rx', verbose=VERBOSE)
                                 energy_consumed_ch_rx = ((initial_energy_ch_rx - ch_node1["ResidualEnergy"]))
-                                print(f'Energy consumed del CH en Tx - Tx-genesis : ', energy_consumed_ch_rx)
+                                # print(f'Energy consumed del CH en Tx - Tx-genesis : ', energy_consumed_ch_rx)
 
                                 # Se almacena en log_event de la rx del ack:auth al CH
                                 log_event(
@@ -509,7 +509,7 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                                                         timeout_ch_to_sn, type_packet, role='SN', action='rx', 
                                                         verbose=VERBOSE, t_verif_s=t_proc_sn_recv_gen)
                     energy_consumed_sn_rx = ((initial_energy_sn_rx - node1["ResidualEnergy"]))
-                    print(f'Energy consumed del SN en Rx - Tx-genesis : ', energy_consumed_sn_rx)
+                    # print(f'Energy consumed del SN en Rx - Tx-genesis : ', energy_consumed_sn_rx)
 
                     # Log guarda consumo por recibir auth:gen:sink
                     log_event(
@@ -698,7 +698,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                                                 timeout_ch_resp_auth, type_packet, role='CH', action='tx', 
                                                 verbose=VERBOSE, t_verif_s=t_proc_ch_resp_auth)
             energy_consumed_ch_tx = ((initial_energy_ch_tx - ch_node1["ResidualEnergy"]))
-            print(f'Energy consumed del CH en Tx - Tx-genesis : ', energy_consumed_ch_tx)
+            # print(f'Energy consumed del CH en Tx - Tx-genesis : ', energy_consumed_ch_tx)
 
             # Se almacena en log_event de la tx del ack:auth
             log_event(
@@ -891,7 +891,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                     ch_node1 = update_energy_node_tdma(ch_node1, node2["Position"], E_schedule,
                                                         timeout_ch, type_packet, role='CH', action='tx', verbose=VERBOSE)
                     energy_consumed_ch_tx = ((initial_energy_ch_tx - ch_node1["ResidualEnergy"]))
-                    print(f'Energy consumed del CH en Tx - Tx-response : ', energy_consumed_ch_tx)
+                    # print(f'Energy consumed del CH en Tx - Tx-response : ', energy_consumed_ch_tx)
 
                     # Se almacena en log_event de la tx del ack:auth
                     log_event(
@@ -1048,7 +1048,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                                                             timeout_sn, type_packet, role='SN', action='rx', verbose=VERBOSE, 
                                                             t_verif_s=t_proc_ch_resp_auth)
                         energy_consumed_sn_rx = ((initial_energy_sn_rx - node2["ResidualEnergy"]))
-                        print(f'Energy consumed del CH en Tx - Tx-response : ', energy_consumed_sn_rx)
+                        # print(f'Energy consumed del CH en Tx - Tx-response : ', energy_consumed_sn_rx)
 
                         # Se almacena en log_event de la tx del ack:auth
                         log_event(

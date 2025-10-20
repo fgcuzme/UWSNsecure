@@ -405,7 +405,7 @@ def run_one(RUN_NUM:int, SEED:int, NUM_NODES:int):
         ####
         # Crear la genesis
 
-        print('Clave del sink : ', node_sink["PrivateKey_sign"])
+        # print('Clave del sink : ', node_sink["PrivateKey_sign"])
 
         node_sink["PrivateKey_sign"]
 
@@ -423,8 +423,8 @@ def run_one(RUN_NUM:int, SEED:int, NUM_NODES:int):
         # (opcional) LRU simple para no crecer sin límite
         node_sink["Tips"] = node_sink["Tips"][-128:]
 
-        print('Tiempo de creación de Tx genesis Sink: ', time_createTX)
-        print('Bloque genesis', txgenesis)
+        # print('Tiempo de creación de Tx genesis Sink: ', time_createTX)
+        # print('Bloque genesis', txgenesis)
         # time.sleep(100)
 
         print("-")
@@ -816,7 +816,7 @@ def run_one(RUN_NUM:int, SEED:int, NUM_NODES:int):
     for i in sn_indices:
         next_send_time[i] = sim_now + np.random.uniform(0, JITTER_BOOTSTRAP_S)
 
-    print("next_send_time : ", next_send_time)
+    # print("next_send_time : ", next_send_time)
     # time.sleep(10)
 
     MAX_EVENTS = 1_000_000
@@ -846,7 +846,7 @@ def run_one(RUN_NUM:int, SEED:int, NUM_NODES:int):
         # data_str = f"{np.random.uniform(0, 30):.3f}"
         payload, (temp, salinity, pressure) = encode_marine_payload()
 
-        print("payload, (temp, salinity, pressure) : ", payload, (temp, salinity, pressure), "Tamaño binario del payload : ", len(payload))
+        # print("payload, (temp, salinity, pressure) : ", payload, (temp, salinity, pressure), "Tamaño binario del payload : ", len(payload))
 
         encrypted_msg = transmit_data(
             RUN_ID, "bbdd_keys_shared_sign_cipher.db", node_uw,
