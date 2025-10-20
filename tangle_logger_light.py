@@ -4,7 +4,7 @@ from collections import defaultdict
 
 # === Configurables vía entorno ===
 CSV_EVENTS = os.environ.get("UWSN_TANGLE_EVENTS", "stats/tangle_events_light.csv")
-CSV_SUMMARY = os.environ.get("UWSN_TANGLE_SUMMARY", "stats/tangle_summary_light.csv")
+CSV_SUMMARY = os.environ.get("UWSN_TANGLE_SUMMARY", "stats/tangle_summary_light")
 BATCH_SIZE = int(os.environ.get("UWSN_TANGLE_BATCH", "1"))         # flush cada N
 SAMPLING_RATE = float(os.environ.get("UWSN_TANGLE_SAMPLING", "1.0")) # 1.0 => medir todo
 RESERVOIR_K = int(os.environ.get("UWSN_TANGLE_RESERVOIR", "2048"))   # muestras p/percentiles
@@ -187,17 +187,26 @@ def _update_summary(row):
 def flush_all():
     """ Llamar al final de la simulación. """
     _flush_events()
+
+    # Obtener el run_id desde variable de entorno o parámetro
+    run_id = os.environ.get("RUN", "run01")  # puedes usar str(run_num) si lo tienes como entero
+
     # escribir resumen
     _ensure_dir(CSV_SUMMARY)
-    with open(CSV_SUMMARY, "w", newline="") as f:
+
+     # Ruta con nombre por run
+    resumen_path = os.path.join(f"{CSV_SUMMARY}_run{run_id:02d}.csv")
+
+    with open(resumen_path, "w", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["op","metric","n","mean_ms","std_ms","min_ms","p50_ms","p90_ms","p95_ms","p99_ms","max_ms"])
+        w.writerow(["op","metric","n","mean_ms","std_ms","var_ms","min_ms","p50_ms","p90_ms","p95_ms","p99_ms","max_ms"])
         for (op, m), agg in sorted(_SUMMARY.items()):
             s = agg.stats()
             if not s.get("n"): continue
+            varianza = s["std"]**2 if s.get("std") is not None else None
             w.writerow([
                 op, m, s["n"],
-                _r(s["mean"]), _r(s["std"]), _r(s["min"]),
+                _r(s["mean"]), _r(s["std"]), _r(varianza), _r(s["min"]),
                 _r(s["p50"]), _r(s["p90"]), _r(s["p95"]), _r(s["p99"]),
                 _r(s["max"])
             ])
