@@ -24,7 +24,7 @@ def run_one(RUN_NUM:int, SEED:int, NUM_NODES:int):
     # %% PARAMETROS INICIALES DE SIMULACIÓN
     import numpy as np
     from bbdd2_sqlite3 import generarte_keys_shared_without_cipher, generarte_keys_sign_without_cipher
-    from clock_uan import sim_advance, sim_now_ms
+    # from clock_uan import sim_advance, sim_now_ms
     import csv, math
 
     num_nodes = NUM_NODES  # Número de nodos
@@ -315,7 +315,7 @@ def run_one(RUN_NUM:int, SEED:int, NUM_NODES:int):
     print ('INICIO DE PROCESO DE SYNCRONIZACIÓN...')
 
     from syn_light import propagate_syn_to_CH_tdma, propagate_syn_to_CH_cdma, clear_sync_state
-    from save_csv import save_stats_to_csv, save_stats_to_csv_cdma, save_stats_to_syn_csv
+    # from save_csv import save_stats_to_csv, save_stats_to_csv_cdma, save_stats_to_syn_csv
 
     # # Borrar la sincronización establecida
     # clear_sync_state(node_sink, node_uw, CH)
