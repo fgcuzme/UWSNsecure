@@ -158,6 +158,7 @@ class _Agg:
             "n": self.n,
             "mean": self.mean,
             "std": std,
+            "var": var,
             "min": self.min, "max": self.max,
             "p50": q(0.50), "p90": q(0.90), "p95": q(0.95), "p99": q(0.99),
         }
@@ -204,10 +205,10 @@ def flush_all():
         for (op, m), agg in sorted(_SUMMARY.items()):
             s = agg.stats()
             if not s.get("n"): continue
-            varianza = s["std"]**2 if s.get("std") is not None else None
+            # varianza = s["std"]**2 if s.get("std") is not None else None
             w.writerow([
                 op, m, s["n"],
-                _r(s["mean"]), _r(s["std"]), _r(varianza), _r(s["min"]),
+                _r(s["mean"]), _r(s["std"]), _r(s["var"]), _r(s["min"]),
                 _r(s["p50"]), _r(s["p90"]), _r(s["p95"]), _r(s["p99"]),
                 _r(s["max"])
             ])
