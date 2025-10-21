@@ -83,7 +83,8 @@ def run_one(RUN_NUM:int, SEED:int, NUM_NODES:int,
     # Este diseño es ideal para despliegues controlados (12–24 h), como misiones de muestreo
     #  temporal o experimentación oceanográfica.
     # Ref: chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://www.evologics.com/web/content/15634?unique=be7aa65d1c113e56664940ddea7cf65757e6648e
-    E_init = 100  # Energía inicial realista en julios (≈ 0.9 Ah @ 3.7V)
+    E0 = float(os.environ.get("UWSN_ENERGY_INITIAL_J", "100.0"))
+    E_init = E0  # Energía inicial realista en julios (≈ 0.9 Ah @ 3.7V)
 
     # Frecuencia de transmisión en kHz
     freq = 20  # Ajusta la frecuencia según el entorno de la red subacuática
@@ -915,7 +916,7 @@ def run_one(RUN_NUM:int, SEED:int, NUM_NODES:int,
     print("Multiplica: energía total, nº de paquetes y bits por F. Latencias por paquete NO se escalan.")
 
     from transmission_summary_uan import summarize_global_by_run, summarize_per_node_by_run
-    
+
     #%%
 
     print("-")
@@ -979,6 +980,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     os.environ["OUTPUT_DIR"] = args.output_dir or ""
     os.environ["UWSN_EVENTS_CSV"] = os.path.join(os.environ["OUTPUT_DIR"], "transmissions.csv")
+    os.environ["UWSN_ENERGY_INITIAL_J"] = "50.0"
 
     # Defaults si no te pasan nada
     RUN_NUM = int(os.environ.get("RUN", "1"))

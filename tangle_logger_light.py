@@ -3,8 +3,9 @@ import os, csv, time, random, math
 from collections import defaultdict
 
 # === Configurables vía entorno ===
-CSV_EVENTS = os.environ.get("UWSN_TANGLE_EVENTS", "stats/tangle_events_light.csv")
-CSV_SUMMARY = os.environ.get("UWSN_TANGLE_SUMMARY", "stats/tangle_summary_light")
+BASE_DIR = os.environ.get("OUTPUT_DIR", "stats/")
+CSV_EVENTS = os.path.join(BASE_DIR, "tangle_events_light.csv")
+CSV_SUMMARY = os.path.join(BASE_DIR, "tangle_summary_light")
 BATCH_SIZE = int(os.environ.get("UWSN_TANGLE_BATCH", "1"))         # flush cada N
 SAMPLING_RATE = float(os.environ.get("UWSN_TANGLE_SAMPLING", "1.0")) # 1.0 => medir todo
 RESERVOIR_K = int(os.environ.get("UWSN_TANGLE_RESERVOIR", "2048"))   # muestras p/percentiles
