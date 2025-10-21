@@ -797,10 +797,16 @@ def run_one(RUN_NUM:int, SEED:int, NUM_NODES:int,
     # Parámetros de la simulación
     # =========================
     SEND_INTERVAL_S = 100           # intervalo fijo entre envíos SN -> CH
-    SIM_DURATION_S   = 3600         # ej: simulo 1h y proyecto a 24h
-    PROJECT_TO_24H   = True
-    PROJECTION_REF_S = 24*3600
-    PROJECTION_FACTOR = (PROJECTION_REF_S / SIM_DURATION_S) if PROJECT_TO_24H else 1.0
+    # SIM_DURATION_S   = 3600         # ej: simulo 1h y proyecto a 24h
+    SIM_DURATION_S   = 600         # ej: simulo 10 y proyecto a 24h
+    # PROJECT_TO_24H   = True
+    PROJECTION_REF_S = 24*3600      # 86400
+    # PROJECTION_FACTOR = (PROJECTION_REF_S / SIM_DURATION_S) if PROJECT_TO_24H else 1.0
+    PROJECTION_FACTOR = (PROJECTION_REF_S / SIM_DURATION_S)
+
+    # projected_energy = total_energy * PROJECTION_FACTOR
+    # projected_packets = total_tx * PROJECTION_FACTOR
+    # projected_bits = d["bits_received"].sum() * PROJECTION_FACTOR
 
     JITTER_BOOTSTRAP_S = 5          # desfase inicial aleatorio pequeño
     MAX_BUFFER = 10
@@ -980,7 +986,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     os.environ["OUTPUT_DIR"] = args.output_dir or ""
     os.environ["UWSN_EVENTS_CSV"] = os.path.join(os.environ["OUTPUT_DIR"], "transmissions.csv")
-    os.environ["UWSN_ENERGY_INITIAL_J"] = "50.0"
+    os.environ["UWSN_ENERGY_INITIAL_J"] = "100.0"
 
     # Defaults si no te pasan nada
     RUN_NUM = int(os.environ.get("RUN", "1"))

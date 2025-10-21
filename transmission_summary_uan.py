@@ -260,7 +260,9 @@ def summarize_global_by_run(input_csv=CANON_CSV, output_dir=None, phase=None):
             ])
         print(f"📊 Resumen global exportado: {output_csv}")
 
-import time
+
+print(f"📁 Guardando en: {os.environ.get('OUTPUT_DIR')}")
+
 output_dir = os.environ.get("OUTPUT_DIR", "stats/")
 for phase in PHASES:
     print(f"\n📡 Procesando fase: {phase}")
