@@ -1,12 +1,18 @@
 # main_sim.py
-def run_one(RUN_NUM:int, SEED:int, NUM_NODES:int):
+def run_one(RUN_NUM:int, SEED:int, NUM_NODES:int,
+            output_dir: str = None):
     import os, json, datetime, random, numpy as np
     random.seed(SEED); np.random.seed(SEED)
 
     SCENARIO_ID = os.environ.get("SCENARIO_ID", "1000km_W5_Sh0.5")
     RUN_ID = f"{SCENARIO_ID}_seed{SEED}_run{RUN_NUM:02d}"
-    os.makedirs("stats", exist_ok=True)
-    with open(f"stats/manifest_{RUN_ID}.json","w") as f:
+
+    output_dir = output_dir or f"stats/{RUN_ID}/"
+    # os.makedirs("stats", exist_ok=True)
+    os.makedirs(output_dir, exist_ok=True)
+
+    with open(os.path.join(output_dir, f"manifest_{RUN_ID}.json"), "w") as f:
+    # with open(f"stats/manifest_{RUN_ID}.json","w") as f:
         json.dump({
             "run_id": RUN_ID,
             "seed": SEED,
@@ -21,6 +27,7 @@ def run_one(RUN_NUM:int, SEED:int, NUM_NODES:int):
             "code_version": "v1.0-main"
         }, f, indent=2)
 
+
     # %% PARAMETROS INICIALES DE SIMULACIÓN
     import numpy as np
     from bbdd2_sqlite3 import generarte_keys_shared_without_cipher, generarte_keys_sign_without_cipher
@@ -29,33 +36,33 @@ def run_one(RUN_NUM:int, SEED:int, NUM_NODES:int):
 
     num_nodes = NUM_NODES  # Número de nodos
 
-    ## 28/09/2025
-    # === Reproducibilidad y metadatos del experimento ===
-    import os, json, datetime, random
+    # ## 28/09/2025
+    # # === Reproducibilidad y metadatos del experimento ===
+    # import os, json, datetime, random
 
-    SEED = int(os.environ.get("UWSN_SEED", "1337"))
-    random.seed(SEED); np.random.seed(SEED)
+    # SEED = int(os.environ.get("UWSN_SEED", "1337"))
+    # random.seed(SEED); np.random.seed(SEED)
 
-    SCENARIO_ID = os.environ.get("SCENARIO_ID", "1000km_W5_Sh0.5")  # si quieres, ajusta luego
-    RUN_NUM = int(os.environ.get("RUN", "1"))
-    RUN_ID = f"{SCENARIO_ID}_seed{SEED}_run{RUN_NUM:02d}"
+    # SCENARIO_ID = os.environ.get("SCENARIO_ID", "1000km_W5_Sh0.5")  # si quieres, ajusta luego
+    # RUN_NUM = int(os.environ.get("RUN", "1"))
+    # RUN_ID = f"{SCENARIO_ID}_seed{SEED}_run{RUN_NUM:02d}"
 
-    os.makedirs("stats", exist_ok=True)
-    manifest = {
-        "run_id": RUN_ID,
-        "seed": SEED,
-        "scenario": {
-            "num_nodes": num_nodes,
-            "freq_khz": 20, "bitrate_bps": 9200,
-            "traffic_shipping": 0.5, "wind_mps": 5,
-            "spreading": 1.5,
-            "E_init_J": 100, "threshold_bateria": float(0.10*100)
-        },
-        "start_time": datetime.datetime.utcnow().isoformat(),
-        "code_version": "v1.0-main"
-    }
-    with open(f"stats/manifest_{RUN_ID}.json","w") as f:
-        json.dump(manifest, f, indent=2)
+    # os.makedirs("stats", exist_ok=True)
+    # manifest = {
+    #     "run_id": RUN_ID,
+    #     "seed": SEED,
+    #     "scenario": {
+    #         "num_nodes": num_nodes,
+    #         "freq_khz": 20, "bitrate_bps": 9200,
+    #         "traffic_shipping": 0.5, "wind_mps": 5,
+    #         "spreading": 1.5,
+    #         "E_init_J": 100, "threshold_bateria": float(0.10*100)
+    #     },
+    #     "start_time": datetime.datetime.utcnow().isoformat(),
+    #     "code_version": "v1.0-main"
+    # }
+    # with open(f"stats/manifest_{RUN_ID}.json","w") as f:
+    #     json.dump(manifest, f, indent=2)
 
 
     ###########################
@@ -248,7 +255,10 @@ def run_one(RUN_NUM:int, SEED:int, NUM_NODES:int):
 
     ## EXPORTAR MAPA DEL CLUSTER
     # === Export map cluster (formal) ===
-    with open(f"stats/cluster_map_{RUN_ID}.csv","w",newline="") as f:
+    # os.makedirs(output_dir, exist_ok=True)
+    with open(os.path.join(output_dir,f"cluster_map_{RUN_ID}.csv"),
+              "w",newline="") as f:
+    # with open(f"stats/cluster_map_{RUN_ID}.csv","w",newline="") as f:
         w = csv.DictWriter(f, fieldnames=[
             "run_id","node_id","role","cluster_id","cluster_head","dist_to_sink_m","neighbor_count"
         ])
@@ -535,7 +545,6 @@ def run_one(RUN_NUM:int, SEED:int, NUM_NODES:int):
 
     #%%
     # from transmission_summary_uan import summarize_per_node, summarize_global
-    from transmission_summary_uan import summarize_global_by_run, summarize_per_node_by_run
 
     ## INICIO PROCESO DE TRANSMISIÓN DE DATOS CIFRADOS CON ASCON
     print("-")
@@ -905,6 +914,8 @@ def run_one(RUN_NUM:int, SEED:int, NUM_NODES:int):
     print(f"Ventana simulada: {SIM_DURATION_S/3600:.2f} h; factor F = {PROJECTION_FACTOR:.2f}")
     print("Multiplica: energía total, nº de paquetes y bits por F. Latencias por paquete NO se escalan.")
 
+    from transmission_summary_uan import summarize_global_by_run, summarize_per_node_by_run
+    
     #%%
 
     print("-")
@@ -924,18 +935,18 @@ def run_one(RUN_NUM:int, SEED:int, NUM_NODES:int):
 
     # Obtener la ruta del directorio donde se encuentra el script actual
     # current_dir = os.path.dirname(os.path.abspath(__file__))
-    current_dir = os.getcwd()
+    # current_dir = os.getcwd()
+    current_dir = os.environ.get("OUTPUT_DIR", os.getcwd())
 
     # Definir la carpeta donde se encuentra la base de datos (carpeta 'save_struct')
     carpeta_destino = os.path.join(current_dir, 'save_struct')
 
     # Crea la carpeta en caso de no existir
-    if not os.path.exists(carpeta_destino):
-        os.makedirs(carpeta_destino)
+    os.makedirs(carpeta_destino, exist_ok=True)
 
     # Obtener el run_id desde variable de entorno o parámetro
     run_id = os.environ.get("RUN", "run01")  # puedes usar str(run_num) si lo tienes como entero
-    num_nodes = os.environ.get("NUM_NODES", "20")  # puedes usar str(run_num) si lo tienes como entero
+    num_nodes = os.environ.get("UNSN_NUM_NODES", "20")  # puedes usar str(run_num) si lo tienes como entero
 
     # # Ruta completa del archivo de la base de datos dentro de la carpeta 'save_struct'
     # ruta_nodos = os.path.join(carpeta_destino, 'nodos_guardados.pkl')
@@ -960,8 +971,17 @@ def run_one(RUN_NUM:int, SEED:int, NUM_NODES:int):
 
 if __name__ == "__main__":
     import os
+    import argparse
+
+    # jala el dir por num_nodes
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--output_dir", type=str, default=None)
+    args = parser.parse_args()
+    os.environ["OUTPUT_DIR"] = args.output_dir or ""
+    os.environ["UWSN_EVENTS_CSV"] = os.path.join(os.environ["OUTPUT_DIR"], "transmissions.csv")
+
     # Defaults si no te pasan nada
     RUN_NUM = int(os.environ.get("RUN", "1"))
     SEED    = int(os.environ.get("UWSN_SEED", "1337"))
-    NUM_NODES = int(os.environ.get("NUM_NODES", "20"))
-    run_one(RUN_NUM, SEED, NUM_NODES)
+    NUM_NODES = int(os.environ.get("UNSN_NUM_NODES", "20"))
+    run_one(RUN_NUM, SEED, NUM_NODES, output_dir=args.output_dir)

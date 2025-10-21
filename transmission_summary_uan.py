@@ -3,9 +3,9 @@ import os, csv
 import pandas as pd
 from collections import defaultdict
 
-# PHASE = "syn"
-PHASE = "auth"
-# PHASE = "data"
+# # PHASE = "syn"
+# PHASE = "auth"
+# # PHASE = "data"
 
 CANON_CSV = os.environ.get("UWSN_EVENTS_CSV", "stats/transmissions.csv")
 
@@ -126,15 +126,18 @@ CANON_CSV = os.environ.get("UWSN_EVENTS_CSV", "stats/transmissions.csv")
 # summarize_per_node()
 # summarize_global()
 
+PHASES = ["syn", "auth", "data"]
 
-def summarize_per_node_by_run(input_csv=CANON_CSV, output_dir="stats/summary_per_node_by_run", phase=PHASE):
+def summarize_per_node_by_run(input_csv=CANON_CSV, output_dir=None, phase=None):
     if not os.path.exists(input_csv):
         print(f"🚨 Archivo no encontrado: {input_csv}")
         return
     df = pd.read_csv(input_csv)
     df = df[df["phase"].astype(str).str.contains(phase)]
+    # df = df[df["phase"].astype(str).str.strip().str.lower() == phase.lower()]
 
-    os.makedirs(output_dir, exist_ok=True)
+    output_dir = output_dir or os.environ.get("OUTPUT_DIR", "stats/")
+    # os.makedirs(output_dir, exist_ok=True)
 
     for run_id, group in df.groupby("run_id"):
         tx = group[group["energy_event_type"] == "tx"]
@@ -174,14 +177,16 @@ def summarize_per_node_by_run(input_csv=CANON_CSV, output_dir="stats/summary_per
         print(f"📁 Resumen por nodo exportado: {output_csv}")
 
 
-def summarize_global_by_run(input_csv=CANON_CSV, output_dir="stats/summary_global_by_run", phase=PHASE):
+def summarize_global_by_run(input_csv=CANON_CSV, output_dir=None, phase=None):
     if not os.path.exists(input_csv):
         print(f"🚨 Archivo no encontrado: {input_csv}")
         return
     df = pd.read_csv(input_csv)
     df = df[df["phase"].astype(str).str.contains(phase)]
+    # df = df[df["phase"].astype(str).str.strip().str.lower() == phase.lower()]
 
-    os.makedirs(output_dir, exist_ok=True)
+    output_dir = output_dir or os.environ.get("OUTPUT_DIR", "stats/")
+    # os.makedirs(input_csv, exist_ok=True)
 
     for run_id, group in df.groupby("run_id"):
         d = group.copy()
@@ -229,7 +234,9 @@ def summarize_global_by_run(input_csv=CANON_CSV, output_dir="stats/summary_globa
             ])
         print(f"📊 Resumen global exportado: {output_csv}")
 
-
-# Resumen y PROYECCIÓN
-summarize_per_node_by_run()
-summarize_global_by_run()
+import time
+output_dir = os.environ.get("OUTPUT_DIR", "stats/")
+for phase in PHASES:
+    print(f"\n📡 Procesando fase: {phase}")
+    summarize_per_node_by_run(phase=phase)
+    summarize_global_by_run(phase=phase)
