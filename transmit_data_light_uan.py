@@ -588,7 +588,9 @@ def transmit_data(RUN_ID, db_path, nodes, sender_node, receiver_node, plaintext,
 
     # Se actualiza la energia de los demas nodos
     active_ids = [sender_id, receiver_id]
-    nodes = update_energy_standby_others(nodes, active_ids, timeout_s, verbose=VERBOSE)
+    active_cluster_id = sender_node["ClusterHead"]
+    nodes = update_energy_standby_others(nodes, active_ids, active_cluster_id,
+                                         timeout_s, verbose=VERBOSE)
 
     # 8) Si el paquete llega: energía RX (receptor) + descifrado
     if success:

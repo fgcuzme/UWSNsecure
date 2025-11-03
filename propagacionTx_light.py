@@ -213,7 +213,8 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
 
                             # Se actualiza la energia de los demas nodos
                             active_ids = [Ch_node["NodeID"]]
-                            node_uw1 = update_energy_standby_others(node_uw1, active_ids, 
+                            active_cluster_id = Ch_node["ClusterHead"]
+                            node_uw1 = update_energy_standby_others(node_uw1, active_ids, active_cluster_id, 
                                                                     timeout_chtosink, verbose=VERBOSE)
 
                             # # Ch to Sink
@@ -279,7 +280,9 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
 
                 # Se actualiza la energia de los demas nodos exista o no recepción del mensaje en el nodo
                 active_ids = [Ch_node["NodeID"]]
-                node_uw1 = update_energy_standby_others(node_uw1, active_ids, timeout_sinktoch, verbose=VERBOSE)
+                active_cluster_id = Ch_node["ClusterHead"]
+                node_uw1 = update_energy_standby_others(node_uw1, active_ids, active_cluster_id, 
+                                                        timeout_sinktoch, verbose=VERBOSE)
 
             else:
                 print(f"CH {Ch_node['NodeID']} no está sincronizado. Omitido.")
@@ -379,7 +382,9 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
 
                 # Se actualiza la energia de los demas nodos
                 active_ids = [ch_node1["NodeID"],node1["NodeID"]]
-                node_uw2 = update_energy_standby_others(node_uw2, active_ids, timeout_ch_to_sn, verbose=VERBOSE)
+                active_cluster_id = ch_node1["ClusterHead"]
+                node_uw2 = update_energy_standby_others(node_uw2, active_ids, active_cluster_id, 
+                                                        timeout_ch_to_sn, verbose=VERBOSE)
 
                 # CH to SN
                 # confirma la recepción del pkt
@@ -451,7 +456,9 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
                                     )
                             # Se actualiza la energia de los demas nodos
                             active_ids = [node1["NodeID"], ch_node1["NodeID"]]
-                            node_uw2 = update_energy_standby_others(node_uw2, active_ids, timeout_sn_to_ch, verbose=VERBOSE)
+                            active_cluster_id = ch_node1["ClusterHead"]
+                            node_uw2 = update_energy_standby_others(node_uw2, active_ids, active_cluster_id, 
+                                                                    timeout_sn_to_ch, verbose=VERBOSE)
 
                             if success_gen_ack:
                                 ack_received_CH = True
@@ -717,7 +724,9 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
 
             ## Energia de los demas nodos
             active_ids = [ch_node1["NodeID"]]
-            node_uw3 = update_energy_standby_others(node_uw3, active_ids, timeout_ch_resp_auth, verbose=VERBOSE)
+            active_cluster_id = ch_node1["ClusterHead"]
+            node_uw3 = update_energy_standby_others(node_uw3, active_ids, active_cluster_id, 
+                                                    timeout_ch_resp_auth, verbose=VERBOSE)
 
 
             # Simular la probabiidad de recepción AL SINK
@@ -910,7 +919,9 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
 
                     ## Energia de los demas nodos
                     active_ids = [ch_node1["NodeID"], node2["NodeID"]]
-                    node_uw3 = update_energy_standby_others(node_uw3, active_ids, timeout_ch, verbose=VERBOSE)
+                    active_cluster_id = ch_node1["ClusterHead"]
+                    node_uw3 = update_energy_standby_others(node_uw3, active_ids, active_cluster_id, 
+                                                            timeout_ch, verbose=VERBOSE)
 
                     # # CH to SN
                     if success_resp_auth:
@@ -977,7 +988,9 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
 
                                 ## Energia de los demas nodos
                                 active_ids = [ch_node1["NodeID"], node2["NodeID"]]
-                                node_uw3 = update_energy_standby_others(node_uw3, active_ids, t_proc_ch_resp_auth, 
+                                active_cluster_id = ch_node1["ClusterHead"]
+                                node_uw3 = update_energy_standby_others(node_uw3, active_ids, active_cluster_id,
+                                                                        t_proc_ch_resp_auth, 
                                                                         verbose=VERBOSE)
 
                                 # Se almacena en log_event de la tx del ack:auth
@@ -1197,7 +1210,9 @@ def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retrie
 
                 ## Energia de los demas nodos
                 active_ids = [node_ch["NodeID"], node4["NodeID"]]
-                nodes = update_energy_standby_others(nodes, active_ids, timeout_sn, verbose=VERBOSE)
+                active_cluster_id = node_ch["ClusterHead"]
+                nodes = update_energy_standby_others(nodes, active_ids, active_cluster_id,
+                                                     timeout_sn, verbose=VERBOSE)
 
                 if success_resp_auth:
                     # CH recibe la transacción y verifica si el nodo está sincronizado
@@ -1296,7 +1311,9 @@ def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retrie
 
                                 ## Energia de los demas nodos
                                 active_ids = [node_ch["NodeID"], node4["NodeID"]]
-                                nodes = update_energy_standby_others(nodes, active_ids, timeout_ch, verbose=VERBOSE)
+                                active_cluster_id = node_ch["ClusterHead"]
+                                nodes = update_energy_standby_others(nodes, active_ids, active_cluster_id,
+                                                                     timeout_ch, verbose=VERBOSE)
 
                                 if success_resp_auth_ack:
                                     authenticated_ack = True

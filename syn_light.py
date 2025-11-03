@@ -90,7 +90,8 @@ def propagate_syn_to_CH_tdma(RUN_ID, sink, CH_ids, node_uw, max_retries=3, timeo
             # DEscuenta energía de los demas nodos
             # Los nodos consumen cuando no estan transmitiendo.
             active_ids = [node_uw[ch]["NodeID"]]
-            node_uw = update_energy_standby_others(node_uw, active_ids, timeout_sinktoch, verbose=VERBOSE)
+            active_cluster_id = node_uw[ch]["ClusterHead"]
+            node_uw = update_energy_standby_others(node_uw, active_ids, active_cluster_id, timeout_sinktoch, verbose=VERBOSE)
 
             # Simular probabilidad de recepción
             if success_syn: # Si recibe el packet de syn
@@ -159,7 +160,8 @@ def propagate_syn_to_CH_tdma(RUN_ID, sink, CH_ids, node_uw, max_retries=3, timeo
                     
                     # Los nodos consumen cuando no estan transmitiendo.
                     active_ids = [node_uw[ch]["NodeID"]]
-                    node_uw = update_energy_standby_others(node_uw, active_ids, timeout_sinktoch, verbose=VERBOSE)
+                    active_cluster_id = node_uw[ch]["ClusterHead"]
+                    node_uw = update_energy_standby_others(node_uw, active_ids, active_cluster_id, timeout_sinktoch, verbose=VERBOSE)
 
                     # Simulación de recepción de ACK para el CH, se considera 0 como escenario ideal
                     # Pero se puede manejar una probabilidad de acuerdo a otros estudios
@@ -267,7 +269,8 @@ def synchronize_nodes_tdma(RUN_ID, CH_id, syn_packet, node_uw, max_retries_senso
             
             # Los nodos consumen cuando no estan transmitiendo.
             active_ids = [node_uw[CH_id]["NodeID"],  node["NodeID"]]
-            node_uw = update_energy_standby_others(node_uw, active_ids, timeout_chtosn, verbose=VERBOSE)
+            active_cluster_id = node_uw[CH_id]["ClusterHead"]
+            node_uw = update_energy_standby_others(node_uw, active_ids, active_cluster_id, timeout_chtosn, verbose=VERBOSE)
             
             if success_tx:
                 ack_received_CH = True
@@ -320,7 +323,8 @@ def synchronize_nodes_tdma(RUN_ID, CH_id, syn_packet, node_uw, max_retries_senso
 
                     # Los nodos consumen cuando no estan transmitiendo.
                     active_ids = [node_uw[CH_id]["NodeID"],  node["NodeID"]]
-                    node_uw = update_energy_standby_others(node_uw, active_ids, timeout_chtosn, verbose=VERBOSE)
+                    active_cluster_id = node_uw[CH_id]["ClusterHead"]
+                    node_uw = update_energy_standby_others(node_uw, active_ids, active_cluster_id, timeout_chtosn, verbose=VERBOSE)
                     
                     if success_ack:
                         print(f"Nodo {node['NodeID']} sincronizado exitosamente.")

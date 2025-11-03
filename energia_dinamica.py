@@ -203,23 +203,41 @@ def calculate_timeout(sink_pos, ch_pos, bitrate=9200, packet_size=72, proc_time_
 # # Uso en propagate_syn_to_CH_tdma
 # timeout = calculate_timeout(sink["Position"], node_uw[ch]["Position"])
 
+# se comenta por mejoras en la función
+# def update_energy_standby_others(all_nodes, active_ids, t_interval_s, verbose=False):
+#     """
+#     Actualiza la energía de los nodos que no están activos (ni transmitiendo ni recibiendo)
+#     durante un intervalo de tiempo t_interval_s (en segundos).
 
-def update_energy_standby_others(all_nodes, active_ids, t_interval_s, verbose=False):
+#     Parámetros:
+#     - all_nodes: lista de diccionarios de nodos
+#     - active_ids: lista de IDs de nodos activos (ej. [tx_id, rx_id])
+#     - t_interval_s: duración del evento en segundos
+#     """
+#     for node in all_nodes:
+#         if node["NodeID"] not in active_ids:
+#             E_standby = energy_standby(t_interval_s)
+#             node["ResidualEnergy"] = max(node["ResidualEnergy"] - E_standby, 0)
+#             if verbose:
+#                 print(f"[STANDBY] Nodo {node['NodeID']} consumió {E_standby:.6f} J | Residual: {node['ResidualEnergy']:.6f} J")
+#     return all_nodes
+
+def update_energy_standby_others(all_nodes, active_ids, active_cluster_id, t_interval_s, verbose=False):
     """
-    Actualiza la energía de los nodos que no están activos (ni transmitiendo ni recibiendo)
-    durante un intervalo de tiempo t_interval_s (en segundos).
-
+    Actualiza la energía de los nodos que pertenecen al clúster activo y no están transmitiendo ni recibiendo.
+    
     Parámetros:
     - all_nodes: lista de diccionarios de nodos
     - active_ids: lista de IDs de nodos activos (ej. [tx_id, rx_id])
+    - active_cluster_id: ID del clúster que está ejecutando su sub-TDMA en este ciclo
     - t_interval_s: duración del evento en segundos
     """
     for node in all_nodes:
-        if node["NodeID"] not in active_ids:
+        if node["ClusterHead"] == active_cluster_id and node["NodeID"] not in active_ids:
             E_standby = energy_standby(t_interval_s)
             node["ResidualEnergy"] = max(node["ResidualEnergy"] - E_standby, 0)
             if verbose:
-                print(f"[STANDBY] Nodo {node['NodeID']} consumió {E_standby:.6f} J | Residual: {node['ResidualEnergy']:.6f} J")
+                print(f"[STANDBY] Nodo {node['NodeID']} del clúster {active_cluster_id} consumió {E_standby:.6f} J | Residual: {node['ResidualEnergy']:.6f} J")
     return all_nodes
 
 
