@@ -1,9 +1,11 @@
 # from tangle2_light import verify_transaction_signature, create_auth_response_tx
-from tangle2_light import verify_transaction_signature, create_auth_response_tx, update_transactions, delete_transaction, ingest_tx, validate_rx_tx_and_log
+from tangle2_light import (verify_transaction_signature, create_auth_response_tx, update_transactions, 
+                           delete_transaction, ingest_tx, validate_rx_tx_and_log)
 from bbdd2_sqlite3 import load_keys_shared_withou_cipher, load_keys_sign_withou_cipher
 from path_loss import propagation_time1
 import numpy as np
-from energia_dinamica import calcular_energia_paquete, energy_listen, energy_standby, calculate_timeout, update_energy_node_tdma, update_energy_standby_others, update_energy_failed_rx, estimate_proc_time_s
+from energia_dinamica import (calcular_energia_paquete, energy_listen, energy_standby, calculate_timeout, 
+                              update_energy_node_tdma, update_energy_standby_others, update_energy_failed_rx, estimate_proc_time_s)
 from per_from_link_uan import per_from_link, propagate_with_probability
 from transmission_logger_uan import log_event
 import random

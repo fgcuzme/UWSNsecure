@@ -1,7 +1,8 @@
 import time
 import numpy as np
 from path_loss import compute_path_loss, propagation_time1
-from energia_dinamica import calcular_energia_paquete, energy_listen, energy_standby, calculate_timeout, update_energy_node_tdma, update_energy_standby_others, update_energy_failed_rx, estimate_proc_time_s
+from energia_dinamica import (calcular_energia_paquete, energy_listen, energy_standby, calculate_timeout, 
+                              update_energy_node_tdma, update_energy_standby_others, update_energy_failed_rx, estimate_proc_time_s)
 from transmission_logger_uan import log_event
 from per_from_link_uan import per_from_link, propagate_with_probability
 
