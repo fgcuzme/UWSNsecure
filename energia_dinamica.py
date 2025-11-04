@@ -235,6 +235,8 @@ def update_energy_standby_others(all_nodes, active_ids, active_cluster_id, t_int
     for node in all_nodes:
         if node["ClusterHead"] == active_cluster_id and node["NodeID"] not in active_ids:
             E_standby = energy_standby(t_interval_s)
+            # print("E_standby : ", E_standby)
+            # time.sleep(1)
             node["ResidualEnergy"] = max(node["ResidualEnergy"] - E_standby, 0)
             if verbose:
                 print(f"[STANDBY] Nodo {node['NodeID']} del clúster {active_cluster_id} consumió {E_standby:.6f} J | Residual: {node['ResidualEnergy']:.6f} J")
@@ -330,6 +332,7 @@ def update_energy_failed_rx(node, target_pos, timeout, role="SN", verbose=False)
         E_timeout = energy_listen(timeout)
 
     E_total = E_guard + E_timeout
+    print("node -> ResidualEnergy : ", node["ResidualEnergy"])
     node["ResidualEnergy"] = max(node["ResidualEnergy"] - E_total, 0)
     if verbose:
         print(f"[{role}-FAILED_RX] Guard:{E_guard:.6f} Timeout:{E_timeout:.6f} → Total:{E_total:.6f} J | Residual:{node['ResidualEnergy']:.6f} J")

@@ -9,12 +9,15 @@ from energia_dinamica import (calcular_energia_paquete, energy_listen, energy_st
 from per_from_link_uan import per_from_link, propagate_with_probability
 from transmission_logger_uan import log_event
 import random
-import time
+import time, os
 from tangle_logger_light import MsTimer, log_tangle_event
 
 global VERBOSE
 
-PER_VARIABLE = None
+raw_per = os.environ.get("PER_VARIABLE", None)
+PER_VARIABLE = float(raw_per) if raw_per not in [None, "None"] else None
+
+# PER_VARIABLE = None
 VERBOSE = False
 PACKET_SIZE_ACK = 72    # bits
 PACKET_SIZE_AUTH = 1480 # bits
@@ -1101,7 +1104,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                         retries_sn += 1
                         print(f"Nodo {node2['NodeID']} no recibió la Tx de autenticación. Reintentando... ({retries_sn}/{max_retries})")
                         # Actualiza la energía del nodo en caso de no recibir el pkt, pero esta escuchando en su slot
-                        node2 = update_energy_failed_rx(node2, ch_node1["Position"], timeout_sn, role="SN", verbose=VERBOSE)
+                        node2 = update_energy_failed_rx(node2, ch_node1["Position"], timeout_ch, role="SN", verbose=VERBOSE)
                         # time.sleep(timeout)
 
                 if retries_sn == max_retries:

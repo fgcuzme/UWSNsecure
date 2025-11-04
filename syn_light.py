@@ -1,4 +1,4 @@
-import time
+import time, os
 import numpy as np
 from path_loss import compute_path_loss, propagation_time1
 from energia_dinamica import (calcular_energia_paquete, energy_listen, energy_standby, calculate_timeout, 
@@ -8,7 +8,11 @@ from per_from_link_uan import per_from_link, propagate_with_probability
 
 global VERBOSE
 
-PER_VARIABLE = None
+raw_per = os.environ.get("PER_VARIABLE", None)
+PER_VARIABLE = float(raw_per) if raw_per not in [None, "None"] else None
+
+
+# PER_VARIABLE = None
 VERBOSE = False
 PACKET_SIZE_SYN = 72 # bits
 PAYLOAD_ACK = 0 # bits

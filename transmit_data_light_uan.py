@@ -1,5 +1,5 @@
 import sqlite3
-import random
+import random, os
 # from transmission_logger import log_transmission_event
 from energia_dinamica import (calcular_energia_paquete, energy_listen, energy_standby, 
                               calculate_timeout, update_energy_node_tdma, estimate_proc_time_s, 
@@ -9,7 +9,10 @@ from transmission_logger_uan import log_event
 
 global VERBOSE
 
-PER_VARIABLE = None
+raw_per = os.environ.get("PER_VARIABLE", None)
+PER_VARIABLE = float(raw_per) if raw_per not in [None, "None"] else None
+
+# PER_VARIABLE = None
 VERBOSE = False
 PAYLOAD_BITS_SN = 60*8 # 480 bits
 PAYLOAD_BITS_CH = 92*8 # 736 bits

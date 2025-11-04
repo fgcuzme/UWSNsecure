@@ -1,8 +1,9 @@
 # run_many.py
 import os, subprocess
 
-node_sizes = [20, 50, 100, 200, 300, 400, 500]
-# node_sizes = [10, 20]
+# node_sizes = [20, 50, 100, 200, 300, 400, 500]
+# node_sizes = [400, 500, 700, 900, 1000]
+node_sizes = [20]
 
 def run_batch(
     scenario="1000km_W5_Sh0.5",
@@ -21,6 +22,7 @@ def run_batch(
             env["UNSN_NUM_NODES"] = str(size)  # 👈 nuevo parámetro
             run_dir = f"results/nodes_{size}/run_{i}"
             env["OUTPUT_DIR"] = run_dir
+            env["PER_VARIABLE"] = "None"  # 👈 aquí defines la variable de entorno "None" or "0.15"
 
             print(f">>> NODES={size} RUN={env['RUN']} SEED={env['UWSN_SEED']}")
             # knobs de rendimiento/registro (ver sección 4)
@@ -30,10 +32,12 @@ def run_batch(
             # ejecuta la simulación
             subprocess.run(["python", "simulation_test1_light.py",
                             "--output_dir", run_dir], env=env, check=True)
+            # subprocess.run(["./simulation_test1_light_arm",
+            #                 "--output_dir", run_dir], env=env, check=True)
 
 if __name__ == "__main__":
     run_batch(scenario=os.environ.get("SCENARIO_ID","1000km_W5_Sh0.5"),
-              runs=int(os.environ.get("RUNS","3")),
+              runs=int(os.environ.get("RUNS","1")),
               seed0=int(os.environ.get("SEED0","1337")),
               #num_nodes=int(os.environ.get("NUM_NODES", "20")),
               seeds_mode=os.environ.get("SEEDS_MODE","inc"))
