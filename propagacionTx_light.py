@@ -99,12 +99,10 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
     type_packet_control = "sync"
 
     for index_ch in ch_list:
-        retries = 0
-        retries_ChtoSink = 0
+        retries = retries_ChtoSink = 0
         #node_ch = node_uw[ch]
         # print('INICIO DE PROPGATE : ', node_ch)
-        ack_received_SinktoCH = False
-        auth_isverify = False
+        ack_received_SinktoCH = ack_received_CHtoSink = auth_isverify = False
         # Almacena el nodo ch para esta ronda
         Ch_node = node_uw1[index_ch]
         verify_ms = store_ms = validate_ms = 0
@@ -168,12 +166,15 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
                         ack_received_CHtoSink = False  # aún no confirmado
 
                         while retries_ChtoSink < max_retries and not ack_received_CHtoSink:
+                            # print("Ingreso number : ", retries_ChtoSink)
+                            # time.sleep(30)
                             # Confirma la recepción de la Tx
                             # guardar la energía antes de actualizar
                             initial_energy_ch_tx = Ch_node["ResidualEnergy"]
 
                             # calular el per
-                            per_ch_sink_auth_ack, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, L=PACKET_SIZE_ACK, bitrate=9200)
+                            per_ch_sink_auth_ack, SL_db, snr_db, EbN0_db, ber = per_from_link(f_khz=20, distance_m=dist, 
+                                                                                              L=PACKET_SIZE_ACK, bitrate=9200)
 
                             success_auth_ack = propagate_with_probability(per=per_ch_sink_auth_ack, override_per=PER_VARIABLE)
                             p_lost_auth_ack = not success_auth_ack
@@ -188,6 +189,7 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
                             Ch_node = update_energy_node_tdma(Ch_node, sink1["Position"], E_schedule,
                                                         timeout_chtosink, type_packet_control, role='CH', 
                                                         action='tx', verbose=VERBOSE)
+                            
                             energy_consumed_ch_tx = ((initial_energy_ch_tx - Ch_node["ResidualEnergy"]))
                             # print(f'Energy consumed del CH en Tx ACK : ', energy_consumed_ch_tx)
 
@@ -216,6 +218,10 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
                             # Se actualiza la energia de los demas nodos
                             active_ids = [Ch_node["NodeID"]]
                             active_cluster_id = Ch_node["ClusterHead"]
+                            
+                            # print("active_ids : ", active_ids, "active_cluster_id : ", active_cluster_id)
+                            # time.sleep(30)
+
                             node_uw1 = update_energy_standby_others(node_uw1, active_ids, active_cluster_id, 
                                                                     timeout_chtosink, verbose=VERBOSE)
 
@@ -283,6 +289,10 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
                 # Se actualiza la energia de los demas nodos exista o no recepción del mensaje en el nodo
                 active_ids = [Ch_node["NodeID"]]
                 active_cluster_id = Ch_node["ClusterHead"]
+
+                # print("active_ids : ", active_ids, "active_cluster_id : ", active_cluster_id)
+                # time.sleep(30)
+
                 node_uw1 = update_energy_standby_others(node_uw1, active_ids, active_cluster_id, 
                                                         timeout_sinktoch, verbose=VERBOSE)
 
@@ -843,7 +853,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                 retries_ch += 1
                 ack_received_chtosink = False
                 # Actualiza la energía del nodo en caso de no recibir el pkt, pero esta escuchando en su slot
-                ch_node1 = update_energy_failed_rx(ch_node1, sink1["Position"], timeout_ch, role="CH", verbose=VERBOSE)
+                ch_node1 = update_energy_failed_rx(ch_node1, sink1["Position"], timeout_ch_resp_auth, role="CH", verbose=VERBOSE)
 
         if retries_ch == max_retries:
             print(f"Sink {sink1['NodeID']} no respondió tras {max_retries} reintentos.")

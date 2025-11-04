@@ -624,10 +624,11 @@ def transmit_data(RUN_ID, db_path, nodes, sender_node, receiver_node, plaintext,
             snr_db=snr_db, per=per_link, lat_dag_ms=0.0, SL_db=SL_db, EbN0_db=EbN0_db, BER=ber
         )
     else:
-        # si se pierde, RX no consume por decodificación del paquete (mantén solo listen en update_energy_standby_others externo si quieres)
-        receiver_node = update_energy_failed_rx(receiver_node, start_pos, timeout_s, role=role_rx, verbose=VERBOSE)
-        E_rx = 0.0
-        t_proc_rx_s = 0.0
+        if "ResidualEnergy" in receiver_node:
+            # si se pierde, RX no consume por decodificación del paquete (mantén solo listen en update_energy_standby_others externo si quieres)
+            receiver_node = update_energy_failed_rx(receiver_node, start_pos, timeout_s, role=role_rx, verbose=VERBOSE)
+            E_rx = 0.0
+            t_proc_rx_s = 0.0
 
 
     # # 9) Log RX (receptor)
