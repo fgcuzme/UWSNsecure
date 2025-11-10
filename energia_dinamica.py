@@ -11,6 +11,9 @@ import os
 # Conmutador: usa 'median' (robusto) o 'mean' (promedio) como nominal
 PROC_BASE = os.environ.get("UWSN_PROC_BASE", "median").lower().strip()  # 'median' | 'mean'
 
+SHIPPING = os.environ.get("SHIPPING", None)
+WIND_SPEED = os.environ.get("WIND_SPEED", None)
+
 # Tiempos [s]
 _MEAN = {
     "sign_s":            0.00046933,   # Ed25519 sign
@@ -101,8 +104,12 @@ def consumo_tx_por_distancia_suavizado(distance_m: float) -> float:
     basada en modelo físico anclado a 2.5 W @ 1500 m.
     Para distancias mayores, usa el modelo escalonado original.
     """
+    # parametros de shipping, wind_speed_mps
+    shipp = float(SHIPPING) if not None else 0.5
+    ws = float(WIND_SPEED) if not None else 5.0
+
     if distance_m <= 1500:
-        return p_tx_approx_W(distance_m)
+        return p_tx_approx_W(distance_m, shipping=shipp, wind_mps=ws)
     elif distance_m <= 3000:
         return p_tx_approx_W3000(distance_m)
     elif distance_m <= 6000:

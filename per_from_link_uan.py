@@ -1,21 +1,38 @@
-import math
+import math, os
 import random
 from path_loss import compute_path_loss
 from noise_uan_aariza import compute_uan_noise
 from curva_anclada_distancias_menores import p_tx_approx_W, bandwidth_bpsk_rrc
 
+PC_TX = os.environ.get("PC_TX", None)
+SHIPPING = os.environ.get("SHIPPING", None)
+WIND_SPEED = os.environ.get("WIND_SPEED", None)
+
 ## Función para estimar BER/PER en BPSK/FSK y úsalo para alimentar la función anterior
 def per_from_link(f_khz, distance_m, L, bitrate=9200, bw_hz=12420, spreading=1.5, EbN0_req_dB=7.0):
-    p_tx = p_tx_approx_W(distance_m, f_khz, bitrate)
-    # print(p_tx)
+    # p_tx = p_tx_approx_W(distance_m, f_khz, bitrate)
+    # # print(p_tx)
+    # SL_db = 170.8 + 10 * math.log10(p_tx)
+    # # SL_db = 170.8 + 10 * math.log10(0.1)
+    # # SL_db = 167
+    # #print("SL_db :", SL_db)
+
+    # parametros de shipping, wind_speed_mps
+    shipp = float(SHIPPING) if not None else 0.5
+    ws = float(WIND_SPEED) if not None else 5.0
+
+    # Decidir si usar potencia fija o adaptable
+    if PC_TX is not None and PC_TX != "adaptive":
+        p_tx = float(PC_TX)  # Potencia fija definida por el usuario
+    else:
+        p_tx = p_tx_approx_W(distance_m, f_khz, bitrate,shipping=shipp, wind_mps=ws)  # Potencia adaptativa
+
     SL_db = 170.8 + 10 * math.log10(p_tx)
-    # SL_db = 170.8 + 10 * math.log10(2.5)
-    # SL_db = 100
-    #print("SL_db :", SL_db)
     
     tl_db, tl_lin = compute_path_loss(f_khz, distance_m, spread_coef=spreading)
     #print("tl_db : ", tl_db)
-    nl_total_db, *_ = compute_uan_noise(f_khz, shipping=0.5, wind_speed_mps=5.0)
+
+    nl_total_db, *_ = compute_uan_noise(f_khz, shipping=shipp, wind_speed_mps=ws)
     # nl_total_db, *_ = compute_uan_noise(f_khz, shipping=1.0, wind_speed_mps=10.0)
     #print("nl_total_db :", nl_total_db)
 

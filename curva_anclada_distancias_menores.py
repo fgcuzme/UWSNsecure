@@ -2,6 +2,7 @@ import numpy as np
 from path_loss import compute_path_loss              # TL(d,f)
 from noise_uan_aariza import compute_uan_noise       # NL_psd(f)
 import matplotlib.pyplot as plt
+import os
 
 def bandwidth_bpsk_rrc(Rb_bps: float, alpha: float = 0.35) -> float:
     return Rb_bps * (1.0 + alpha)

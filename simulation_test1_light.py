@@ -6,6 +6,9 @@ def run_one(RUN_NUM:int, SEED:int, NUM_NODES:int,
 
     SCENARIO_ID = os.environ.get("SCENARIO_ID", "1000km_W5_Sh0.5")
     RUN_ID = f"{SCENARIO_ID}_seed{SEED}_run{RUN_NUM:02d}"
+    SHIPPING = os.environ.get("SHIPPING", None)
+    WIND_SPEED = os.environ.get("WIND_SPEED", None)
+    ENERGY_INI = os.environ.get("UWSN_ENERGY_INITIAL_J", "100.0")
 
     output_dir = output_dir or f"stats/{RUN_ID}/"
     # os.makedirs("stats", exist_ok=True)
@@ -19,9 +22,9 @@ def run_one(RUN_NUM:int, SEED:int, NUM_NODES:int,
             "scenario": {
                 "num_nodes": NUM_NODES,
                 "freq_khz": 20, "bitrate_bps": 9200,
-                "traffic_shipping = 0.5": 0.5, "wind_mps": 5,
+                "traffic_shipping = 0.5": float(SHIPPING), "wind_mps": float(WIND_SPEED),
                 "spreading": 1.5,
-                "E_init_J": 100, "threshold_bateria": float(0.10*100)
+                "E_init_J": float(ENERGY_INI), "threshold_bateria": float(0.10*float(ENERGY_INI))
             },
             "start_time": datetime.datetime.utcnow().isoformat(),
             "code_version": "v1.0-main"
@@ -72,18 +75,28 @@ def run_one(RUN_NUM:int, SEED:int, NUM_NODES:int,
     # PARAMETROS DE LA RED INICIAL
     # Parámetros de la red de nodos
     # num_nodes = 20  # Número de nodos
-    dim_x = 1000  # Dimensiones del área de despliegue (en metros)
-    dim_y = 1000
-    dim_z = -1000  # Profundidad (en metros)
-    sink_pos = np.array([500, 500, 0])  # Posición del Sink en el centro
+    # dim_x = 1000  # Dimensiones del área de despliegue (en metros)
+    # dim_y = 1000
+    # dim_z = -1000  # Profundidad (en metros)
+    # sink_pos = np.array([500, 500, 0])  # Posición del Sink en el centro
     # E_init = 10  # Energía inicial de cada nodo (en Joules)
+
+    # pasadas por parametros
+    dim_x = int(os.environ.get("DIM_X", "1000"))
+    dim_y = int(os.environ.get("DIM_Y", "1000"))
+    dim_z = int(os.environ.get("DIM_Z", "-1000"))
+    sink_pos = np.array([
+    float(os.environ.get("SINK_POS_X", "500")),
+    float(os.environ.get("SINK_POS_Y", "500")),
+    float(os.environ.get("SINK_POS_Z", "0"))
+    ])
 
     # Estimación de la capacidad de batería necesaria para tus nodos acústicos subacuáticos,
     # basado en las especificaciones del módem S2CR 15/27 (15–27 kHz) y tu perfil de tráfico.
     # Este diseño es ideal para despliegues controlados (12–24 h), como misiones de muestreo
     #  temporal o experimentación oceanográfica.
     # Ref: chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://www.evologics.com/web/content/15634?unique=be7aa65d1c113e56664940ddea7cf65757e6648e
-    E0 = float(os.environ.get("UWSN_ENERGY_INITIAL_J", "100.0"))
+    E0 = float(ENERGY_INI)
     E_init = E0  # Energía inicial realista en julios (≈ 0.9 Ah @ 3.7V)
 
     # Frecuencia de transmisión en kHz
@@ -173,7 +186,9 @@ def run_one(RUN_NUM:int, SEED:int, NUM_NODES:int,
     ## Proceso de generación de cluster
     num_rounds = 1
     num_niveles = 3
-    radio_comunicacion = 500
+    # radio_comunicacion = 500
+
+    radio_comunicacion = float(os.environ.get("RADIO_RANGE", "500"))
 
     # Inicialización de energía
     energia_nodos = np.full(num_nodes, E_init)
@@ -986,7 +1001,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     os.environ["OUTPUT_DIR"] = args.output_dir or ""
     os.environ["UWSN_EVENTS_CSV"] = os.path.join(os.environ["OUTPUT_DIR"], "transmissions.csv")
-    os.environ["UWSN_ENERGY_INITIAL_J"] = "100.0"
+    # os.environ["UWSN_ENERGY_INITIAL_J"] = "100.0"
 
     # Defaults si no te pasan nada
     RUN_NUM = int(os.environ.get("RUN", "1"))
