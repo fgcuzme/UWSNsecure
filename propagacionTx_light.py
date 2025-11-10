@@ -302,7 +302,8 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
             else:
                 print(f"CH {Ch_node['NodeID']} no está sincronizado. Omitido.")
                 # recived = False
-                # break
+                break
+
         if retries == max_retries:
             print(f"CH {Ch_node['NodeID']} no respondió tras {max_retries} reintentos.")
             # recived = False
@@ -1416,7 +1417,7 @@ def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retrie
                     retries += 1
                     print(f"CH {node_ch['NodeID']} no recibió la Tx de autenticación. Reintentando... ({retries}/{max_retries})")
                     # Actualiza la energía del nodo en caso de no recibir el pkt, pero esta escuchando en su slot
-                    node_ch = update_energy_failed_rx(node_ch, node4["Position"], timeout_ch, role="CH", verbose=VERBOSE)
+                    node_ch = update_energy_failed_rx(node_ch, node4["Position"], timeout_sn, role="CH", verbose=VERBOSE)
                     # time.sleep(timeout)
 
             if retries == max_retries:
