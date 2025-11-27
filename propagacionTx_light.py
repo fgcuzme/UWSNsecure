@@ -641,7 +641,7 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
     for ch_index in list_ch:
         ack_received_chtosink = False
         ack_received_CH = False
-        verify_ms = store_ms = validate_ms = 0
+        verify_ms = store_ms = validate_ms = proce_ms = 0
 
         print('Iniciando propagación de la transacción respuesta del CH al sink y dentro del cluster...')
         indexCH = node_uw3[ch_index]['NodeID']
