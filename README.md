@@ -1,10 +1,10 @@
 # UWSNsecure
-Codigo de prueba para la simulación del proceso de autenticación utilizando un tangle ligero y cifrado de datos con ASCON
+Test code for simulating the authentication process using a lightweight Tangle and data encryption with ASCON
 
-Versión de python utilizada
+Python version used:
 3.11.5
 
-Paquetes utilizados
+Packages used:
 Package      Version
 ------------ -------
 ascon        0.0.9
