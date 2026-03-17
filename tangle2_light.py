@@ -9,21 +9,36 @@ from collections import deque
 from tangle_logger_light import log_tangle_event, MsTimer
 import msgpack
 
+## Establecer variables globales para num_tips=2, check_fresh=True, alpha=0.3, max_steps=200
+
 
 _TTL_tx = float(120.0)          # rango 120-300s -> 2–5 × (t_propagación_max + colas)
 _TTL_windows = float(300.0)     # rango 300-420s -> TTL + margen
 
-# Normalizadores y estado DAG en el nodo (drop-in)
+# # se comenta para mejorar 02/03/2026
+# # Normalizadores y estado DAG en el nodo (drop-in)
+# def _ensure_dag_state(node):
+#     node.setdefault("Tips", [])
+#     node.setdefault("ApprovedTransactions", [])
+#     node.setdefault("Transactions", [])
+#     node.setdefault("_tx_index", {})           # id -> tx
+#     node.setdefault("_nonce_window", deque())  # (nonce, ts_insert)
+#     node.setdefault("_nonce_set", set())
+#     node.setdefault("_nonce_ttl_s", _TTL_windows)
+#     node.setdefault("_max_nonce_cache", 4096)
+
+# Mejora aplicada 02/03/2026
 def _ensure_dag_state(node):
     node.setdefault("Tips", [])
     node.setdefault("ApprovedTransactions", [])
     node.setdefault("Transactions", [])
-    node.setdefault("_tx_index", {})           # id -> tx
-    node.setdefault("_nonce_window", deque())  # (nonce, ts_insert)
+    node.setdefault("_tx_index", {})            # id -> tx
+    node.setdefault("_approvers", {})           # parent_id -> [child_id,...]  (reverse edges)
+    node.setdefault("_score", {})               # txid -> lightweight weight/score
+    node.setdefault("_nonce_window", deque())
     node.setdefault("_nonce_set", set())
     node.setdefault("_nonce_ttl_s", _TTL_windows)
     node.setdefault("_max_nonce_cache", 4096)
-
 
 # Añade helpers de normalización
 def _to_builtin(x):
@@ -425,7 +440,9 @@ def create_gen_block(RUN_ID, sink_id, private_key):
 def create_auth_response_tx(RUN_ID, node_ch1):
     _ensure_dag_state(node_ch1)
 
-    approved_tips1, selTips_ms = select_valid_tips(RUN_ID,node_ch1, num_tips=2, check_nonce=True, check_fresh=True)
+    # approved_tips1, selTips_ms = select_valid_tips(RUN_ID,node_ch1, num_tips=2, check_nonce=True, check_fresh=True)
+
+    approved_tips1, selTips_ms = select_valid_tips(RUN_ID,node_ch1, num_tips=2, check_fresh=True, alpha=0.3, max_steps=200)
 
     payload_str = f'{int(node_ch1["NodeID"])};{int(node_ch1["Id_pair_keys_sign"])};{int(node_ch1["Id_pair_keys_shared"])}'
     payoad_bytes = payload_str.encode('utf-8')  # → binario UTF-8
@@ -613,60 +630,157 @@ def _is_fresh_tx(tx, now=None):
     return ttl > 0 and (now >= ts) and (now <= ts + ttl)
 
 
-def select_valid_tips(RUN_ID, node, num_tips=2, check_nonce=True, check_fresh=True):
+# # Se mejora 02/03/202x
+# def select_valid_tips(RUN_ID, node, num_tips=2, check_nonce=True, check_fresh=True):
+#     _ensure_dag_state(node)
+#     if not node["_tx_index"]: _rebuild_tx_index(node)
+
+#     tips_before = len(node["Tips"])
+    
+#     # MIDE CUANDO SE CREA UNA NUEVA TX QUE NO SEA LA GENESIS
+#     # lo hace el tx
+#     with MsTimer() as t_sel:
+#         valid = []
+
+#         for tid in _to_id_list(node["Tips"]):
+#             tx = node["_tx_index"].get(tid)
+#             if not tx: continue
+#             if check_fresh and not _is_fresh_tx(tx): continue
+#             if check_nonce:
+#                 nonce = str(tx.get("Nonce", ""))
+#                 # namespace TIPSEL para no colisionar con RX
+#                 if not nonce or _nonce_seen(node, f"TIPSEL:{nonce}"):
+#                     continue
+#             valid.append(tid)
+#     selTips_ms = t_sel.ms
+
+#     # logging (una sola fila por selección; guardamos agregados básicos)
+#     if RUN_ID is not None:
+#         log_tangle_event(
+#             run_id=RUN_ID, phase="auth", module="tangle", op="tips_select",
+#             node_id=node.get("NodeID"),
+#             tips_before=tips_before, tips_after=tips_before, approved_count=len(valid),
+#             t_tips_sel=t_sel.ms
+#         )
+
+#     if len(valid) <= num_tips: return valid[:], t_sel.ms
+    
+#     return random.sample(valid, num_tips), t_sel.ms
+
+# Se agrega para mejorar 02/03/202x
+def select_valid_tips(RUN_ID, node, num_tips=2, check_fresh=True, alpha=0.3, max_steps=200):
     _ensure_dag_state(node)
-    if not node["_tx_index"]: _rebuild_tx_index(node)
+    if not node["_tx_index"]:
+        _rebuild_tx_index(node)
+
+    # print("Imprime tx nodes : ", node["_tx_index"], "\n", len(node["Tips"]))
+    # time.sleep(30)
 
     tips_before = len(node["Tips"])
-    
-    # MIDE CUANDO SE CREA UNA NUEVA TX QUE NO SEA LA GENESIS
-    # lo hace el tx
-    with MsTimer() as t_sel:
-        valid = []
 
+    with MsTimer() as t_sel:
+        # 1) filtra tips válidos por frescura (y lo que quieras)
+        valid = []
+        now = time.time()
         for tid in _to_id_list(node["Tips"]):
             tx = node["_tx_index"].get(tid)
-            if not tx: continue
-            if check_fresh and not _is_fresh_tx(tx): continue
-            if check_nonce:
-                nonce = str(tx.get("Nonce", ""))
-                # namespace TIPSEL para no colisionar con RX
-                if not nonce or _nonce_seen(node, f"TIPSEL:{nonce}"):
-                    continue
+            if not tx:
+                continue
+            if check_fresh and not _is_fresh_tx(tx, now=now):
+                continue
             valid.append(tid)
+
+        valid_set = set(valid)
+
+        # 2) si pocos tips válidos, devuelve directo
+        if len(valid) <= num_tips:
+            chosen = valid[:]
+            total_steps = 0
+        else:
+            # 3) WRW para elegir tips únicos
+            chosen = []
+            total_steps = 0
+            for _ in range(num_tips):
+                tip, steps = random_walk_to_tip(node, valid_set, alpha=alpha, max_steps=max_steps)
+                total_steps += steps
+                if tip and tip not in chosen:
+                    chosen.append(tip)
+                    valid_set.discard(tip)  # no repetir en esta TX
+
+            # 4) fallback si WRW no logró suficientes
+            if len(chosen) < num_tips:
+                remaining = list(valid_set)
+                need = num_tips - len(chosen)
+                if len(remaining) >= need:
+                    chosen += random.sample(remaining, need)
+                else:
+                    chosen += remaining
+
     selTips_ms = t_sel.ms
 
-    # logging (una sola fila por selección; guardamos agregados básicos)
     if RUN_ID is not None:
         log_tangle_event(
             run_id=RUN_ID, phase="auth", module="tangle", op="tips_select",
-            node_id=node.get("NodeID"),
-            tips_before=tips_before, tips_after=tips_before, approved_count=len(valid),
-            t_tips_sel=t_sel.ms
+            node_id=node.get("NodeID"), tx_type=tx.get("Type"),
+            tips_before=tips_before, tips_after=tips_before,
+            approved_count=len(chosen),
+            t_tips_sel=selTips_ms,
+            alpha=alpha, rw_steps=total_steps
         )
 
-    if len(valid) <= num_tips: return valid[:], t_sel.ms
-    
-    return random.sample(valid, num_tips), t_sel.ms
+    return chosen, selTips_ms
 
+# # Se comenta para mejoras 02/03/202x
+# # tangle2_light.py
+# # Este helper deja la TX materializada en el nodo y actualiza _tx_index. Así select_valid_tips(...) funciona.
+# def ingest_tx(RUN_ID,node, tx: dict, add_as_tip: bool = True):
+#     _ensure_dag_state(node)
+#     txid = str(tx["ID"])
+#     tips_before = len(node["Tips"])
 
-# tangle2_light.py
-# Este helper deja la TX materializada en el nodo y actualiza _tx_index. Así select_valid_tips(...) funciona.
-def ingest_tx(RUN_ID,node, tx: dict, add_as_tip: bool = True):
+#     # Almacena el proceso de almacenamiento de la tx
+#     with MsTimer() as t_store:
+#         # de-dup en Transactions
+#         if txid not in node.get("_tx_index", {}):
+#             node["Transactions"].append(tx)
+#             node["_tx_index"][txid] = tx
+#         # meter como tip (si no está caduca) para que luego pueda ser aprobada
+#         if add_as_tip and txid not in node["Tips"]:
+#             node["Tips"].append(txid)
+#     store_ms = t_store.ms
+
+#     log_tangle_event(
+#         run_id=RUN_ID, phase="auth", module="tangle", op="tips_store",
+#         node_id=node.get("NodeID"), tx_id=txid, tx_type=tx.get("Type"),
+#         tips_before=tips_before, tips_after=len(node["Tips"]),
+#         approved_count=len(tx.get("ApprovedTx", [])),
+#         t_tips_store=t_store.ms, t_idx_upd=None
+#     )
+#     return t_store.ms
+
+# Mejora aplicada 02/03/202x
+def ingest_tx(RUN_ID, node, tx: dict, add_as_tip: bool = True):
     _ensure_dag_state(node)
     txid = str(tx["ID"])
-    tips_before = len(node["Tips"])
+    tips_before = len(node["Tips"]) # se agrega
 
-    # Almacena el proceso de almacenamiento de la tx
     with MsTimer() as t_store:
-        # de-dup en Transactions
-        if txid not in node.get("_tx_index", {}):
+        if txid not in node["_tx_index"]:
             node["Transactions"].append(tx)
             node["_tx_index"][txid] = tx
-        # meter como tip (si no está caduca) para que luego pueda ser aprobada
+
+        # ---- reverse adjacency: parent -> approver(child) ----
+        for parent in _to_id_list(tx.get("ApprovedTx", [])):
+            node["_approvers"].setdefault(parent, []).append(txid)
+
+            # lightweight score: count direct approvers
+            node["_score"][parent] = node["_score"].get(parent, 0) + 1
+
+        # default score for this tx
+        node["_score"].setdefault(txid, node["_score"].get(txid, 0))
+
         if add_as_tip and txid not in node["Tips"]:
             node["Tips"].append(txid)
-    store_ms = t_store.ms
 
     log_tangle_event(
         run_id=RUN_ID, phase="auth", module="tangle", op="tips_store",
@@ -713,3 +827,231 @@ def validate_rx_tx_and_log(RUN_ID, node, tx, phase="auth", module="tangle"):
     )
 
     return replay_ok, t_nonce.ms + t_ts.ms + t_replay.ms
+
+
+
+# Se agrega para caminar el DAG 02/03/202x
+import math, random
+
+def _pick_start_tx(node):
+    """
+    Start point del walk.
+    Opción simple: genesis si existe; si no, un tx al azar que no sea tip.
+    """
+    # si guardas genesis por ID, úsalo aquí
+    if node["Transactions"]:
+        return str(node["Transactions"][0].get("ID"))
+    # fallback
+    tips = set(_to_id_list(node.get("Tips", [])))
+    non_tips = [str(tx.get("ID")) for tx in node.get("Transactions", []) if str(tx.get("ID")) not in tips]
+    return random.choice(non_tips) if non_tips else (random.choice(list(tips)) if tips else None)
+
+
+def _weighted_choice(candidates, weights):
+    s = sum(weights)
+    if s <= 0:
+        return random.choice(candidates)
+    r = random.random() * s
+    acc = 0.0
+    for c, w in zip(candidates, weights):
+        acc += w
+        if acc >= r:
+            return c
+    return candidates[-1]
+
+
+def random_walk_to_tip(node, valid_tips_set, alpha=0.3, max_steps=200):
+    """
+    WRW: camina por approvers hasta llegar a un tip válido.
+    - valid_tips_set: tips filtrados por TS/TTL (y lo que quieras)
+    """
+    start = _pick_start_tx(node)
+    if start is None:
+        return None, 0  # no hay DAG
+
+    curr = start
+    visited = set([curr])
+    steps = 0
+
+    while steps < max_steps:
+        # si ya caímos en un tip válido, paramos
+        if curr in valid_tips_set:
+            return curr, steps
+
+        approvers = node["_approvers"].get(curr, [])
+        # si no tiene approvers => es tip (aunque tu lista de Tips pueda diferir)
+        if not approvers:
+            # si es válido lo aceptamos, si no, devolvemos igual o None
+            return (curr if curr in valid_tips_set else None), steps
+
+        # evita ciclos por corrupción de estado (DAG debería ser acíclico)
+        nxt_candidates = [a for a in approvers if a not in visited]
+        if not nxt_candidates:
+            return None, steps
+
+        # pesos por score (lightweight)
+        w = []
+        for a in nxt_candidates:
+            sc = node["_score"].get(a, 0)
+            w.append(math.exp(alpha * sc))
+
+        curr = _weighted_choice(nxt_candidates, w)
+        visited.add(curr)
+        steps += 1
+
+    return None, steps  # no alcanzó tip en max_steps
+
+
+
+
+### Código Python: “Approves” (ancestry check) + confidence + confirmación
+
+import time
+from collections import deque
+
+def _tx_parents(node, txid):
+    """Devuelve lista de parents (ApprovedTx) para un txid, robusto a tipos."""
+    tx = node["_tx_index"].get(str(txid))
+    if not tx:
+        return []
+    return _to_id_list(tx.get("ApprovedTx", []))
+
+
+def approves(node, tip_id, target_id, max_nodes=5000):
+    """
+    Retorna True si tip_id aprueba directa o indirectamente a target_id
+    siguiendo enlaces ApprovedTx (del tip hacia sus parents).
+    max_nodes limita el recorrido para evitar loops/estado corrupto.
+    """
+    tip_id = str(tip_id)
+    target_id = str(target_id)
+
+    if tip_id == target_id:
+        return True
+
+    visited = set()
+    q = deque([tip_id])
+    seen = 0
+
+    while q and seen < max_nodes:
+        u = q.popleft()
+        if u == target_id:
+            return True
+        if u in visited:
+            continue
+        visited.add(u)
+        seen += 1
+
+        for p in _tx_parents(node, u):
+            if p not in visited:
+                q.append(p)
+
+    return False
+
+
+def compute_valid_tips_set(node, now=None, check_fresh=True):
+    """Construye el set de tips elegibles por TTL/TS (Eq.32)."""
+    _ensure_dag_state(node)
+    if not node["_tx_index"]:
+        _rebuild_tx_index(node)
+    if now is None:
+        now = time.time()
+
+    valid = []
+    for tid in _to_id_list(node.get("Tips", [])):
+        tx = node["_tx_index"].get(tid)
+        if not tx:
+            continue
+        if check_fresh and not _is_fresh_tx(tx, now=now):
+            continue
+        valid.append(tid)
+
+    return set(valid)
+
+
+def confidence_confirm_tx(RUN_ID, node, target_txid, M=20, theta=0.8,
+                          alpha=0.3, max_steps=200, check_fresh=True,
+                          log=True):
+    """
+    Estima confidence c(target) por muestreo de M walks.
+    Confirma si c >= theta.
+
+    Retorna: (confirmed: bool, c: float, stats: dict)
+    """
+    _ensure_dag_state(node)
+    if not node["_tx_index"]:
+        _rebuild_tx_index(node)
+
+    target_txid = str(target_txid)
+    print("este es target", target_txid)
+    print("este _tx_index", node["_tx_index"])
+    time.sleep(10)
+
+    if target_txid not in node["_tx_index"]:
+        return False, 0.0, {"reason": "target_not_in_index"}
+
+    now = time.time()
+    valid_set = compute_valid_tips_set(node, now=now, check_fresh=check_fresh)
+    if not valid_set:
+        return False, 0.0, {"reason": "no_valid_tips"}
+
+    # Muestreo
+    success = 0
+    fails_walk = 0
+    total_steps = 0
+
+    with MsTimer() as t_conf:
+        for _ in range(M):
+            tip, steps = random_walk_to_tip(node, valid_set, alpha=alpha, max_steps=max_steps)
+            total_steps += steps
+            if tip is None:
+                fails_walk += 1
+                continue
+            if approves(node, tip, target_txid):
+                success += 1
+
+    c = success / float(M) if M > 0 else 0.0
+    confirmed = (c >= float(theta))
+
+    # Opcional: marcar en el índice local (sin romper tu estructura)
+    if confirmed:
+        node["_tx_index"][target_txid]["Confirmed"] = True
+        node["_tx_index"][target_txid]["Confidence"] = float(c)
+
+    stats = {
+        "M": M,
+        "success": success,
+        "fails_walk": fails_walk,
+        "avg_steps": (total_steps / float(M)) if M > 0 else 0.0,
+        "alpha": alpha,
+        "max_steps": max_steps,
+        "theta": theta,
+        "t_conf_ms": t_conf.ms
+    }
+
+    if log and RUN_ID is not None:
+        log_tangle_event(
+            run_id=RUN_ID, phase="auth", module="tangle", op="confirm_check",
+            node_id=node.get("NodeID"), tx_id=target_txid,
+            confirmed=confirmed, confidence=float(c),
+            M=M, theta=float(theta),
+            alpha=float(alpha), rw_steps=int(total_steps),
+            t_confirm_ms=t_conf.ms
+        )
+
+    return confirmed, float(c), stats
+
+
+# # ejemplo: tras ingest_tx(...) o tras create_transaction(...)
+# confirmed, c, stats = confidence_confirm_tx(
+#     RUN_ID, node_ch1, target_txid=new_tx["ID"],
+#     M=20, theta=0.8, alpha=0.3, max_steps=200
+# )
+
+# 4) Parámetros (para paper + reproducibilidad)
+# Parámetros por defecto que se aplica en experimentos:
+# K=2 tips
+# α=0.3 (luego haces sensibilidad: 0, 0.3, 0.5)
+# 𝑆𝑚𝑎𝑥=200
+# M=20 walks para confidence
+# θ=0.8

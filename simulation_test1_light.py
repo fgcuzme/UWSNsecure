@@ -402,7 +402,7 @@ def run_one(RUN_NUM:int, SEED:int, NUM_NODES:int,
     print("INCIO PROCESO DE AUTENTICACIÓN BASADO EN TX")
 
     from propagacionTx_light import propagate_tx_to_ch, authenticate_nodes_to_ch, propagate_tx_to_sink_and_cluster
-    from tangle2_light import create_gen_block, delete_tangle, ingest_tx
+    from tangle2_light import create_gen_block, delete_tangle, ingest_tx, confidence_confirm_tx
     import time
     # from save_csv import save_stats_tx, save_stats_energy_proTx_csv, save_stats_to_csv, save_stats_to_csv1, save_stats_to_csv2
 
@@ -446,6 +446,14 @@ def run_one(RUN_NUM:int, SEED:int, NUM_NODES:int,
         # Ingerir en el propio sink (autor de la génesis) y dejarla como tip
         ingest_tx(RUN_ID, node_sink, txgenesis, add_as_tip=True)
 
+        # Confirmacion tx
+        a,b,c = confidence_confirm_tx(RUN_ID, node_sink, txgenesis, M=20, theta=0.8,
+                          alpha=0.3, max_steps=200, check_fresh=True,
+                          log=True)
+
+        print(a,b,c)
+        time.sleep(10)
+        
         # (opcional) LRU simple para no crecer sin límite
         node_sink["Tips"] = node_sink["Tips"][-128:]
 

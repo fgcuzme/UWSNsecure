@@ -1,6 +1,6 @@
 # from tangle2_light import verify_transaction_signature, create_auth_response_tx
 from tangle2_light import (verify_transaction_signature, create_auth_response_tx, update_transactions, 
-                           delete_transaction, ingest_tx, validate_rx_tx_and_log)
+                           delete_transaction, ingest_tx, validate_rx_tx_and_log, confidence_confirm_tx)
 from bbdd2_sqlite3 import load_keys_shared_withou_cipher, load_keys_sign_withou_cipher
 from path_loss import propagation_time1
 import numpy as np
@@ -162,6 +162,13 @@ def propagate_tx_to_ch(RUN_ID, sink1, ch_list, node_uw1, genesis_tx, E_schedule,
                         # Ch_node['Tips'].append(genesis_tx['ID'])    # Se guarda la Tx genesis en el CH; se comemta 08/10/2025
                         # agrega nueva linea 08/10/2025
                         store_ms = ingest_tx(RUN_ID, Ch_node, genesis_tx, add_as_tip=True)
+
+                        a,b,c = confidence_confirm_tx(RUN_ID, Ch_node, genesis_tx, M=20, theta=0.8,
+                                                        alpha=0.3, max_steps=200, check_fresh=True,
+                                                        log=True)
+
+                        print(a,b,c)
+                        time.sleep(10)
 
                         # rx_ok te dice si supera antireplay; ya estás verificando firma aparte.
                         rx_ok, validate_ms = validate_rx_tx_and_log(RUN_ID, Ch_node, genesis_tx, phase="auth", module="tangle")
@@ -431,6 +438,14 @@ def propagate_genesis_to_cluster(RUN_ID, node_uw2, ch_index, genesis_tx, E_sched
 
                             # Se agrega esta linea 08/10/2025
                             store_ms = ingest_tx(RUN_ID, node1, genesis_tx, add_as_tip=True)
+
+                            a,b,c = confidence_confirm_tx(RUN_ID, node1, genesis_tx, M=20, theta=0.8,
+                                                        alpha=0.3, max_steps=200, check_fresh=True,
+                                                        log=True)
+                            
+                            print(a,b,c)
+                            time.sleep(10)
+                            
                             # rx_ok te dice si supera antireplay; ya estás verificando firma aparte.
                             rx_ok, validate_ms  = validate_rx_tx_and_log(RUN_ID, node1, genesis_tx, phase="auth", module="tangle")
 
@@ -782,6 +797,14 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                     ## Se comento toda esta parte 14/10/2025
                     # ingest_tx(sink1, auth_response_tx_sink, add_as_tip=True)
                     store_ms = ingest_tx(RUN_ID, sink1, auth_response_tx1, add_as_tip=True)
+
+                    a,b,c = confidence_confirm_tx(RUN_ID, sink1, auth_response_tx1, M=20, theta=0.8,
+                                                        alpha=0.3, max_steps=200, check_fresh=True,
+                                                        log=True)
+                    
+                    print(a,b,c)
+                    time.sleep(10)
+                            
                     # rx_ok te dice si supera antireplay; ya estás verificando firma aparte.
                     rx_ok, validate_ms = validate_rx_tx_and_log(RUN_ID, sink1, auth_response_tx1, phase="auth", 
                                                                 module="tangle")
@@ -975,6 +998,14 @@ def propagate_tx_to_sink_and_cluster(RUN_ID, sink1, list_ch, node_uw3, E_schedul
                             # node2['Tips'].append(auth_response_tx1['ID']) # corregido
                             # Por esta nueva 08/10/2025
                             store_ms = ingest_tx(RUN_ID, node2, auth_response_tx1, add_as_tip=True)
+
+                            a,b,c = confidence_confirm_tx(RUN_ID, node2, auth_response_tx1, M=20, theta=0.8,
+                                                        alpha=0.3, max_steps=200, check_fresh=True,
+                                                        log=True)
+                            
+                            print(a,b,c)
+                            time.sleep(10)
+                            
                             # rx_ok te dice si supera antireplay; ya estás verificando firma aparte.
                             rx_ok, validate_ms = validate_rx_tx_and_log(RUN_ID, node2, auth_response_tx1, 
                                                                         phase="auth", module="tangle")
@@ -1265,6 +1296,14 @@ def authenticate_nodes_to_ch(RUN_ID, nodes, chead, E_schedule, ronda, max_retrie
 
                             # Por esta nueva 0814/10/2025
                             store_ms = ingest_tx(RUN_ID, node_ch, node_auth_tx, add_as_tip=True)
+
+                            a,b,c = confidence_confirm_tx(RUN_ID, node_ch, node_auth_tx, M=20, theta=0.8,
+                                                        alpha=0.3, max_steps=200, check_fresh=True,
+                                                        log=True)
+                            
+                            print(a,b,c)
+                            time.sleep(10)
+
                             # rx_ok te dice si supera antireplay; ya estás verificando firma aparte.
                             rx_ok, validate_ms = validate_rx_tx_and_log(RUN_ID, node_ch, node_auth_tx, phase="auth", 
                                                                         module="tangle")
