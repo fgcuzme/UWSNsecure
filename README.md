@@ -46,3 +46,24 @@ mkdir ~/arm64-sysroot
   export PATH=$PATH:$SYSROOT/usr/bin
     
   Note: These variables must be exported one by one.
+
+
+RUNNING THE CODE ON THE RASPBERRY
+
+1. Copy the entire folder from Ubuntu to the Raspberry Pi, except for the environment.
+
+2. On the Raspberry Pi, create the environment and install the dependencies from the .txt file.
+
+3. Convert the .so files to ARM so they can run on the Raspberry Pi. This step only needs to be repeated.
+
+python setup.py build_ext --inplace
+
+4. Force the execution of the folders
+
+export PYTHONPATH=$(pwd)/venv_embed_rasp/lib/python3.11/site-packages:$PYTHONPATH
+export LD_LIBRARY_PATH=$(pwd)/venv_embed_rasp/lib/python3.11/site-packages:$LD_LIBRARY_PATH
+
+“venv2” should be replaced with the virtual environment you created.
+
+5. Run main.
+python3 a_run_many.py  -> this file call to simulation_test1_light_arm
