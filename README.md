@@ -7,14 +7,29 @@ Python version used:
 Packages used:
 Package      Version
 ------------ -------
-ascon        0.0.9
-cffi         1.17.1
-cryptography 43.0.3
-numpy        1.25.2
-pip          24.3.1
-pycparser    2.22
-scipy        1.14.1
-setuptools   65.5.0
+ascon           0.0.9
+cffi            1.17.1
+contourpy       1.3.3
+cryptography    43.0.3
+cycler          0.12.1
+Cython          3.1.5
+fonttools       4.60.1
+kiwisolver      1.4.9
+matplotlib      3.10.7
+msgpack         1.1.2
+numpy           1.25.2
+packaging       25.0
+pandas          2.3.3
+pillow          12.0.0
+pip             23.0.1
+pycparser       2.22
+pyparsing       3.2.5
+python-dateutil 2.9.0.post0
+pytz            2025.2
+scipy           1.14.1
+setuptools      66.1.1
+six             1.17.0
+tzdata          2025.2
 
 *********************
 
@@ -46,3 +61,24 @@ mkdir ~/arm64-sysroot
   export PATH=$PATH:$SYSROOT/usr/bin
     
   Note: These variables must be exported one by one.
+
+
+RUNNING THE CODE ON THE RASPBERRY
+
+1. Copy the entire folder from Ubuntu to the Raspberry Pi, except for the environment.
+
+2. On the Raspberry Pi, create the environment and install the dependencies from the .txt file.
+
+3. Convert the .so files to ARM so they can run on the Raspberry Pi. This step only needs to be repeated.
+
+python setup.py build_ext --inplace
+
+4. Force the execution of the folders
+
+export PYTHONPATH=$(pwd)/venv_embed_rasp/lib/python3.11/site-packages:$PYTHONPATH
+export LD_LIBRARY_PATH=$(pwd)/venv_embed_rasp/lib/python3.11/site-packages:$LD_LIBRARY_PATH
+
+“venv2” should be replaced with the virtual environment you created.
+
+5. Run main.
+python3 a_run_many.py  -> this file call to simulation_test1_light_arm
