@@ -26,7 +26,8 @@ FIELDS = [
     # flags
     "sig_ok", "nonce_ok", "ts_ok", "replay_ok",
     # tangle DAG
-    "alpha", "rw_steps",
+    "confirmed", "confidence", "M", "theta", "alpha", "rw_steps", "t_confirm_ms",
+    "success_walk", "fails_walk", "avg_steps", "total_steps"
 ]
 
 # --- Estado interno (buffer + resumen online) ---
@@ -71,7 +72,8 @@ def log_tangle_event(
     t_other=None, t_total=None,
     payload_bytes=None, tx_bytes=None,
     sig_ok=None, nonce_ok=None, ts_ok=None, replay_ok=None,
-    alpha=None, rw_steps=None,
+    confirmed=None, confidence=None, M=None, theta=None, alpha=None, rw_steps=None, t_confirm_ms=None,
+    success_walk=None, fails_walk=None, avg_steps=None, total_steps=None
 ):
     if DISABLED: 
         return
@@ -99,7 +101,12 @@ def log_tangle_event(
         "nonce_ok": _bool_or_none(nonce_ok),
         "ts_ok": _bool_or_none(ts_ok),
         "replay_ok": _bool_or_none(replay_ok),
+        "confirmed": _bool_or_none(confirmed), "confidence": _f(confidence), 
+        "M": _f(M), "theta": _f(theta),
         "alpha": _f(alpha), "rw_steps": _f(rw_steps),
+        "t_confirm_ms": _f(t_confirm_ms),
+        "success_walk": _f(success_walk), "fails_walk": _f(fails_walk), "avg_steps": _f(avg_steps),
+        "total_steps": _f(total_steps)
     }
     _buf.append(row)
     if len(_buf) >= BATCH_SIZE:
@@ -181,7 +188,7 @@ _SUMMARY = defaultdict(_Agg)
 _METRICS = ("t_sign","t_verify","t_canon","t_hash",
             "t_tips_sel","t_tips_store","t_idx_upd",
             "t_nonce_chk","t_ts_chk","t_replay_chk",
-            "t_total")
+            "t_total","t_confirm_ms")
 
 def _update_summary(row):
     op = row["op"] or "unknown"
