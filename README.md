@@ -1,7 +1,7 @@
 # UWSNsecure
 Test code for simulating the authentication process using a lightweight Tangle and data encryption with ASCON
 
-Python version used:
+Python version used (Ubuntu and Raspberry):
 3.11.5
 
 Packages used:
@@ -33,7 +33,8 @@ tzdata          2025.2
 
 *********************
 
-Python to C conversion
+#########################################
+Python to C conversion (Ubuntu)
 
 Cross-compilation for ARM
 
@@ -62,6 +63,39 @@ mkdir ~/arm64-sysroot
     
   Note: These variables must be exported one by one.
 
+4. To verify the compilation, we will run the .main file, which in this case is “pyhon3.11 a_run_many.py”.
+
+5. Run the setup as follows: python3.11 setup.py
+This file contains the .py modules to be compiled with Cython.
+
+7. If necessary, install Cython in the virtual environment using the pip command.
+
+Once the files are converted, we will use Cython to transform our calling file into a .c file with the following command:
+
+cython --embed -o simulation_test1_light.c simulation_test1_light.py --directive language_level=3
+
+Replace “simulation_test1_light.c simulation_test1_light.py” with the files you want to convert. In this case, the main file.
+
+7. Additionally, you need to import the library locations.
+
+export PYTHONPATH=/home/fcuzme/arm64-sysroot/compilables_embed/embed_python/lib/python3.11/site-packages:$(pwd)
+
+“/arm64-sysroot/compilables_embed/embed_python”, replace with your configured path.
+
+8. Finally, we transform the .c file into an executable with the same name.
+
+gcc -o simulation_test1_light simulation_test1_light.c -I/usr/include/python3.11 -L/usr/lib/x86_64-linux-gnu -lpython3.11 -lpthread -lm -lutil -ldl
+
+
+###################################################
+
+ARMx64 transformation (ubuntu)
+
+We transform the .c file into ARM
+
+aarch64-linux-gnu-gcc --sysroot=$SYSROOT -o simulation_test1_light_arm simulation_test1_light.c -I$SYSROOT/usr/include/aarch64-linux-gnu/python3.11 -L$SYSROOT/usr/lib/aarch64-linux-gnu -lpython3.11 -lpthread -lm -lutil -ldl
+
+###################################################
 
 RUNNING THE CODE ON THE RASPBERRY
 
