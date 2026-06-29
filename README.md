@@ -1,7 +1,7 @@
 # UWSNsecure
 Test code for simulating the authentication process using a lightweight Tangle and data encryption with ASCON
 
-Python version used:
+Python version used (Ubuntu and Raspberry):
 3.11.5
 
 Packages used:
@@ -33,7 +33,8 @@ tzdata          2025.2
 
 *********************
 
-Python to C conversion
+#########################################
+Python to C conversion (Ubuntu)
 
 Cross-compilation for ARM
 
@@ -62,6 +63,15 @@ mkdir ~/arm64-sysroot
     
   Note: These variables must be exported one by one.
 
+###################################################
+
+ARMx64 transformation (ubuntu)
+
+We transform the .c file into ARM
+
+aarch64-linux-gnu-gcc --sysroot=$SYSROOT -o simulation_test1_light_arm simulation_test1_light.c -I$SYSROOT/usr/include/aarch64-linux-gnu/python3.11 -L$SYSROOT/usr/lib/aarch64-linux-gnu -lpython3.11 -lpthread -lm -lutil -ldl
+
+###################################################
 
 RUNNING THE CODE ON THE RASPBERRY
 
