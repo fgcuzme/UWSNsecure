@@ -1,0 +1,957 @@
+from cryptography.hazmat.primitives.asymmetric import ed25519, x25519
+from cryptography.hazmat.primitives import hashes, serialization
+import time
+import random
+import ascon
+import json, hashlib, os
+import numpy as np
+from collections import deque
+from tangle_logger_light import log_tangle_event, MsTimer
+import msgpack
+
+## Establecer variables globales para num_tips=2, check_fresh=True, alpha=0.3, max_steps=200
+
+
+_TTL_tx = float(120.0)          # rango 120-300s -> 2–5 × (t_propagación_max + colas)
+_TTL_windows = float(300.0)     # rango 300-420s -> TTL + margen
+
+# # se comenta para mejorar 02/03/2026
+# # Normalizadores y estado DAG en el nodo (drop-in)
+# def _ensure_dag_state(node):
+#     node.setdefault("Tips", [])
+#     node.setdefault("ApprovedTransactions", [])
+#     node.setdefault("Transactions", [])
+#     node.setdefault("_tx_index", {})           # id -> tx
+#     node.setdefault("_nonce_window", deque())  # (nonce, ts_insert)
+#     node.setdefault("_nonce_set", set())
+#     node.setdefault("_nonce_ttl_s", _TTL_windows)
+#     node.setdefault("_max_nonce_cache", 4096)
+
+# Mejora aplicada 02/03/2026
+def _ensure_dag_state(node):
+    node.setdefault("Tips", [])
+    node.setdefault("ApprovedTransactions", [])
+    node.setdefault("Transactions", [])
+    node.setdefault("_tx_index", {})            # id -> tx
+    node.setdefault("_approvers", {})           # parent_id -> [child_id,...]  (reverse edges)
+    node.setdefault("_score", {})               # txid -> lightweight weight/score
+    node.setdefault("_nonce_window", deque())
+    node.setdefault("_nonce_set", set())
+    node.setdefault("_nonce_ttl_s", _TTL_windows)
+    node.setdefault("_max_nonce_cache", 4096)
+
+# Añade helpers de normalización
+def _to_builtin(x):
+    """Convierte recursivamente tipos NumPy/bytes a tipos JSON-canónicos."""
+    if isinstance(x, (np.integer,)):   return int(x)
+    if isinstance(x, (np.floating,)):  return float(x)
+    if isinstance(x, (bytes, bytearray)):  return x.hex()  # representación canónica
+    if isinstance(x, (list, tuple, np.ndarray)):
+        return [_to_builtin(v) for v in x]
+    if isinstance(x, dict):
+        return {str(k): _to_builtin(v) for k, v in x.items()}
+    return x
+
+def _canonical_bytes_for_sig(tx_dict: dict) -> bytes:
+    """
+    Serialización canónica de los campos cubiertos por la firma.
+    Importante: NO incluye la propia 'Signature'.
+    """
+    view = {
+        "ID":           tx_dict["ID"],                 # bindea el ID actual
+        "ApprovedTx":   tx_dict.get("ApprovedTx", []),
+        "Payload":      tx_dict.get("Payload", ""),
+        "Source":       tx_dict.get("Source"),
+        "Type":         tx_dict.get("Type", "1"),
+        # TS = Timestamp (tu campo existente)
+        "TS":           tx_dict.get("Timestamp", 0.0),
+        "TTL":          tx_dict.get("TTL", _TTL_tx),
+        "Nonce":        tx_dict.get("Nonce", "")
+    }
+    view_norm = _to_builtin(view)
+    # return json.dumps(view_norm, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return msgpack.packb(view_norm, use_bin_type=True)
+
+# # Se cambia por la función siguiente
+# # Función para verificar la firma de una transacción
+# def verify_transaction_signature(transaction_data, signature, public_key_bytes):
+#     """
+#     ed25519
+#     Verifica la firma de una transacción usando la clave pública.
+
+#     transaction_data: Datos de la transacción (string o numérico).
+#     signature: Firma digital de la transacción (byte array).
+#     public_key_bytes: Clave pública en formato RAW, DER o PEM (byte array).
+
+#     Retorna:
+#     True si la firma es válida, False si no lo es.
+#     """
+#     # Convertir el transaction_id a bytes
+#     if isinstance(transaction_data, int):  # Si es un número, convertir a string
+#         transaction_bytes = str(transaction_data).encode('utf-8')
+#     else:
+#         # Si ya es un string, convertirlo a bytes
+#         transaction_bytes = transaction_data.encode('utf-8')
+
+
+#     # verificar si la clave privada ya es un objeto Ed25519PublicKey
+#     if isinstance(public_key_bytes, ed25519.Ed25519PublicKey):
+#         actual_pulic_key = public_key_bytes
+#     else:
+#         # Cargar la clave pública desde los bytes
+#         actual_pulic_key = ed25519.Ed25519PublicKey.from_public_bytes(public_key_bytes)
+
+#     # Verificar la firma
+
+#     try:
+#         actual_pulic_key.verify(signature, transaction_bytes)
+#         return True  # La firma es válida
+#     except:
+#         return False  # La verificación falló
+
+def verify_transaction_signature(transaction_data, signature, public_key_bytes):
+    """
+    Verifica firma Ed25519.
+    - Si 'transaction_data' es un dict de TX, verifica sobre la serialización canónica (sin 'Signature').
+    - Si es str/bytes/int, verifica sobre su representación en bytes.
+    """
+    # 1) bytes a verificar
+    if isinstance(transaction_data, dict):
+        data_bytes = _canonical_bytes_for_sig(transaction_data)
+    elif isinstance(transaction_data, (bytes, bytearray)):
+        data_bytes = bytes(transaction_data)
+    elif isinstance(transaction_data, int):
+        data_bytes = str(transaction_data).encode("utf-8")
+    else:
+        data_bytes = str(transaction_data).encode("utf-8")
+
+    # 2) clave pública
+    if isinstance(public_key_bytes, ed25519.Ed25519PublicKey):
+        actual_public_key = public_key_bytes
+    else:
+        actual_public_key = ed25519.Ed25519PublicKey.from_public_bytes(public_key_bytes)
+
+    # 3) verificación
+    try:
+        actual_public_key.verify(signature, data_bytes)
+        return True
+    except Exception:
+        return False
+
+
+
+# Validamos toda la tx en vez de solo el ID
+def sign_transaction(data_bytes, private_key_bytes):
+    """
+    Firma Ed25519 sobre bytes (data_bytes).
+    Acepta private_key como objeto Ed25519PrivateKey o bytes RAW.
+    """
+    if isinstance(data_bytes, (str, int)):
+        data_bytes = str(data_bytes).encode("utf-8")
+    elif not isinstance(data_bytes, (bytes, bytearray)):
+        raise ValueError("sign_transaction() espera bytes ya serializados")
+        # data_bytes = json.dumps(data_bytes, sort_keys=True, separators=(",", ":")).encode("utf-8")
+
+    if isinstance(private_key_bytes, ed25519.Ed25519PrivateKey):
+        actual_private_key = private_key_bytes
+    else:
+        actual_private_key = ed25519.Ed25519PrivateKey.from_private_bytes(private_key_bytes)
+
+    return actual_private_key.sign(data_bytes)
+
+# # PRUEBAS
+# from bbdd2_sqlite3 import load_keys_sign_withou_cipher
+# ed25519_private_key, ed25519_public_key = load_keys_sign_withou_cipher("bbdd_keys_shared_sign_cipher.db", "keys_sign_ed25519", index=664)
+
+# # print('Clave privada recuperada : ', ed25519_private_key.hex())
+# # print('Clave publica recuperada : ', ed25519_public_key.hex())
+
+# # # Generación de par de claves para firmar y verificar mensajes utilizando Ed25519
+# # ed25519_private_key = ed25519.Ed25519PrivateKey.generate()
+# # ed25519_public_key = ed25519_private_key.public_key()
+
+# # Mensaje a firmar
+# message = b"2c369fbdb9a124037aa7ad053b583a366470b825fa40131a57b544d2b744c846"
+
+# signature1 = sign_transaction(message, ed25519_private_key)
+# print('Firma con ed25519 : ', signature1.hex(), ' -> Tamaño : ', len(signature1))
+
+# verifysignature1 = verify_transaction_signature(message, signature1, ed25519_public_key)
+# print('Firma con ed25519 : ', verifysignature1)
+
+# # # Ejemplo de uso
+# # from bbdd_sqlite3 import load_keys_withou_cipher
+# # transaction_id = "tx12345"
+
+# # # Ejemplo de cómo buscar una clave específica por su ID
+# # clave_privada, clave_publica = load_keys_withou_cipher("claves_sin_cifrado.db", index=2)
+
+# # # Firmar la transacción
+# # signature = sign_transaction(transaction_id, clave_privada)
+# # print(f"Firma digital: {signature.hex()} -> Tamaño : {len(signature)}")
+
+
+
+# Función para generar un ID único usando Ascon o un hash alternativo
+def generate_unique_id_asconhash(node_id):
+    """
+    Genera un ID único para una transacción usando un hash (Ascon o SHA-256).
+
+    node_id: ID del nodo que genera la transacción.
+    Retorna: ID único de la transacción (hash).
+    """
+    # Obtener la marca de tiempo actual en segundos
+    timestamp = str(int(time.time()))
+    # # VAriante Obtener la marca de tiempo actual en milisegundos
+    # timestamp = str(int(time.time() * 1000))
+
+    # Generar un número aleatorio para asegurar unicidad
+    # random_value = str(random.randint(1, 1e9))
+    # # Variante Generar un número aleatorio más pequeño
+    random_value = str(random.randint(1, 1e6))
+
+    # Concatenar el node_id, timestamp y random_value para crear el identificador de datos
+    data = f'{node_id}_{timestamp}_{random_value}'.encode('utf-8')
+
+    # Verifica que el tercer parámetro (longitud del hash) sea entero (si lo necesitas en Ascon)
+    hash_length = 32 # Ejemplo de longitud de hash de 32 bytes
+
+    # Usando hashlib como alternativa si no tienes Ascon
+    # Si tienes la implementación de Ascon, puedes cambiar hashlib por ascon.hash
+    # ascon_hash = ascon.hash(py.bytes(data), 'Ascon-Hash', hash_length)  # Ejemplo con Ascon
+    # digest1 = hashlib.sha256(data).hexdigest()  # Usamos SHA-256 en este ejemplo
+    digest = ascon.hash(data, "Ascon-Hash", hash_length).hex() # sin truncar 256 bits = 64 hex # Se puede reducir a 16, 32 o 64 hex
+    # digest = ascon.hash(data, "Ascon-Hash", hash_length).hex()[:16] # Se puede reducir a 16, 32 o 64 hex
+
+    # print('Hash Firma : ', digest, ' -> Tamaño del Hash', len(digest))
+
+    # Retornar el ID único de la transacción
+    return digest
+
+### UNa opcion
+# def generate_unique_id_asconhash(node_id, domain=b"U-Tangle:v1", tx_type=b"GEN", round_id=0, extra_nonce=None):
+#     import os, ascon, time
+#     ts = str(int(time.time()*1000)).encode()
+#     rnd = os.urandom(8) if extra_nonce is None else extra_nonce
+#     data = b"|".join([
+#         domain, tx_type, str(node_id).encode(), str(round_id).encode(), ts, rnd
+#     ])
+#     return ascon.hash(data, "Ascon-Hash", 32).hex()
+
+
+# # Ejemplo de uso
+# node_id = 1
+# transaction_id = generate_unique_id_asconhash(node_id)
+# print(f'Transaction ID: {transaction_id}')
+
+# generate_unique_id_asconhash(1)
+
+# Función para crear una transacción en el Tangle
+def create_transaction(RUN_ID, node_id, payload, transaction_type, approvedtips, private_key, selTips_ms=None):
+    """
+    Crear una transacción en el Tangle.
+
+    node_id: ID del nodo que genera la transacción.
+    payload: Datos de la transacción (pueden ser datos de sensores o sincronización).
+    transaction_type: Tipo de transacción ('Data = 2', 'Sync = 0', 'Control', etc.).
+    approved_tips: IDs de las transacciones que esta transacción aprueba.
+    private_key: Clave privada del nodo para firmar la transacción.
+
+    Retorna:
+    Una estructura de la transacción generada.
+    """
+    with MsTimer() as t_hash:
+        # 1) ID único como ya haces
+        # Crear un ID único para la transacción
+        transaction_id = generate_unique_id_asconhash(node_id)
+    hash_ms = t_hash.ms
+
+    # print('Tx que se aprueban : ', approvedtips)
+
+    # medir canonical + hash + sign
+    # 2) Construir TX SIN firma aún
+    # Crear la transacción con sus campos
+    tx = {
+        "ID": transaction_id,                       # ID único de la transacción -> 32 bytes
+        "Timestamp": float(time.time()),            # Marca de tiempo en segundos -> 2 bytes
+        "Source": int(node_id),                     # Nodo que genera la transacción -> 2 bytes -> si son menos de 255 nodos puede ser un byte
+        "Type": transaction_type,              # Tipo de transacción: 'Data', 'Sync', etc. -> 1 bytes
+        # "Payload": str(payload),                    # Datos a transmitir -> 32-64 bytes
+        "Payload": payload if isinstance(payload, bytes) else str(payload).encode("utf-8"),                    # Datos a transmitir -> 32-64 bytes
+        # "ApprovedTx": [str(t) for t in approvedtips],  # Lista de transacciones aprobadas por esta transacción -> 64 bytes
+        "ApprovedTx": approvedtips,  # Lista de transacciones aprobadas por esta transacción -> 64 bytes
+        # "Weight": 1.0,                            # Peso inicial de la transacción -> Eliminar
+        # "TipSelectionCount": 0,                   # Contador de veces seleccionada como tip -> Eliminar
+        "TTL": _TTL_tx,
+        "Nonce": ascon.hash((str(node_id) + str(time.time())).encode(), "Ascon-Hash", 32).hex()[:16],
+    }
+
+    print("Tx_canonica", tx)
+
+    with MsTimer() as t_canon:
+        # 3) Firmar la vista canónica
+        to_sign = _canonical_bytes_for_sig(tx)
+    canonical_ms = t_canon.ms
+
+    with MsTimer() as t_sign:
+        signature = sign_transaction(to_sign, private_key)  # Firma con clave privada -> 32 bytes
+    sign_ms = t_sign.ms
+
+    # 4) Adjuntar firma y devolver
+    tx["Signature"] = signature
+
+    # === TIEMPO DE PROCESAMIENTO TOTAL (TX) ===
+    # Si además mides selección/almacenamiento de tips en este lado, súmalos aquí.
+    selTips_ms = selTips_ms if selTips_ms is not None else 0.0
+    proc_tx_ms = float(hash_ms + canonical_ms + sign_ms + selTips_ms)
+    tx["_proc_ms_tx"] = float(proc_tx_ms)   # <- queda disponible para el módulo de propagación
+
+    log_tangle_event(
+        run_id=RUN_ID, phase="auth", module="tangle", op="create_tx",
+        node_id=node_id, tx_id=tx["ID"], tx_type=transaction_type,
+        t_canon=t_canon.ms, t_hash=t_hash.ms, t_sign=t_sign.ms,
+        payload_bytes=len(str(payload).encode("utf-8")),
+        tx_bytes=len(str(tx).encode("utf-8")),
+        # ts_ok=True, t_tips_sel=selTips_ms, t_total=proc_tx_ms
+        ts_ok=True, t_tips_sel=selTips_ms, t_total=t_hash.ms+t_canon.ms+t_sign.ms+selTips_ms
+    )
+
+    return tx
+
+
+# TAMAÑO TX -> 32 + 2 + 2 + 64 + 64 + 32 = 196 bytes = 1568 bits
+# TAMAÑO TX -> 32 + 2 + 2 + 64 + 64 + 20 = 184 bytes = 1472 bits
+#### MEJORA EN LA TX
+# def create_transaction(node_id, node_key_id, private_key, payload, approvedtips, transaction_type=b"DATA", round_id=0):
+#     tx_id = generate_unique_id_asconhash(node_id=node_id, tx_type=transaction_type, round_id=round_id)
+#     transaction = {
+#         "ID": tx_id,
+#         "NodeID": node_id,
+#         "KeyID": node_key_id,           # [ADD]
+#         "Type": transaction_type.decode() if isinstance(transaction_type, (bytes, bytearray)) else transaction_type,  # [ADD]
+#         "Payload": payload,
+#         "ApprovedTx": approvedtips
+#     }
+#     signature = sign_transaction(tx_id, private_key)
+#     transaction["Signature"] = signature
+#     return transaction
+
+
+
+# Función para crear el bloque génesis
+def create_gen_block(RUN_ID, sink_id, private_key):
+    """
+    Crear el bloque génesis.
+    sink_id: ID del Sink (nodo coordinador).
+    private_key: Clave privada del Sink para firmar el bloque génesis.
+    """
+
+    # # Cargar la clave pública del sink desde los bytes
+    # public_key_ed25519 = ed25519.Ed25519PrivateKey.from_private_bytes(private_key)
+
+    # private_key_bytes = public_key_ed25519.private_bytes(
+    #     encoding=serialization.Encoding.Raw,
+    #     format=serialization.PrivateFormat.Raw,
+    #     encryption_algorithm=serialization.NoEncryption()
+    # )
+
+    # print('Clave del sink dentro de la función crear Tx genesis: ', private_key_bytes)
+
+    # No se aprueba ninguna transacción, ya que es el primer bloque
+    approved_tips = []
+
+    # print('Antes de entrar a la función crear Tx... ')
+    payload_str = 'payload'
+    payoad_bytes = payload_str.encode('utf-8')  # → binario UTF-8
+
+    type_str = '0x20'
+    type_bytes = type_str.encode('utf-8')  # → binario UTF-8
+
+    # Crear la transacción génesis
+    genesis_block = create_transaction(RUN_ID, sink_id, payoad_bytes, type_bytes, approved_tips, private_key)
+
+    # Agrega la Tx a la lista
+
+    # Mostrar mensaje
+    # print(f'Bloque génesis creado con ID: {genesis_block["ID"]}')
+
+    return genesis_block
+
+
+
+def create_auth_response_tx(RUN_ID, node_ch1):
+    _ensure_dag_state(node_ch1)
+
+    # approved_tips1, selTips_ms = select_valid_tips(RUN_ID,node_ch1, num_tips=2, check_nonce=True, check_fresh=True)
+
+    approved_tips1, selTips_ms = select_valid_tips(RUN_ID,node_ch1, num_tips=2, check_fresh=True, alpha=0.3, max_steps=200)
+
+    payload_str = f'{int(node_ch1["NodeID"])};{int(node_ch1["Id_pair_keys_sign"])};{int(node_ch1["Id_pair_keys_shared"])}'
+    payoad_bytes = payload_str.encode('utf-8')  # → binario UTF-8
+
+    type_str = '0x21'
+    type_bytes = type_str.encode('utf-8')  # → binario UTF-8
+
+    new_tx = create_transaction(RUN_ID, int(node_ch1['NodeID']), payoad_bytes, type_bytes, approved_tips1, node_ch1['PrivateKey_sign'], selTips_ms=selTips_ms)
+
+    # mover tips aprobados a ApprovedTransactions
+    node_ch1["Tips"] = _to_id_list(node_ch1["Tips"])
+    node_ch1.setdefault("ApprovedTransactions", [])
+    node_ch1["ApprovedTransactions"] = _to_id_list(node_ch1["ApprovedTransactions"])
+    for tip in approved_tips1:
+        if tip in node_ch1["Tips"]:
+            node_ch1["Tips"].remove(tip)
+        if tip not in node_ch1["ApprovedTransactions"]:
+            node_ch1["ApprovedTransactions"].append(tip)
+
+    node_ch1["Transactions"].append(new_tx)
+    node_ch1["Tips"].append(new_tx["ID"])
+    node_ch1["_tx_index"][new_tx["ID"]] = new_tx
+
+    return new_tx
+
+
+# BORRAR TANGLE EN PYTHON
+def delete_tangle(nodo_sink, node_uw, CH):
+    # Limpiar los datos del Sink
+    nodo_sink['Tips'] = []
+    nodo_sink['ApprovedTransactions'] = []
+    nodo_sink['Transactions'] = []
+
+    # Restablecer el estado de autenticación en nodo_sink
+    for i in range(len(nodo_sink['RegisterNodes'])):
+        # nodo_sink['RegisterNodes'][i]['Status_syn'] = False
+        nodo_sink['RegisterNodes'][i]['Status_auth'] = False
+
+    # Limpiar los datos de cada nodo en node_uw
+    for node in node_uw:
+        node['Tips'] = []
+        node['ApprovedTransactions'] = []
+        node['Transactions'] = []
+        node['Authenticated'] = False
+        node['ExclusionStatus'] = False
+
+    # Restablecer el estado de autenticación de cada nodo CH
+    for ch_index in CH:
+        for i in range(len(node_uw[ch_index]['RegisterNodes'])):
+            # node_uw[ch_index]['RegisterNodes'][i]['Status_syn'] = False
+            node_uw[ch_index]['RegisterNodes'][i]['Status_auth'] = False
+
+    print('Tangle de cada nodo eliminado ...')
+
+
+
+# %%
+
+import random, copy
+import numpy as np
+
+def _to_id_list(tips):
+    """
+    Normaliza una lista de tips que pueden venir como:
+    - strings (ID),
+    - ints/np.uint16,
+    - dicts con campo 'ID'.
+    Elimina duplicados preservando orden.
+    """
+    ids = []
+    for t in (tips or []):
+        if isinstance(t, dict) and "ID" in t:
+            ids.append(str(t["ID"]))
+        elif isinstance(t, (np.integer, int)):
+            ids.append(str(int(t)))
+        else:
+            ids.append(str(t))
+    seen = set()
+    out = []
+    for x in ids:
+        if x not in seen:
+            out.append(x); seen.add(x)
+    return out
+
+def _rebuild_tx_index(node):
+    _ensure_dag_state(node)
+    node["_tx_index"].clear()
+    for tx in node["Transactions"]:
+        txid = str(tx.get("ID"))
+        if txid: node["_tx_index"][txid] = tx
+
+def select_tips(tips, num_tips):
+    """
+    Selecciona num_tips IDs únicos al azar desde 'tips' (robusto a dict/np types).
+    """
+    ids = _to_id_list(tips)
+    if len(ids) >= num_tips:
+        return random.sample(ids, num_tips)
+    return ids[:]  # todos los disponibles
+
+def update_transactions(node, received_transaction):
+    """
+    Mueve los tips aprobados (presentes en node['Tips']) a node['ApprovedTransactions'].
+    No modifica la TX recibida. Robusto a tipos numpy/dict en Tips.
+    """
+    # Asegurar campos del nodo
+    node.setdefault("Tips", [])
+    node.setdefault("ApprovedTransactions", [])
+    node.setdefault("Transactions", [])
+
+    # Normalizar listas internas a IDs (strings)
+    node["Tips"] = _to_id_list(node["Tips"])
+    node["ApprovedTransactions"] = _to_id_list(node["ApprovedTransactions"])
+
+    # Copia de la TX recibida (si quisieras almacenarla después)
+    transaction_copy = copy.deepcopy(received_transaction)
+    transaction_id = str(transaction_copy.get("ID", ""))
+
+    approved_tips2 = _to_id_list(received_transaction.get("ApprovedTx", []))
+
+    # Mover tips aprobados
+    for tip in approved_tips2:
+        if tip in node["Tips"]:
+            node["Tips"].remove(tip)
+            if tip not in node["ApprovedTransactions"]:
+                node["ApprovedTransactions"].append(tip)
+
+    # (Opcional) si quieres guardar la TX recibida evitando duplicados:
+    # if transaction_id and transaction_id not in [tx.get("ID") for tx in node["Transactions"]]:
+    #     node["Transactions"].append(transaction_copy)
+
+
+def delete_transaction(node, transaction_id):
+    """
+    Elimina una transacción del nodo por ID. Devuelve True si la encontró.
+    Robusto a IDs no-string.
+    """
+    txid = str(transaction_id)
+    txs = node.get("Transactions", [])
+    for i, tx in enumerate(list(txs)):
+        if str(tx.get("ID")) == txid:
+            del txs[i]
+            print(f"Transacción {txid} eliminada del nodo {node.get('NodeID')}.")
+            return True
+    print(f"Transacción {txid} no encontrada en el nodo {node.get('NodeID')}.")
+    return False
+
+
+def find_node_index(register_nodes, target_node_id):
+    """
+    Búsqueda lineal por 'NodeID'. Devuelve índice o -1.
+    Normaliza tipos a str para comparación robusta.
+    """
+    target = str(target_node_id)
+    for idx, nd in enumerate(register_nodes or []):
+        if str(nd.get("NodeID")) == target:
+            return idx
+    return -1
+
+
+## Selección de tips válidos (TS/TTL y Nonce) antes de aprobar
+def _purge_expired_nonces(node, now=None):
+    _ensure_dag_state(node)
+    if now is None: now = time.time()
+    window, s, ttl = node["_nonce_window"], node["_nonce_set"], node["_nonce_ttl_s"]
+    while window and (now - window[0][1] > ttl):
+        nonce, _ = window.popleft(); s.discard(nonce)
+    while len(window) > node["_max_nonce_cache"]:
+        nonce, _ = window.popleft(); s.discard(nonce)
+
+
+def _nonce_seen(node, nonce, now=None):
+    _ensure_dag_state(node)
+    if now is None: now = time.time()
+    _purge_expired_nonces(node, now)
+    s = node["_nonce_set"]
+    if nonce in s: return True
+    s.add(nonce); node["_nonce_window"].append((nonce, now))
+    return False
+
+
+def _is_fresh_tx(tx, now=None):
+    if now is None: now = time.time()
+    ts, ttl = float(tx.get("Timestamp", 0.0)), float(tx.get("TTL", 0.0))
+    return ttl > 0 and (now >= ts) and (now <= ts + ttl)
+
+
+# Se agrega para mejorar 02/03/202x
+def select_valid_tips(RUN_ID, node, num_tips=2, check_fresh=True, alpha=0.3, max_steps=200):
+    _ensure_dag_state(node)
+    if not node["_tx_index"]:
+        _rebuild_tx_index(node)
+
+    # print("Imprime tx nodes : ", node["_tx_index"], "\n", len(node["Tips"]))
+    # time.sleep(30)
+
+    tips_before = len(node["Tips"])
+
+    with MsTimer() as t_sel:
+        # 1) filtra tips válidos por frescura (y lo que quieras)
+        valid = []
+        now = time.time()
+        for tid in _to_id_list(node["Tips"]):
+            tx = node["_tx_index"].get(tid)
+            if not tx:
+                continue
+            if check_fresh and not _is_fresh_tx(tx, now=now):
+                continue
+            valid.append(tid)
+
+        valid_set = set(valid)
+
+        # 2) si pocos tips válidos, devuelve directo
+        if len(valid) <= num_tips:
+            chosen = valid[:]
+            total_steps = 0
+        else:
+            # 3) WRW para elegir tips únicos
+            chosen = []
+            total_steps = 0
+            for _ in range(num_tips):
+                tip, steps = random_walk_to_tip(node, valid_set, alpha=alpha, max_steps=max_steps)
+                total_steps += steps
+                if tip and tip not in chosen:
+                    chosen.append(tip)
+                    valid_set.discard(tip)  # no repetir en esta TX
+
+            # 4) fallback si WRW no logró suficientes
+            if len(chosen) < num_tips:
+                remaining = list(valid_set)
+                need = num_tips - len(chosen)
+                if len(remaining) >= need:
+                    chosen += random.sample(remaining, need)
+                else:
+                    chosen += remaining
+
+    selTips_ms = t_sel.ms
+
+    if RUN_ID is not None:
+        log_tangle_event(
+            run_id=RUN_ID, phase="auth", module="tangle", op="tips_select",
+            node_id=node.get("NodeID"), tx_type=tx.get("Type"),
+            tips_before=tips_before, tips_after=tips_before,
+            approved_count=len(chosen),
+            t_tips_sel=selTips_ms,
+            alpha=alpha, rw_steps=total_steps
+        )
+
+    return chosen, selTips_ms
+
+
+# Mejora aplicada 02/03/202x
+def ingest_tx(RUN_ID, node, tx: dict, add_as_tip: bool = True):
+    _ensure_dag_state(node)
+    txid = str(tx["ID"])
+    tips_before = len(node["Tips"]) # se agrega
+
+    with MsTimer() as t_store:
+        if txid not in node["_tx_index"]:
+            node["Transactions"].append(tx)
+            node["_tx_index"][txid] = tx
+
+        # ---- reverse adjacency: parent -> approver(child) ----
+        for parent in _to_id_list(tx.get("ApprovedTx", [])):
+            node["_approvers"].setdefault(parent, []).append(txid)
+
+            # lightweight score: count direct approvers
+            node["_score"][parent] = node["_score"].get(parent, 0) + 1
+
+        # default score for this tx
+        node["_score"].setdefault(txid, node["_score"].get(txid, 0))
+
+        if add_as_tip and txid not in node["Tips"]:
+            node["Tips"].append(txid)
+
+    log_tangle_event(
+        run_id=RUN_ID, phase="auth", module="tangle", op="tips_store",
+        node_id=node.get("NodeID"), tx_id=txid, tx_type=tx.get("Type"),
+        tips_before=tips_before, tips_after=len(node["Tips"]),
+        approved_count=len(tx.get("ApprovedTx", [])),
+        t_tips_store=t_store.ms, t_idx_upd=None
+    )
+    return t_store.ms
+
+
+# === RX: validar y loggear Nonce/TS/Replay ===
+def validate_rx_tx_and_log(RUN_ID, node, tx, phase="auth", module="tangle"):
+    _ensure_dag_state(node)
+    now = time.time()
+
+    # almacena la validación de la tx, lo hace el receptor
+    with MsTimer() as t_nonce:
+        nonce = str(tx.get("Nonce", ""))
+        # Namespacing para RX (no colisiona con TIPSEL)
+        if not nonce:
+            nonce_ok = False
+        else:
+            nonce_ok = not _nonce_seen(node, f"RX:{nonce}", now=now)
+    nonce_ms = t_nonce.ms
+
+    with MsTimer() as t_ts:
+        ts_ok = _is_fresh_tx(tx, now=now)
+    ts_ms = t_ts.ms
+
+    with MsTimer() as t_replay:
+        replay_ok = (nonce_ok and ts_ok)
+    replay_ms = t_replay.ms
+
+    # Suma de tiempos de este tiempo
+    validate_ms = nonce_ms + ts_ms + replay_ms
+
+    log_tangle_event(
+        run_id=RUN_ID, phase=phase, module=module, op="rx_checks",
+        node_id=node.get("NodeID"), tx_id=tx.get("ID"), tx_type=tx.get("Type"),
+        t_nonce_chk=t_nonce.ms, t_ts_chk=t_ts.ms, t_replay_chk=t_replay.ms,
+        nonce_ok=nonce_ok, ts_ok=ts_ok, replay_ok=replay_ok,
+        tx_bytes=len(str(tx).encode("utf-8")) #, t_total=t_nonce.ms + t_ts.ms + t_replay.ms
+    )
+
+    return replay_ok, t_nonce.ms + t_ts.ms + t_replay.ms
+
+
+
+# Se agrega para caminar el DAG 02/03/202x
+import math, random
+
+def _pick_start_tx(node):
+    """
+    Start point del walk.
+    Opción simple: genesis si existe; si no, un tx al azar que no sea tip.
+    """
+    # si guardas genesis por ID, úsalo aquí
+    if node["Transactions"]:
+        return str(node["Transactions"][0].get("ID"))
+    # fallback
+    tips = set(_to_id_list(node.get("Tips", [])))
+    non_tips = [str(tx.get("ID")) for tx in node.get("Transactions", []) if str(tx.get("ID")) not in tips]
+    return random.choice(non_tips) if non_tips else (random.choice(list(tips)) if tips else None)
+
+
+def _weighted_choice(candidates, weights):
+    s = sum(weights)
+    if s <= 0:
+        return random.choice(candidates)
+    r = random.random() * s
+    acc = 0.0
+    for c, w in zip(candidates, weights):
+        acc += w
+        if acc >= r:
+            return c
+    return candidates[-1]
+
+
+def random_walk_to_tip(node, valid_tips_set, alpha=0.3, max_steps=200):
+    """
+    WRW: camina por approvers hasta llegar a un tip válido.
+    - valid_tips_set: tips filtrados por TS/TTL (y lo que quieras)
+    """
+    start = _pick_start_tx(node)
+    if start is None:
+        return None, 0  # no hay DAG
+
+    curr = start
+    visited = set([curr])
+    steps = 0
+
+    while steps < max_steps:
+        # si ya caímos en un tip válido, paramos
+        if curr in valid_tips_set:
+            return curr, steps
+
+        approvers = node["_approvers"].get(curr, [])
+        # si no tiene approvers => es tip (aunque tu lista de Tips pueda diferir)
+        if not approvers:
+            # si es válido lo aceptamos, si no, devolvemos igual o None
+            return (curr if curr in valid_tips_set else None), steps
+
+        # evita ciclos por corrupción de estado (DAG debería ser acíclico)
+        nxt_candidates = [a for a in approvers if a not in visited]
+        if not nxt_candidates:
+            return None, steps
+
+        # pesos por score (lightweight)
+        w = []
+        for a in nxt_candidates:
+            sc = node["_score"].get(a, 0)
+            w.append(math.exp(alpha * sc))
+
+        curr = _weighted_choice(nxt_candidates, w)
+        visited.add(curr)
+        steps += 1
+
+    return None, steps  # no alcanzó tip en max_steps
+
+
+
+
+### Código Python: “Approves” (ancestry check) + confidence + confirmación
+
+import time
+from collections import deque
+
+def _tx_parents(node, txid):
+    """Devuelve lista de parents (ApprovedTx) para un txid, robusto a tipos."""
+    tx = node["_tx_index"].get(str(txid))
+    if not tx:
+        return []
+    return _to_id_list(tx.get("ApprovedTx", []))
+
+
+def approves(node, tip_id, target_id, max_nodes=5000):
+    """
+    Retorna True si tip_id aprueba directa o indirectamente a target_id
+    siguiendo enlaces ApprovedTx (del tip hacia sus parents).
+    max_nodes limita el recorrido para evitar loops/estado corrupto.
+    """
+    tip_id = str(tip_id)
+    target_id = str(target_id)
+
+    if tip_id == target_id:
+        return True
+
+    visited = set()
+    q = deque([tip_id])
+    seen = 0
+
+    while q and seen < max_nodes:
+        u = q.popleft()
+        if u == target_id:
+            return True
+        if u in visited:
+            continue
+        visited.add(u)
+        seen += 1
+
+        for p in _tx_parents(node, u):
+            if p not in visited:
+                q.append(p)
+
+    return False
+
+
+def compute_valid_tips_set(node, now=None, check_fresh=True):
+    """Construye el set de tips elegibles por TTL/TS (Eq.32)."""
+    _ensure_dag_state(node)
+    if not node["_tx_index"]:
+        _rebuild_tx_index(node)
+    if now is None:
+        now = time.time()
+
+    valid = []
+    for tid in _to_id_list(node.get("Tips", [])):
+        tx = node["_tx_index"].get(tid)
+        if not tx:
+            continue
+        if check_fresh and not _is_fresh_tx(tx, now=now):
+            continue
+        valid.append(tid)
+
+    return set(valid)
+
+
+def confidence_confirm_tx(RUN_ID, node, target_txid, M=20, theta=0.8,
+                          alpha=0.3, max_steps=200, check_fresh=True,
+                          log=True):
+    """
+    Estima confidence c(target) por muestreo de M walks.
+    Confirma si c >= theta.
+
+    Retorna: (confirmed: bool, c: float, stats: dict)
+    """
+    _ensure_dag_state(node)
+    if not node["_tx_index"]:
+        _rebuild_tx_index(node)
+
+    target_txid = str(target_txid)
+    
+    print("este es target", target_txid)
+    print("este _tx_index", node["_tx_index"])
+    #time.sleep(10)
+
+    # if target_txid not in node["_tx_index"]:
+    #     return False, 0.0, {"reason": "target_not_in_index"}
+
+    now = time.time()
+    valid_set = compute_valid_tips_set(node, now=now, check_fresh=check_fresh)
+    if not valid_set:
+        return False, 0.0, {"reason": "no_valid_tips"}
+
+    # Muestreo
+    success = 0
+    fails_walk = 0
+    total_steps = 0
+
+    with MsTimer() as t_conf:
+        for _ in range(M):
+            tip, steps = random_walk_to_tip(node, valid_set, alpha=alpha, max_steps=max_steps)
+            total_steps += steps
+            if tip is None:
+                fails_walk += 1
+                continue
+            if approves(node, tip, target_txid):
+                success += 1
+
+    c = success / float(M) if M > 0 else 0.0
+    confirmed = (c >= float(theta))
+
+    # # control
+    # print("Imprime confirmed : ", c, "  -  ", confirmed)
+    # time.sleep(10)
+
+    # Opcional: marcar en el índice local (sin romper tu estructura)
+    if confirmed:
+        node["_tx_index"][target_txid]["Confirmed"] = True
+        node["_tx_index"][target_txid]["Confidence"] = float(c)
+
+    stats = {
+        "M": M,
+        "success": success,
+        "fails_walk": fails_walk,
+        "avg_steps": (total_steps / float(M)) if M > 0 else 0.0,
+        "alpha": alpha,
+        "max_steps": max_steps,
+        "theta": theta,
+        "t_conf_ms": t_conf.ms
+    }
+    
+    # control
+    # print("Imprime stats : ", stats)
+    # time.sleep(10)
+
+    # if log and RUN_ID is not None:
+    #     log_tangle_event(
+    #         run_id=RUN_ID, phase="auth", module="tangle", op="confirm_check",
+    #         node_id=node.get("NodeID"), tx_id=target_txid,
+    #         confirmed=confirmed, confidence=float(c),
+    #         M=M, theta=float(theta),
+    #         alpha=float(alpha), rw_steps=int(total_steps),
+    #         t_confirm_ms=t_conf.ms
+    #     )
+
+    log_tangle_event(
+        run_id=RUN_ID, phase="auth", module="tangle", op="confirm_check",
+        node_id=node.get("NodeID"), tx_id=target_txid, tx_type="NULL",
+        confirmed=confirmed, confidence=float(c),
+        M=M, theta=float(theta),
+        alpha=float(alpha), rw_steps=int(total_steps),
+        t_confirm_ms=t_conf.ms,
+        success_walk=success,
+        fails_walk=fails_walk,
+        total_steps=total_steps,
+        avg_steps=float(total_steps / float(M)) if M > 0 else 0.0
+        )
+    
+    return confirmed, float(c), stats
+
+
+# # ejemplo: tras ingest_tx(...) o tras create_transaction(...)
+# confirmed, c, stats = confidence_confirm_tx(
+#     RUN_ID, node_ch1, target_txid=new_tx["ID"],
+#     M=20, theta=0.8, alpha=0.3, max_steps=200
+# )
+
+# 4) Parámetros (para paper + reproducibilidad)
+# Parámetros por defecto que se aplica en experimentos:
+# K=2 tips
+# α=0.3 (luego haces sensibilidad: 0, 0.3, 0.5)
+# 𝑆𝑚𝑎𝑥=200
+# M=20 walks para confidence
+# θ=0.8
